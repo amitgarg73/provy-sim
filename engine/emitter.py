@@ -78,10 +78,13 @@ class ProvyEmitter:
 
     # ── high-level ───────────────────────────────────────────────────────────
     def open_session(self, result: RunResult) -> dict:
+        # Do NOT send a separate external_id: Provy resolves later trace/eval/close/outcome calls by
+        # matching external_id to the session id we send here. If external_id differed from session_id
+        # (e.g. the entity id), those later calls would miss and spawn a duplicate session. The work-item
+        # id lives in metadata and on each trace instead, which is what reconciliation keys off.
         return self._post("/api/ingest/session/open", {
             "session_id": result.session_id,
             "session_type": result.session_type,
-            "external_id": result.entity_id,
             "is_simulated": self.is_simulated,
             "metadata": {
                 "date": datetime.now(timezone.utc).date().isoformat(),
@@ -158,14 +161,9 @@ class ProvyEmitter:
 
     # ── convenience: emit a whole run except the outcome (that's EOD reconcile) ─
     def emit_run(self, result: RunResult) -> None:
-        # Provy assigns the real session id (a uuid) and treats our provided id as external_id. Capture
-        # the returned id and use it for every later call, so traces, evals, close, the judge's
-        # predictions, and the reconcile outcome all key off the SAME session. Without this the outcome
-        # posts a session id Provy never minted, reconciliation cannot resolve the session, and duplicate
-        # sessions get created. In a dry run the response has no session_id, so we keep the generated one.
-        resp = self.open_session(result)
-        if isinstance(resp, dict) and resp.get("session_id"):
-            result.session_id = resp["session_id"]
+        # We use OUR OWN session id throughout (id-agnostic ingest, #165): Provy stores it as external_id
+        # and resolves every later call by it. No need to capture Provy's internal uuid.
+        self.open_session(result)
         for step in result.traces:
             self.trace(result, step)
         for ev in result.evals:
