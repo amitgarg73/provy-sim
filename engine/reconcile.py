@@ -37,15 +37,24 @@ def reconcile_pending(ledger: GroundTruthLedger, emitter: ProvyEmitter,
                       workflow: Optional[str] = None, mark: bool = True) -> dict:
     pending = ledger.pending_outcomes(workflow)
     posted = 0
+    errors: list[str] = []
     for rec in pending:
         r = _minimal_result(rec)
         occurred = (rec.get("outcome_post", {}) or {}).get("occurred_at")
-        emitter.outcome(r, occurred_at=occurred)
+        resp = emitter.outcome(r, occurred_at=occurred)
+        # _post never raises; it returns {"error": ...} on failure. Only mark reconciled on a real post,
+        # so a silent HTTP failure does not get flipped and lost.
+        if isinstance(resp, dict) and resp.get("error"):
+            errors.append(f"{r.entity_id}: {resp['error']}")
+            continue
         rec["reconciled"] = True
         posted += 1
     if mark and posted:
         _rewrite(ledger)
-    return {"pending": len(pending), "posted": posted, "emit_enabled": emitter.enabled}
+    out = {"pending": len(pending), "posted": posted, "errors": len(errors), "emit_enabled": emitter.enabled}
+    if errors:
+        out["error_detail"] = errors[:5]
+    return out
 
 
 def _rewrite(ledger: GroundTruthLedger) -> None:

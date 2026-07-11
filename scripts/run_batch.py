@@ -63,9 +63,11 @@ def main() -> int:
               f"terminal={r.terminal_reason} faults=[{faults}]")
 
     if args.reconcile:
+        # Order matters: the server judge writes the trace-based predictions, and an outcome can only
+        # reconcile against a prediction that already exists. Judge FIRST, then post the outcomes.
+        print(f"judge backfill: {backfill_server_judge(emitter.base, emitter.key)}")
         res = reconcile_pending(ledger, emitter, workflow=args.pack)
         print(f"reconcile: {res}")
-        print(f"judge backfill: {backfill_server_judge(emitter.base, emitter.key)}")
 
     if args.scoreboard:
         records = ledger.read(workflow=args.pack)
