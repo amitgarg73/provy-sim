@@ -1,0 +1,33 @@
+name: tick
+
+# 24x7 heartbeat. Every 30 minutes it asks the Sim Control console which fleets are running and runs one
+# batch for each. Vercel Hobby cannot do sub-daily cron, so this scheduler lives here. Fleets are
+# started/stopped from the console; a stopped fleet is simply skipped. Also dispatchable by hand.
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      count:
+        description: 'Sessions per running fleet this tick'
+        required: false
+        type: string
+        default: '6'
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run due fleets
+        env:
+          CONTROL_URL: ${{ secrets.CONTROL_URL }}
+          CONTROL_LEVERS_TOKEN: ${{ secrets.CONTROL_LEVERS_TOKEN }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          TICK_COUNT: ${{ inputs.count || '6' }}
+        run: python scripts/tick.py
