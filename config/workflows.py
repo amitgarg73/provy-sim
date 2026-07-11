@@ -30,6 +30,16 @@ class WorkflowConfig:
         return os.environ.get(self.key_env, "")
 
     def lever_config(self) -> LeverConfig:
+        """Load levers, preferring the Sim Control console when CONTROL_URL is
+        set. Fully optional: if the console is unreachable or unconfigured, fall
+        back to the local defaults so the sim always runs offline."""
+        try:
+            from engine.control_client import fetch_lever_rates
+            remote = fetch_lever_rates(self.workflow)
+            if remote:
+                return LeverConfig(remote)
+        except Exception:
+            pass
         return LeverConfig(self.lever_rates)
 
 
