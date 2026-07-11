@@ -1,0 +1,312 @@
+"""The failure levers (the chaos config) and their application.
+
+Per-agent, per-dimension, with KNOWN injection rates and a seeded RNG for
+reproducibility. Each lever mutates a CLEAN baseline RunResult and returns the
+injected-truth record of exactly what it broke. Silent levers are first-class:
+they are the differentiator.
+
+Design: lever logic here is domain-free. It reads the pack's LeverManifest
+(which agents/signals to aim at) and the pack's contract (to derive the bad
+value for a signal). So the same nine levers work for Support, Claims, and CRM
+without change.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import timedelta
+from typing import Optional
+
+from . import contract as C
+from .types import (Criterion, InjectedFault, LeverManifest, RunContext,
+                    RunResult, TraceStep)
+
+
+# ── Config ──────────────────────────────────────────────────────────────────
+
+@dataclass
+class LeverSetting:
+    rate: float = 0.0
+    target: Optional[str] = None
+    params: dict = field(default_factory=dict)
+
+
+class LeverConfig:
+    """Maps lever name -> LeverSetting. Accepts floats or dicts for convenience."""
+
+    def __init__(self, settings: Optional[dict] = None):
+        self.settings: dict[str, LeverSetting] = {}
+        for name, val in (settings or {}).items():
+            self.settings[name] = self._coerce(val)
+
+    @staticmethod
+    def _coerce(val) -> LeverSetting:
+        if isinstance(val, LeverSetting):
+            return val
+        if isinstance(val, (int, float)):
+            return LeverSetting(rate=float(val))
+        if isinstance(val, dict):
+            return LeverSetting(
+                rate=float(val.get("rate", 0.0)),
+                target=val.get("target"),
+                params=val.get("params", {}),
+            )
+        return LeverSetting()
+
+    def get(self, name: str) -> Optional[LeverSetting]:
+        s = self.settings.get(name)
+        return s if s and s.rate > 0 else None
+
+
+# Order matters: structural first, then outcome-affecting, then correctness,
+# then finalize, then calibration and drift (which read the settled outcome).
+_PHASE_A = ["skip_propagation", "overt_error", "tool_fault",
+            "quality_degrade", "policy_violation", "sla_breach", "silent_wrong"]
+
+
+# ── Trace helpers ────────────────────────────────────────────────────────────
+
+def _find_step(result: RunResult, agent: str, step_type: str) -> Optional[TraceStep]:
+    for s in result.traces:
+        if s.agent == agent and s.step_type == step_type:
+            return s
+    return None
+
+
+def _agent_message(result: RunResult, agent: str) -> Optional[TraceStep]:
+    return _find_step(result, agent, "agent_message")
+
+
+# ── The levers ───────────────────────────────────────────────────────────────
+
+def _skip_propagation(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    up = s.target or m.first_agent
+    down = m.downstream_agent
+    # Upstream agent skips.
+    result.traces = [t for t in result.traces if t.agent != down]
+    result.traces.append(TraceStep(agent=up, step_type="skip", outcome="skipped",
+                                    payload_extra={"reason": "missing_input", "skip_type": "propagated"}))
+    result.traces.append(TraceStep(agent=down, step_type="skip", outcome="skipped",
+                                    payload_extra={"reason": f"blocked by {up} skip", "skip_type": "propagated"}))
+    result.terminal_reason = "skip_propagated"
+    result.metadata["skipped"] = True
+    return InjectedFault("skip_propagation", up, "upstream_gap",
+                         {"upstream": up, "downstream": down})
+
+
+def _overt_error(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    agent = s.target or m.retriever_agent
+    msg = s.params.get("message", "downstream tool call raised")
+    result.traces.append(TraceStep(agent=agent, step_type="error", outcome="error",
+                                    error=msg, entity_id=result.entity_id))
+    if s.params.get("fatal"):
+        result.terminal_reason = "error"
+        cs = C.signal_index(contract).get(m.correctness_signal)
+        if cs is not None:
+            result.real_signals[m.correctness_signal] = C.bad_value(cs)
+    return InjectedFault("overt_error", agent, "reliability", {"message": msg})
+
+
+_TOOL_SHAPES = {
+    "errored":  lambda now: {"error": "retriever backend 500"},
+    "empty":    lambda now: {},
+    "fallback": lambda now: {"from_cache": True, "note": "served stale fallback"},
+    "stale":    lambda now: {"as_of": (now - timedelta(days=400)).date().isoformat(), "note": "stale index"},
+}
+
+
+def _tool_fault(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    agent = s.target or m.retriever_agent
+    shape = s.params.get("shape") or ctx.rng.choice(list(_TOOL_SHAPES))
+    step = _find_step(result, agent, "tool_call")
+    bad_output = _TOOL_SHAPES[shape](ctx.now)
+    if step is None:
+        step = TraceStep(agent=agent, step_type="tool_call", tool_name="retrieve",
+                         tool_input={}, entity_id=result.entity_id)
+        result.traces.insert(0, step)
+    step.tool_output = bad_output
+    step.outcome = "error" if shape == "errored" else "ok"
+    return InjectedFault("tool_fault", agent, "tool_defect", {"shape": shape})
+
+
+def _quality_degrade(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    agent = s.target or m.resolver_agent
+    reason = s.params.get("reason", "reasoning was shallow and skipped the key policy check")
+    hit = False
+    for e in result.evals:
+        if e.agent == agent:
+            e.score = min(e.score, 0.35)
+            e.passed = False
+            e.detail = {"reasoning": reason}
+            hit = True
+    if not hit:
+        result.evals.append(EvalResultDefault(agent, result.entity_id, reason))
+    return InjectedFault("quality_degrade", agent, "quality", {"reason": reason})
+
+
+def _policy_violation(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    idx = C.signal_index(contract)
+    c = idx.get(m.policy_signal)
+    if c is None:
+        return None
+    bad = C.bad_value(c)
+    result.estimated_signals[m.policy_signal] = bad
+    result.real_signals[m.policy_signal] = bad
+    return InjectedFault("policy_violation", s.target or m.resolver_agent, "policy",
+                         {"signal": m.policy_signal})
+
+
+def _sla_breach(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    idx = C.signal_index(contract)
+    c = idx.get(m.sla_signal)
+    if c is None:
+        return None
+    result.real_signals[m.sla_signal] = C.bad_value(c)
+    latency = int(s.params.get("latency_ms", 42000))
+    for t in result.traces:
+        t.latency_ms = max(t.latency_ms, latency // max(1, len(result.traces)))
+    result.metadata["sla_latency_ms"] = latency
+    return InjectedFault("sla_breach", None, "sla", {"latency_ms": latency})
+
+
+def _silent_wrong(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """The star. Confident, well-formed, L4-passing output that is actually
+    wrong on ground truth. Estimated stays good; reality diverges."""
+    agent = s.target or m.resolver_agent
+    idx = C.signal_index(contract)
+    corrupted = []
+    for sig in [m.correctness_signal, m.secondary_bad_signal]:
+        if not sig:
+            continue
+        c = idx.get(sig)
+        if c is None:
+            continue
+        # Real side goes bad; estimated (trace) side stays good on purpose.
+        result.real_signals[sig] = C.bad_value(c)
+        if c.side == "trace":
+            # a trace-only signal can't diverge on the outcome; skip so it stays honest
+            result.real_signals[sig] = C.good_value(c)
+            continue
+        corrupted.append(sig)
+    # Evals still pass — that is the whole point. Confidence stays high.
+    result.confidence = max(result.confidence, 0.9)
+    msg = _agent_message(result, agent)
+    if msg is not None:
+        msg.payload_extra["confidence"] = "HIGH"
+    result.metadata["silent_wrong"] = True
+    return InjectedFault("silent_wrong", agent, "silent_divergence", {"signals": corrupted})
+
+
+def _confidence_miscalibration(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Report HIGH confidence on the runs it is wrong on, LOW on the right ones."""
+    wrong = result.outcome_label == "fail"
+    result.confidence = 0.9 if wrong else 0.25
+    msg = _agent_message(result, s.target or m.resolver_agent)
+    if msg is not None:
+        msg.payload_extra["confidence"] = "HIGH" if wrong else "LOW"
+    return InjectedFault("confidence_miscalibration", s.target or m.resolver_agent,
+                         "calibration", {"reported": "HIGH" if wrong else "LOW", "wrong": wrong})
+
+
+def _silent_drift(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Gradually degrade an agent over sessions while the surface looks stable."""
+    onset = int(s.params.get("onset", 20))
+    if ctx.session_index < onset:
+        return None
+    mode = s.params.get("mode", "quality")
+    severity = ctx.session_index - onset + 1
+    agent = s.target or m.drift_agent or m.resolver_agent
+    if mode == "quality":
+        drop = min(0.06 * severity, 0.6)
+        for e in result.evals:
+            if e.agent == agent:
+                e.score = max(0.0, e.score - drop)
+                e.passed = e.score >= 0.7
+                e.detail = {"reasoning": "gradual quality decay (drift)"}
+    elif mode == "schema":
+        msg = _agent_message(result, agent)
+        if msg is not None:
+            msg.payload_extra.pop("confidence", None)
+            msg.payload_extra["_dropped_key"] = "resolution_code"
+    elif mode == "volume":
+        keep = [t for t in result.traces if t.agent != agent]
+        one = _agent_message(result, agent)
+        result.traces = keep + ([one] if one else [])
+    result.metadata["drift"] = {"agent": agent, "mode": mode, "severity": severity}
+    return InjectedFault("silent_drift", agent, f"drift_{mode}",
+                         {"onset": onset, "severity": severity, "mode": mode})
+
+
+def EvalResultDefault(agent, entity_id, reason):
+    from .types import EvalResult
+    return EvalResult(agent=agent, eval_name="reasoning_quality", score=0.3,
+                      passed=False, detail={"reasoning": reason}, entity_id=entity_id)
+
+
+_LEVER_FNS = {
+    "skip_propagation": _skip_propagation,
+    "overt_error": _overt_error,
+    "tool_fault": _tool_fault,
+    "quality_degrade": _quality_degrade,
+    "policy_violation": _policy_violation,
+    "sla_breach": _sla_breach,
+    "silent_wrong": _silent_wrong,
+    "confidence_miscalibration": _confidence_miscalibration,
+    "silent_drift": _silent_drift,
+}
+
+
+# ── Finalize ─────────────────────────────────────────────────────────────────
+
+def finalize(result: RunResult, contract: list[Criterion]) -> None:
+    """Recompute outcome_label from the real signals and record what the
+    estimate claimed, so divergence is well-defined."""
+    est_ok = all(
+        C.meets(c, result.estimated_signals.get(c.signal))
+        for c in contract if c.side in ("trace", "both")
+    )
+    real_ok = all(
+        C.meets(c, result.real_signals.get(c.signal))
+        for c in contract if c.side in ("outcome", "both")
+    )
+    result.metadata["estimated_success"] = est_ok
+    if result.metadata.get("skipped"):
+        result.outcome_label = "skipped"
+        result.outcome_value = None
+        return
+    result.outcome_label = "success" if real_ok else "fail"
+    result.outcome_value = 1.0 if real_ok else -1.0
+
+
+# ── Apply ────────────────────────────────────────────────────────────────────
+
+def apply(result: RunResult, gt, manifest: LeverManifest,
+          contract: list[Criterion], config: LeverConfig, ctx: RunContext) -> list[InjectedFault]:
+    """Roll each configured lever against the seeded RNG and mutate the run.
+    Returns the list of injected faults (ground truth)."""
+    faults: list[InjectedFault] = []
+
+    def _fire(name: str) -> None:
+        s = config.get(name)
+        if not s:
+            return
+        # drift decides by session index; others by coin flip against rate
+        if name == "silent_drift":
+            if ctx.rng.random() >= s.rate:
+                return
+        else:
+            if ctx.rng.random() >= s.rate:
+                return
+        f = _LEVER_FNS[name](result, gt, manifest, contract, s, ctx)
+        if f is not None:
+            faults.append(f)
+
+    for name in _PHASE_A:
+        _fire(name)
+
+    finalize(result, contract)
+
+    _fire("confidence_miscalibration")
+    _fire("silent_drift")
+
+    result.faults = faults
+    return faults

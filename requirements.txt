@@ -1,0 +1,12 @@
+# Provy proof-simulation harness — runtime deps are intentionally minimal.
+# The engine uses only the Python stdlib (urllib) for emitting and calling Groq,
+# so a dry run needs nothing installed. These are for testing and optional extras.
+
+pytest>=8.0
+
+# Optional: only needed to score the DETECTED side of the scoreboard (reads ag_*
+# tables read-only). The harness runs fine without it.
+# supabase>=2.0
+
+# Optional: load a local .env for convenience. Not required.
+python-dotenv>=1.0
