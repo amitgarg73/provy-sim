@@ -1,0 +1,43 @@
+name: _run (reusable)
+
+# Shared run logic for every fleet. Called by run-support / run-claims / run-crm so the pipeline
+# lives in one place. Not directly dispatchable — the per-fleet callers are. The fleet's ingest key
+# comes in as an input (passed by the Sim Control app at kick time); the only secret is GROQ_API_KEY.
+on:
+  workflow_call:
+    inputs:
+      pack:       { required: true,  type: string }
+      ingest_key: { required: true,  type: string }
+      provy_url:  { required: false, type: string,  default: 'https://provyai.vercel.app' }
+      count:      { required: false, type: string,  default: '8' }
+      seed:       { required: false, type: string,  default: '1' }
+      reconcile:  { required: false, type: boolean, default: true }
+    secrets:
+      GROQ_API_KEY: { required: true }
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run batch (emit + reconcile)
+        env:
+          PROVY_EMIT: '1'
+          PROVY_URL: ${{ inputs.provy_url }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # The runner resolves the pack's key from PROVY_KEY_<PACK> (config/workflows.py). Only the
+          # selected pack's variable is set, from the caller's input.
+          PROVY_KEY_SUPPORT: ${{ inputs.pack == 'support' && inputs.ingest_key || '' }}
+          PROVY_KEY_CLAIMS:  ${{ inputs.pack == 'claims'  && inputs.ingest_key || '' }}
+          PROVY_KEY_CRM:     ${{ inputs.pack == 'crm'     && inputs.ingest_key || '' }}
+        run: |
+          python scripts/run_batch.py \
+            --pack "${{ inputs.pack }}" \
+            --count "${{ inputs.count }}" \
+            --seed "${{ inputs.seed }}" \
+            ${{ inputs.reconcile && '--reconcile' || '' }}
