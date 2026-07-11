@@ -62,6 +62,9 @@ def reconcile_pending(ledger: GroundTruthLedger, emitter: ProvyEmitter,
             r = _minimal_result(rec)
             occurred = (rec.get("outcome_post", {}) or {}).get("occurred_at")
             resp = emitter.outcome(r, occurred_at=occurred)
+            if attempt == 0:
+                print(f"  outcome entity={r.entity_id} session={r.session_id} "
+                      f"signals={list((r.real_signals or {}).keys())} -> {resp}")
             if isinstance(resp, dict) and resp.get("error"):
                 errors.append(f"{r.entity_id}: {resp['error']}")
                 still.append(rec)
