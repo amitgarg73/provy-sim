@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.request
 from datetime import datetime, timezone
 from typing import Optional
@@ -33,25 +34,52 @@ def _minimal_result(rec: dict) -> RunResult:
     return r
 
 
+def _matched(resp: dict) -> bool:
+    """True when /api/ingest/outcome reconciled the post against a prediction."""
+    if not isinstance(resp, dict):
+        return False
+    if resp.get("reconciliation") in ("matched", "diverged"):
+        return True
+    return isinstance(resp.get("reconciled"), int) and resp["reconciled"] >= 1
+
+
 def reconcile_pending(ledger: GroundTruthLedger, emitter: ProvyEmitter,
-                      workflow: Optional[str] = None, mark: bool = True) -> dict:
+                      workflow: Optional[str] = None, mark: bool = True,
+                      retries: int = 5, backoff: float = 20.0) -> dict:
+    """Post the day's real outcomes and reconcile them against the trace-based predictions.
+
+    A prediction is written by the server judge; an outcome posted before its prediction is visible
+    comes back unmatched. So post all, then retry only the unmatched ones after a short wait, up to a
+    budget. Predictions land within a minute in practice; the tick's 30-minute cadence covers any tail.
+    """
     pending = ledger.pending_outcomes(workflow)
+    remaining = list(pending)
     posted = 0
     errors: list[str] = []
-    for rec in pending:
-        r = _minimal_result(rec)
-        occurred = (rec.get("outcome_post", {}) or {}).get("occurred_at")
-        resp = emitter.outcome(r, occurred_at=occurred)
-        # _post never raises; it returns {"error": ...} on failure. Only mark reconciled on a real post,
-        # so a silent HTTP failure does not get flipped and lost.
-        if isinstance(resp, dict) and resp.get("error"):
-            errors.append(f"{r.entity_id}: {resp['error']}")
-            continue
-        rec["reconciled"] = True
-        posted += 1
+    for attempt in range(retries + 1):
+        still: list[dict] = []
+        for rec in remaining:
+            r = _minimal_result(rec)
+            occurred = (rec.get("outcome_post", {}) or {}).get("occurred_at")
+            resp = emitter.outcome(r, occurred_at=occurred)
+            if isinstance(resp, dict) and resp.get("error"):
+                errors.append(f"{r.entity_id}: {resp['error']}")
+                still.append(rec)
+            elif (not emitter.enabled) or (isinstance(resp, dict) and resp.get("skipped")) or _matched(resp):
+                # Dry run (nothing sent) counts as posted; otherwise it must have reconciled.
+                rec["reconciled"] = True
+                posted += 1
+            else:
+                still.append(rec)  # prediction not visible yet — retry after a wait
+        remaining = still
+        if not remaining:
+            break
+        if attempt < retries:
+            time.sleep(backoff)
     if mark and posted:
         _rewrite(ledger)
-    out = {"pending": len(pending), "posted": posted, "errors": len(errors), "emit_enabled": emitter.enabled}
+    out = {"pending": len(pending), "posted": posted, "unmatched": len(remaining),
+           "errors": len(errors), "emit_enabled": emitter.enabled}
     if errors:
         out["error_detail"] = errors[:5]
     return out
