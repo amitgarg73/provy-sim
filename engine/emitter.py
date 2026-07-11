@@ -158,7 +158,14 @@ class ProvyEmitter:
 
     # ── convenience: emit a whole run except the outcome (that's EOD reconcile) ─
     def emit_run(self, result: RunResult) -> None:
-        self.open_session(result)
+        # Provy assigns the real session id (a uuid) and treats our provided id as external_id. Capture
+        # the returned id and use it for every later call, so traces, evals, close, the judge's
+        # predictions, and the reconcile outcome all key off the SAME session. Without this the outcome
+        # posts a session id Provy never minted, reconciliation cannot resolve the session, and duplicate
+        # sessions get created. In a dry run the response has no session_id, so we keep the generated one.
+        resp = self.open_session(result)
+        if isinstance(resp, dict) and resp.get("session_id"):
+            result.session_id = resp["session_id"]
         for step in result.traces:
             self.trace(result, step)
         for ev in result.evals:
