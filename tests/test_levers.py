@@ -134,14 +134,14 @@ def test_silent_staleness_pins_retriever_and_diverges():
         assert "as_of" in step.tool_output and step.outcome == "ok"   # stale but not an error
 
 
-def test_silent_unsupported_pins_retriever_via_soft_signal():
+def test_silent_unsupported_pins_the_resolver_who_ignored_the_weak_match():
     pack = get_pack("claims")
     m = pack.lever_manifest()
     outs = _run_with(pack, {"silent_unsupported": 1.0}, n=12, seed=21)
     for o in outs:
         f = _fault(o, "silent_unsupported")
-        # Provy's attribution is tool-centric, so the culprit is the retriever whose tool surfaced it.
-        assert f is not None and f.agent == m.retriever_agent
+        # The retriever surfaced the weak match correctly; the resolver ignored it -> resolver.
+        assert f is not None and f.agent == m.resolver_agent
         assert o.result.diverged() is True and all(e.passed for e in o.result.evals)
         step = next(t for t in o.result.traces
                     if t.agent == m.retriever_agent and t.step_type == "tool_call")
@@ -194,7 +194,8 @@ def test_silent_missed_action_is_a_clean_looking_omission():
     outs = _run_with(pack, {"silent_missed_action": 1.0}, n=10, seed=24)
     for o in outs:
         f = _fault(o, "silent_missed_action")
-        assert f is not None and f.agent == m.reviewer_agent
+        # The resolver took the quiet path instead of acting on the signal -> resolver.
+        assert f is not None and f.agent == m.resolver_agent
         assert o.result.diverged() is True and all(e.passed for e in o.result.evals)
         assert o.result.metadata.get("needed_action") is True
         # No error/skip trace — "did nothing" looks like a clean pass.

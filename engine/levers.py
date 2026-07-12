@@ -231,26 +231,26 @@ def _silent_staleness(result, gt, m, contract, s, ctx) -> Optional[InjectedFault
 
 
 def _silent_unsupported(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
-    """Cited but unsupported. The retrieval surfaces a weak-support signal (a low match score) that
-    the answer is built on anyway; reality is wrong. No hard tool defect, so this exercises Provy's
-    judge tier ('ignored a red flag'). Provy's attribution is tool-centric: it names the agent whose
-    tool surfaced the ignored signal (the retriever), so the injected culprit is the retriever too."""
-    retriever = s.target or m.retriever_agent
-    step = _find_step(result, retriever, "tool_call")
+    """Cited but unsupported. The retriever surfaces a weak-support signal (a low match score) that
+    the RESOLVER builds a confident answer on anyway; reality is wrong. No hard tool defect, so this
+    exercises Provy's judge tier ('ignored a red flag'). The culprit is the resolver — the decision
+    agent that ignored the weak-match warning — not the retriever that correctly surfaced it."""
+    resolver = s.target or m.resolver_agent
+    step = _find_step(result, m.retriever_agent, "tool_call")
     if step is None:
-        step = TraceStep(agent=retriever, step_type="tool_call", tool_name="retrieve",
+        step = TraceStep(agent=m.retriever_agent, step_type="tool_call", tool_name="retrieve",
                          tool_input={}, entity_id=result.entity_id)
         result.traces.insert(0, step)
     # A soft signal only a judge would weigh — deliberately NOT a fallback/stale key.
     step.tool_output = {**(step.tool_output or {}), "match_score": 0.28, "note": "weak match"}
     step.outcome = "ok"
     corrupted = _corrupt_correctness(result, contract, m)
-    msg = _agent_message(result, m.resolver_agent)
+    msg = _agent_message(result, resolver)
     if msg is not None:
         msg.payload_extra["confidence"] = "HIGH"
     result.confidence = max(result.confidence, 0.9)
     result.metadata["silent_unsupported"] = True
-    return InjectedFault("silent_unsupported", retriever, "silent_unsupported",
+    return InjectedFault("silent_unsupported", resolver, "silent_unsupported",
                          {"match_score": 0.28, "signals": corrupted})
 
 
@@ -291,10 +291,10 @@ def _silent_policy(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
 
 
 def _silent_missed_action(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
-    """Should have acted, didn't. A case that needed escalation or a flag; the agent took the
-    quiet path, and 'did nothing' reads as a clean pass. Reality diverges. Pure omission with no
-    tool footprint, so Provy flags the divergence but attribution is often an honest blind spot."""
-    agent = s.target or m.reviewer_agent
+    """Should have acted, didn't. A case that needed escalation or a flag; the resolver took the
+    quiet path instead of acting on the policy signal, and 'did nothing' reads as a clean pass.
+    Reality diverges. The culprit is the resolver — the decision agent that ignored the signal."""
+    agent = s.target or m.resolver_agent
     corrupted = _corrupt_correctness(result, contract, m)
     result.metadata["needed_action"] = True
     result.metadata["silent_missed_action"] = True
