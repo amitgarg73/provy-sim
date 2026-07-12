@@ -31,6 +31,26 @@ def test_aggregate_lever_rates():
     assert agg["fails"]["count"] == 3
 
 
+def test_attribution_truth_only_for_diverged_silent_faults():
+    contract = get_pack("support").contract()
+    good = {"escalated": False, "policy_followed": True, "sla_met": True,
+            "reopened_7d": False, "category_correct": True}
+    bad = dict(good, reopened_7d=True)
+    records = [
+        _rec("E0", [], good, "success"),  # clean -> no truth row
+        _rec("S1", [{"lever": "silent_staleness", "agent": "retriever"}], bad, "fail", diverged=True),
+        _rec("S2", [{"lever": "silent_wrong", "agent": "resolver"}], bad, "fail", diverged=True),
+        # a visible fault on a non-diverged run must NOT produce a truth row
+        _rec("V1", [{"lever": "quality_degrade", "agent": "resolver"}], good, "success"),
+    ]
+    agg = aggregate_injected(records, contract)
+    truth = agg["attribution_truth"]
+    assert {t["entity_id"] for t in truth} == {"S1", "S2"}
+    by_entity = {t["entity_id"]: t for t in truth}
+    assert by_entity["S1"] == {"entity_id": "S1", "lever": "silent_staleness", "agent": "retriever"}
+    assert by_entity["S2"]["agent"] == "resolver"
+
+
 def test_injected_met_rate_math():
     contract = get_pack("support").contract()
     good = {"escalated": False, "policy_followed": True, "sla_met": True,

@@ -18,6 +18,13 @@ from typing import Optional
 
 from .contract import Criterion, meets, signal_index
 
+# The silent family: levers that leave the estimate green and diverge only on reality.
+# Their culprit truth is what the console scores Provy's attribution against.
+_SILENT_LEVERS = {
+    "silent_wrong", "silent_staleness", "silent_unsupported",
+    "silent_incomplete", "silent_policy", "silent_missed_action",
+}
+
 
 # ── Injected-truth aggregation ───────────────────────────────────────────────
 
@@ -29,10 +36,18 @@ def aggregate_injected(records: list[dict], contract: list[Criterion]) -> dict:
 
     lever_counts: Counter = Counter()
     lever_by_agent: dict[str, Counter] = {}
+    # Per-entity culprit truth for diverged runs, so the console can score Provy's
+    # attribution (its named agent) against the agent the sim actually targeted.
+    attribution_truth: list[dict] = []
     for rec in records:
+        diverged = bool(rec.get("diverged"))
         for f in rec.get("faults", []):
             lever_counts[f["lever"]] += 1
             lever_by_agent.setdefault(f["lever"], Counter())[f.get("agent") or "-"] += 1
+            if diverged and f["lever"] in _SILENT_LEVERS and f.get("agent") and rec.get("entity_id"):
+                attribution_truth.append({
+                    "entity_id": rec["entity_id"], "lever": f["lever"], "agent": f["agent"],
+                })
 
     diverged = sum(1 for r in records if r.get("diverged"))
     fails = sum(1 for r in records if r.get("outcome_label") == "fail")
@@ -73,6 +88,8 @@ def aggregate_injected(records: list[dict], contract: list[Criterion]) -> dict:
             } for c in contract
         },
         "injected_met_rate": round(injected_met_rate, 4) if injected_met_rate is not None else None,
+        # Capped so the run summary stays small; the console joins these by entity_id.
+        "attribution_truth": attribution_truth[:1000],
     }
 
 
