@@ -61,14 +61,15 @@ def test_value_at_risk_from_costs():
         _rec("S2", [{"lever": "silent_wrong", "agent": "resolver"}], bad, "fail", diverged=True),
         _rec("S3", [{"lever": "silent_wrong", "agent": "resolver"}], bad, "fail", diverged=True),
     ]
-    costs = get_pack("support").failure_cost()
+    # Support has no cost map (no $ shown); claims does, so use it here.
+    costs = get_pack("claims").failure_cost()
     agg = aggregate_injected(records, contract, costs)
-    # silent_policy 1*650 + silent_wrong 2*220 = 650 + 440 = 1090
-    assert agg["value"]["by_lever"]["silent_policy"] == 650
-    assert agg["value"]["by_lever"]["silent_wrong"] == 440
-    assert agg["value"]["at_risk"] == 1090
-    # a lever with no cost (or empty costs) contributes nothing
-    assert aggregate_injected(records, contract)["value"]["at_risk"] == 0
+    # silent_policy 1*6000 + silent_wrong 2*4000 = 6000 + 8000 = 14000
+    assert agg["value"]["by_lever"]["silent_policy"] == 6000
+    assert agg["value"]["by_lever"]["silent_wrong"] == 8000
+    assert agg["value"]["at_risk"] == 14000
+    # support (or empty costs) contributes nothing
+    assert aggregate_injected(records, contract, get_pack("support").failure_cost())["value"]["at_risk"] == 0
 
 
 def test_injected_met_rate_math():
