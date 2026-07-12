@@ -57,12 +57,15 @@ class LeverConfig:
         return s if s and s.rate > 0 else None
 
 
-# Order matters: structural first, then outcome-affecting, then correctness,
-# then finalize, then calibration and drift (which read the settled outcome).
-_PHASE_A = ["skip_propagation", "overt_error", "tool_fault",
-            "quality_degrade", "policy_violation", "sla_breach", "silent_wrong",
-            "silent_staleness", "silent_unsupported", "silent_incomplete",
-            "silent_policy", "silent_missed_action"]
+# Phase A — the outcome-shaping failures. At most ONE fires per run (see apply): a run is either
+# clean or has exactly one primary failure, so a visible lever can never mask a silent divergence
+# (a skip turns the run "skipped"; a policy break fails the estimate too) and every diverged run
+# maps to exactly one injected cause for 1:1 attribution scoring. The silent family is listed FIRST
+# so it wins ties — it's the focus of the harness. Calibration + drift are phase-B overlays.
+_PHASE_A = ["silent_wrong", "silent_staleness", "silent_unsupported", "silent_incomplete",
+            "silent_policy", "silent_missed_action",
+            "skip_propagation", "overt_error", "tool_fault",
+            "quality_degrade", "policy_violation", "sla_breach"]
 
 
 # ── Trace helpers ────────────────────────────────────────────────────────────
@@ -391,45 +394,37 @@ def finalize(result: RunResult, contract: list[Criterion]) -> None:
 
 # ── Apply ────────────────────────────────────────────────────────────────────
 
-# The outcome-revealed silent levers are mutually exclusive per run: at most one fires, so each
-# diverged run maps to exactly one injected culprit and Provy's attribution scores 1:1. Without
-# this, a stale-tool signal from one lever pollutes the attribution of another on the same run.
-_SILENT_EXCLUSIVE = {
-    "silent_wrong", "silent_staleness", "silent_unsupported",
-    "silent_incomplete", "silent_policy", "silent_missed_action",
-}
-
-
 def apply(result: RunResult, gt, manifest: LeverManifest,
           contract: list[Criterion], config: LeverConfig, ctx: RunContext) -> list[InjectedFault]:
     """Roll each configured lever against the seeded RNG and mutate the run.
     Returns the list of injected faults (ground truth)."""
     faults: list[InjectedFault] = []
-    silent_fired = False
+    primary_fired = False   # at most one phase-A (outcome-shaping) failure per run
 
-    def _fire(name: str) -> None:
-        nonlocal silent_fired
+    def _fire(name: str, exclusive: bool = True) -> None:
+        nonlocal primary_fired
         s = config.get(name)
         if not s:
             return
-        # At most one outcome-revealed silent failure per run (1:1 attribution scoring).
-        if name in _SILENT_EXCLUSIVE and silent_fired:
+        if exclusive and primary_fired:
             return
         if ctx.rng.random() >= s.rate:
             return
         f = _LEVER_FNS[name](result, gt, manifest, contract, s, ctx)
         if f is not None:
             faults.append(f)
-            if name in _SILENT_EXCLUSIVE:
-                silent_fired = True
+            if exclusive:
+                primary_fired = True
 
     for name in _PHASE_A:
         _fire(name)
 
     finalize(result, contract)
 
-    _fire("confidence_miscalibration")
-    _fire("silent_drift")
+    # Calibration + drift are overlays: they don't reshape a single run's outcome, so they layer on
+    # freely (a run can be both silently wrong AND overconfident, or in a drifting window).
+    _fire("confidence_miscalibration", exclusive=False)
+    _fire("silent_drift", exclusive=False)
 
     result.faults = faults
     return faults

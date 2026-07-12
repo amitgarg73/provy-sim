@@ -148,18 +148,31 @@ def test_silent_unsupported_pins_the_resolver_who_ignored_the_weak_match():
         assert step.tool_output.get("match_score") == 0.28         # soft signal, not a hard defect
 
 
-def test_silent_levers_are_mutually_exclusive_per_run():
+_PHASE_A_LEVERS = ("silent_wrong", "silent_staleness", "silent_unsupported", "silent_incomplete",
+                   "silent_policy", "silent_missed_action", "skip_propagation", "overt_error",
+                   "tool_fault", "quality_degrade", "policy_violation", "sla_breach")
+
+
+def test_at_most_one_primary_failure_per_run():
     pack = get_pack("support")
-    # Every outcome-revealed silent lever at 100% — only ONE may fire per run.
-    rates = {lv: 1.0 for lv in
-             ["silent_wrong", "silent_staleness", "silent_unsupported", "silent_incomplete",
-              "silent_policy", "silent_missed_action"]}
-    outs = _run_with(pack, rates, n=30, seed=40)
+    # Every phase-A lever at 100% — exactly one fires per run (silent wins ties, it is listed first).
+    outs = _run_with(pack, {lv: 1.0 for lv in _PHASE_A_LEVERS}, n=30, seed=40)
     for o in outs:
-        silent = [f for f in o.result.faults
-                  if f.lever in ("silent_wrong", "silent_staleness", "silent_unsupported",
-                                 "silent_incomplete", "silent_policy", "silent_missed_action")]
-        assert len(silent) == 1, f"expected exactly one silent fault, got {[f.lever for f in silent]}"
+        primary = [f for f in o.result.faults if f.lever in _PHASE_A_LEVERS]
+        assert len(primary) == 1, f"expected exactly one primary fault, got {[f.lever for f in primary]}"
+        assert primary[0].lever in _PHASE_A_LEVERS[:6]  # a silent one
+
+
+def test_a_visible_lever_never_masks_a_silent_divergence():
+    pack = get_pack("support")
+    # silent_wrong + skip_propagation both at 100%. Without one-per-run, the skip would turn the run
+    # "skipped" and erase the silent divergence. Now only silent_wrong fires and the run diverges.
+    outs = _run_with(pack, {"silent_wrong": 1.0, "skip_propagation": 1.0}, n=20, seed=41)
+    for o in outs:
+        levers = [f.lever for f in o.result.faults]
+        assert levers == ["silent_wrong"], levers
+        assert o.result.diverged() is True
+        assert o.result.terminal_reason != "skip_propagated"
 
 
 def test_silent_incomplete_marks_completed_but_diverges():
