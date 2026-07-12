@@ -121,10 +121,16 @@ class SupportPack(BasePack):
             entity_id=eid))
         r.traces.append(self.agent_step(
             ctx, A["retriever"], item, decision="retrieved policy + account context", entity_id=eid))
+        article = "POL-" + gt["category"][:3].upper()
         r.traces.append(self.agent_step(
             ctx, A["resolver"], item,
-            decision=f"resolution={gt['correct_resolution']}", entity_id=eid,
-            payload_extra={"resolution_code": gt["correct_resolution"], "confidence": "HIGH"}))
+            decision=(f"Applied policy {article} (allows={gt['policy_allows']}) to the "
+                      f"{item['account_tier']}-tier account's {item['requested_action']} request; "
+                      f"therefore resolution={gt['correct_resolution']}."),
+            entity_id=eid,
+            payload_extra={"resolution_code": gt["correct_resolution"], "policy_article": article,
+                           "policy_allows": gt["policy_allows"], "account_tier": item["account_tier"],
+                           "confidence": "HIGH"}))
         r.traces.append(self.agent_step(
             ctx, A["reviewer"], item, decision="approved: within policy", entity_id=eid))
 

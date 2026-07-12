@@ -103,9 +103,15 @@ class CRMPack(BasePack):
             entity_id=eid))
         r.traces.append(self.agent_step(
             ctx, A["enricher"], item, decision="enriched firmographics + contact", entity_id=eid))
+        employees = {"smb": 40, "midmarket": 400, "enterprise": 4000}[item["company_size"]]
         r.traces.append(self.agent_step(
-            ctx, A["scorer"], item, decision=f"qualification={gt['qualification']}", entity_id=eid,
-            payload_extra={"qualification": gt["qualification"], "confidence": "HIGH"}))
+            ctx, A["scorer"], item,
+            decision=(f"Enriched firmographics: {item['company_size']} ({employees} employees), "
+                      f"source={item['source']}, intent={item['intent']}; applying the fit-and-intent "
+                      f"rule, qualification={gt['qualification']}."),
+            entity_id=eid,
+            payload_extra={"qualification": gt["qualification"], "employees": employees,
+                           "source": item["source"], "intent": item["intent"], "confidence": "HIGH"}))
         r.traces.append(self.agent_step(
             ctx, A["router"], item, decision=f"routed to {gt['correct_owner']} owner", entity_id=eid))
         r.traces.append(self.agent_step(

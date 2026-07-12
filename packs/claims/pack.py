@@ -111,8 +111,14 @@ class ClaimsPack(BasePack):
         r.traces.append(self.agent_step(
             ctx, A["validator"], item, decision="documents complete; policy active", entity_id=eid))
         r.traces.append(self.agent_step(
-            ctx, A["adjudicator"], item, decision=f"decision={gt['correct_decision']}", entity_id=eid,
-            payload_extra={"decision": gt["correct_decision"], "confidence": "HIGH"}))
+            ctx, A["adjudicator"], item,
+            decision=(f"Checked ${item['amount']} against the ${item['policy_limit']} limit "
+                      f"(within_limit={gt['within_limit']}) with {len(item['docs_submitted'])} of "
+                      f"{len(DOC_SETS[item['claim_type']])} required documents; "
+                      f"therefore decision={gt['correct_decision']}."),
+            entity_id=eid,
+            payload_extra={"decision": gt["correct_decision"], "policy_limit": item["policy_limit"],
+                           "amount": item["amount"], "within_limit": gt["within_limit"], "confidence": "HIGH"}))
         r.traces.append(self.agent_step(
             ctx, A["reviewer"], item, decision="approved: within limit, no duplicate", entity_id=eid))
 
