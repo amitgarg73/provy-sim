@@ -47,6 +47,11 @@ class WorkflowConfig:
 # differentiator. Overt levers are lower so the fleet still mostly succeeds.
 _DEFAULT_RATES = {
     "silent_wrong":              {"rate": 0.12},
+    "silent_staleness":          {"rate": 0.05},
+    "silent_unsupported":        {"rate": 0.04},
+    "silent_incomplete":         {"rate": 0.03},
+    "silent_policy":             {"rate": 0.03},
+    "silent_missed_action":      {"rate": 0.03},
     "confidence_miscalibration": {"rate": 0.10},
     "tool_fault":                {"rate": 0.08},
     "quality_degrade":           {"rate": 0.08},

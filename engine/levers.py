@@ -60,7 +60,9 @@ class LeverConfig:
 # Order matters: structural first, then outcome-affecting, then correctness,
 # then finalize, then calibration and drift (which read the settled outcome).
 _PHASE_A = ["skip_propagation", "overt_error", "tool_fault",
-            "quality_degrade", "policy_violation", "sla_breach", "silent_wrong"]
+            "quality_degrade", "policy_violation", "sla_breach", "silent_wrong",
+            "silent_staleness", "silent_unsupported", "silent_incomplete",
+            "silent_policy", "silent_missed_action"]
 
 
 # ── Trace helpers ────────────────────────────────────────────────────────────
@@ -196,6 +198,110 @@ def _silent_wrong(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     return InjectedFault("silent_wrong", agent, "silent_divergence", {"signals": corrupted})
 
 
+def _corrupt_correctness(result, contract, m) -> list[str]:
+    """Set the primary correctness signal bad on the Real side only, leaving Estimated
+    good so evals still pass. Returns the signals corrupted. Shared by the silent family."""
+    idx = C.signal_index(contract)
+    corrupted = []
+    c = idx.get(m.correctness_signal)
+    if c is not None and c.side != "trace":
+        result.real_signals[m.correctness_signal] = C.bad_value(c)
+        corrupted.append(m.correctness_signal)
+    return corrupted
+
+
+def _silent_staleness(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Acting on stale information. The retriever serves believable but stale data (an old
+    as_of, no error), the answer is built on it, and reality diverges. Estimated stays good;
+    Provy's deterministic scan flags the stale tool output and pins the retriever."""
+    agent = s.target or m.retriever_agent
+    as_of = (ctx.now - timedelta(days=int(s.params.get("age_days", 400)))).date().isoformat()
+    step = _find_step(result, agent, "tool_call")
+    if step is None:
+        step = TraceStep(agent=agent, step_type="tool_call", tool_name="retrieve",
+                         tool_input={}, entity_id=result.entity_id)
+        result.traces.insert(0, step)
+    step.tool_output = {**(step.tool_output or {}), "as_of": as_of, "note": "from index"}
+    step.outcome = "ok"  # no error — it looks fine
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.confidence = max(result.confidence, 0.9)
+    result.metadata["silent_staleness"] = True
+    return InjectedFault("silent_staleness", agent, "silent_staleness",
+                         {"as_of": as_of, "signals": corrupted})
+
+
+def _silent_unsupported(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Cited but unsupported. The retrieval surfaces a weak-support signal (a low match score)
+    that the resolver ignores, answering with HIGH confidence anyway; reality is wrong. No hard
+    tool defect, so this exercises Provy's judge tier: 'ignored a red flag' -> the resolver."""
+    resolver = s.target or m.resolver_agent
+    step = _find_step(result, m.retriever_agent, "tool_call")
+    if step is None:
+        step = TraceStep(agent=m.retriever_agent, step_type="tool_call", tool_name="retrieve",
+                         tool_input={}, entity_id=result.entity_id)
+        result.traces.insert(0, step)
+    # A soft signal only a judge would weigh — deliberately NOT a fallback/stale key.
+    step.tool_output = {**(step.tool_output or {}), "match_score": 0.28, "note": "weak match"}
+    step.outcome = "ok"
+    corrupted = _corrupt_correctness(result, contract, m)
+    msg = _agent_message(result, resolver)
+    if msg is not None:
+        msg.payload_extra["confidence"] = "HIGH"
+    result.confidence = max(result.confidence, 0.9)
+    result.metadata["silent_unsupported"] = True
+    return InjectedFault("silent_unsupported", resolver, "silent_unsupported",
+                         {"match_score": 0.28, "signals": corrupted})
+
+
+def _silent_incomplete(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Looks done, isn't. The resolver marks the work complete and the reviewer approves, but a
+    required sub-step was silently skipped, so reality diverges. Estimated stays good; the
+    culprit is the agent that claimed done."""
+    agent = s.target or m.resolver_agent
+    skipped = s.params.get("step", "verification")
+    msg = _agent_message(result, agent)
+    if msg is not None:
+        msg.payload_extra["completed"] = True
+        msg.payload_extra["_skipped_step"] = skipped
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.confidence = max(result.confidence, 0.9)
+    result.metadata["silent_incomplete"] = True
+    return InjectedFault("silent_incomplete", agent, "silent_incomplete",
+                         {"skipped_step": skipped, "signals": corrupted})
+
+
+def _silent_policy(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Compliant on paper. The policy check passes on the Estimated side and the reviewer
+    approves, but the action actually violated policy and the audit/outcome says so (policy
+    signal bad on the Real side only). Contrast policy_violation, which fails the check openly."""
+    agent = s.target or m.reviewer_agent
+    idx = C.signal_index(contract)
+    c = idx.get(m.policy_signal)
+    if c is None:
+        return None
+    result.estimated_signals[m.policy_signal] = C.good_value(c)  # looks compliant
+    result.real_signals[m.policy_signal] = C.bad_value(c)        # reality: violated
+    msg = _agent_message(result, agent)
+    if msg is not None:
+        msg.payload_extra["review"] = "approved: within policy"
+    result.confidence = max(result.confidence, 0.9)
+    result.metadata["silent_policy"] = True
+    return InjectedFault("silent_policy", agent, "silent_policy", {"signal": m.policy_signal})
+
+
+def _silent_missed_action(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Should have acted, didn't. A case that needed escalation or a flag; the agent took the
+    quiet path, and 'did nothing' reads as a clean pass. Reality diverges. Pure omission with no
+    tool footprint, so Provy flags the divergence but attribution is often an honest blind spot."""
+    agent = s.target or m.reviewer_agent
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["needed_action"] = True
+    result.metadata["silent_missed_action"] = True
+    result.confidence = max(result.confidence, 0.9)
+    return InjectedFault("silent_missed_action", agent, "silent_missed_action",
+                         {"signals": corrupted})
+
+
 def _confidence_miscalibration(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     """Report HIGH confidence on the runs it is wrong on, LOW on the right ones."""
     wrong = result.outcome_label == "fail"
@@ -250,6 +356,11 @@ _LEVER_FNS = {
     "policy_violation": _policy_violation,
     "sla_breach": _sla_breach,
     "silent_wrong": _silent_wrong,
+    "silent_staleness": _silent_staleness,
+    "silent_unsupported": _silent_unsupported,
+    "silent_incomplete": _silent_incomplete,
+    "silent_policy": _silent_policy,
+    "silent_missed_action": _silent_missed_action,
     "confidence_miscalibration": _confidence_miscalibration,
     "silent_drift": _silent_drift,
 }

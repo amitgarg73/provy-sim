@@ -116,6 +116,76 @@ def test_policy_violation_breaks_both_sides():
         assert o.result.real_signals[m.policy_signal] is False
 
 
+def _fault(o, lever):
+    return next((f for f in o.result.faults if f.lever == lever), None)
+
+
+def test_silent_staleness_pins_retriever_and_diverges():
+    pack = get_pack("support")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"silent_staleness": 1.0}, n=12, seed=20)
+    for o in outs:
+        f = _fault(o, "silent_staleness")
+        assert f is not None and f.agent == m.retriever_agent
+        assert o.result.outcome_label == "fail" and o.result.diverged() is True
+        assert all(e.passed for e in o.result.evals)           # silent: evals still pass
+        step = next(t for t in o.result.traces
+                    if t.agent == m.retriever_agent and t.step_type == "tool_call")
+        assert "as_of" in step.tool_output and step.outcome == "ok"   # stale but not an error
+
+
+def test_silent_unsupported_pins_resolver_via_soft_signal():
+    pack = get_pack("claims")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"silent_unsupported": 1.0}, n=12, seed=21)
+    for o in outs:
+        f = _fault(o, "silent_unsupported")
+        assert f is not None and f.agent == m.resolver_agent
+        assert o.result.diverged() is True and all(e.passed for e in o.result.evals)
+        step = next(t for t in o.result.traces
+                    if t.agent == m.retriever_agent and t.step_type == "tool_call")
+        assert step.tool_output.get("match_score") == 0.28         # soft signal, not a hard defect
+
+
+def test_silent_incomplete_marks_completed_but_diverges():
+    pack = get_pack("crm")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"silent_incomplete": 1.0}, n=10, seed=22)
+    for o in outs:
+        f = _fault(o, "silent_incomplete")
+        assert f is not None and f.agent == m.resolver_agent
+        assert o.result.diverged() is True and all(e.passed for e in o.result.evals)
+        msg = next(t for t in o.result.traces
+                   if t.agent == m.resolver_agent and t.step_type == "agent_message")
+        assert msg.payload_extra.get("completed") is True
+
+
+def test_silent_policy_compliant_on_paper():
+    pack = get_pack("support")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"silent_policy": 1.0}, n=10, seed=23)
+    for o in outs:
+        f = _fault(o, "silent_policy")
+        assert f is not None and f.agent == m.reviewer_agent
+        # Estimated compliant, Real violated — the divergence a check-only tool never sees.
+        assert o.result.estimated_signals[m.policy_signal] is True
+        assert o.result.real_signals[m.policy_signal] is False
+        assert o.result.diverged() is True and all(e.passed for e in o.result.evals)
+
+
+def test_silent_missed_action_is_a_clean_looking_omission():
+    pack = get_pack("claims")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"silent_missed_action": 1.0}, n=10, seed=24)
+    for o in outs:
+        f = _fault(o, "silent_missed_action")
+        assert f is not None and f.agent == m.reviewer_agent
+        assert o.result.diverged() is True and all(e.passed for e in o.result.evals)
+        assert o.result.metadata.get("needed_action") is True
+        # No error/skip trace — "did nothing" looks like a clean pass.
+        assert not any(t.step_type in ("error", "skip") for t in o.result.traces)
+
+
 def test_faults_recorded_in_ground_truth_record():
     pack = get_pack("claims")
     outs = _run_with(pack, {"silent_wrong": 1.0}, n=3, seed=11)
