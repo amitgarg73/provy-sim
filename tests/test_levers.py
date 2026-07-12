@@ -46,6 +46,7 @@ def test_injection_rate_matches_config():
 
 def test_skip_propagation_is_a_visible_failure_not_a_benign_skip():
     pack = get_pack("support")
+    m = pack.lever_manifest()
     outs = _run_with(pack, {"skip_propagation": 1.0}, n=10, seed=3)
     for o in outs:
         # A dropped work item fails — not a benign "correctly stood down" skip.
@@ -54,6 +55,10 @@ def test_skip_propagation_is_a_visible_failure_not_a_benign_skip():
         assert o.result.diverged() is False   # visible (estimate fails too), not a silent divergence
         assert any(t.step_type == "skip" for t in o.result.traces)
         assert any(f.lever == "skip_propagation" for f in o.result.faults)
+        # The first agent bailed, so EVERY downstream agent is blocked — none may have a real step.
+        downstream = {m.retriever_agent, m.resolver_agent, m.reviewer_agent}
+        ran = [t.agent for t in o.result.traces if t.agent in downstream and t.step_type != "skip"]
+        assert ran == [], f"downstream agents ran despite the upstream skip: {ran}"
 
 
 def test_overt_error_emits_error_trace():

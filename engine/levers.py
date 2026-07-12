@@ -85,13 +85,21 @@ def _agent_message(result: RunResult, agent: str) -> Optional[TraceStep]:
 
 def _skip_propagation(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     up = s.target or m.first_agent
-    down = m.downstream_agent
-    # Upstream agent bails, so the downstream decision agent never runs.
-    result.traces = [t for t in result.traces if t.agent != down]
+    # An agent bails, so EVERY agent after it is blocked — a sequential pipeline can't run without its
+    # input. (Before, only the one named downstream agent was skipped, which left middle agents
+    # illogically still running.) Derive pipeline order from the clean run's traces.
+    order: list[str] = []
+    for t in result.traces:
+        if t.agent not in order:
+            order.append(t.agent)
+    up_i = order.index(up) if up in order else 0
+    blocked = order[up_i + 1:]                       # everyone downstream of the bailing agent
+    result.traces = [t for t in result.traces if t.agent not in order[up_i:]]
     result.traces.append(TraceStep(agent=up, step_type="skip", outcome="skipped",
                                     payload_extra={"reason": "missing_input", "skip_type": "propagated"}))
-    result.traces.append(TraceStep(agent=down, step_type="skip", outcome="skipped",
-                                    payload_extra={"reason": f"blocked by {up} skip", "skip_type": "propagated"}))
+    for d in blocked:
+        result.traces.append(TraceStep(agent=d, step_type="skip", outcome="skipped",
+                                        payload_extra={"reason": f"blocked by {up} skip", "skip_type": "propagated"}))
     # A dropped work item is a FAILURE for these domains, not a benign stand-down (the trading
     # "skip = no opportunity" convention does not apply — a support ticket must be handled). Make it a
     # VISIBLE pipeline break, not a silent divergence: fail the correctness signal on the Real side,
@@ -107,9 +115,9 @@ def _skip_propagation(result, gt, m, contract, s, ctx) -> Optional[InjectedFault
             result.real_signals[cc.signal] = C.bad_value(cc)
             break
     result.terminal_reason = "pipeline_break"
-    result.metadata["pipeline_break"] = {"upstream": up, "downstream": down}
+    result.metadata["pipeline_break"] = {"upstream": up, "blocked": blocked}
     return InjectedFault("skip_propagation", up, "upstream_gap",
-                         {"upstream": up, "downstream": down})
+                         {"upstream": up, "blocked": blocked})
 
 
 def _overt_error(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
