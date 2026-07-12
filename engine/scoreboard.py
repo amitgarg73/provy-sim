@@ -28,11 +28,13 @@ _SILENT_LEVERS = {
 
 # ── Injected-truth aggregation ───────────────────────────────────────────────
 
-def aggregate_injected(records: list[dict], contract: list[Criterion]) -> dict:
-    """Compute injected rates and honest denominators from the ledger."""
+def aggregate_injected(records: list[dict], contract: list[Criterion], costs: dict | None = None) -> dict:
+    """Compute injected rates and honest denominators from the ledger. When `costs` (a per-lever
+    dollar map) is given, also compute the value at risk = sum(count * cost)."""
     n = len(records)
     if n == 0:
         return {"runs": 0}
+    costs = costs or {}
 
     lever_counts: Counter = Counter()
     lever_by_agent: dict[str, Counter] = {}
@@ -90,6 +92,11 @@ def aggregate_injected(records: list[dict], contract: list[Criterion]) -> dict:
         "injected_met_rate": round(injected_met_rate, 4) if injected_met_rate is not None else None,
         # Capped so the run summary stays small; the console joins these by entity_id.
         "attribution_truth": attribution_truth[:1000],
+        # Value at risk = count * per-failure cost. Empty when no cost map is supplied.
+        "value": {
+            "at_risk": round(sum(lever_counts[lv] * costs.get(lv, 0) for lv in lever_counts), 2),
+            "by_lever": {lv: round(lever_counts[lv] * costs[lv], 2) for lv in lever_counts if costs.get(lv)},
+        },
     }
 
 
@@ -145,8 +152,8 @@ class ProvyQuery:
 # ── The report ───────────────────────────────────────────────────────────────
 
 def build_report(records: list[dict], contract: list[Criterion],
-                 provy: ProvyQuery | None = None) -> dict:
-    injected = aggregate_injected(records, contract)
+                 provy: ProvyQuery | None = None, costs: dict | None = None) -> dict:
+    injected = aggregate_injected(records, contract, costs)
     provy = provy or ProvyQuery()
 
     detected = {

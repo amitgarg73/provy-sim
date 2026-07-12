@@ -60,3 +60,30 @@ def fetch_lever_rates(pack: str, timeout: float = 8.0) -> Optional[dict]:
     except Exception:
         # Offline / unreachable / unauthorized -> caller uses local defaults.
         return None
+
+
+def post_injected(pack: str, injected: dict, runs: Optional[int] = None, timeout: float = 8.0) -> bool:
+    """Post an injected-truth run summary (engine.scoreboard.aggregate_injected output) to the
+    console so its scoreboard has the injected side. Best-effort: returns False on any failure
+    (no env, no workflow id, network down) and never raises."""
+    base = os.environ.get("CONTROL_URL", "").strip().rstrip("/")
+    if not base:
+        return False
+    wf_id = _workflow_id_for(pack)
+    if not wf_id:
+        return False
+    headers = {"Content-Type": "application/json"}
+    token = os.environ.get("CONTROL_LEVERS_TOKEN", "").strip()
+    if token:
+        headers["x-control-token"] = token
+    body = json.dumps({
+        "pack": pack,
+        "runs": runs if runs is not None else injected.get("runs"),
+        "injected": injected,
+    }).encode()
+    try:
+        req = urllib.request.Request(f"{base}/api/runs/{wf_id}", data=body, headers=headers, method="POST")
+        urllib.request.urlopen(req, timeout=timeout)
+        return True
+    except Exception:
+        return False

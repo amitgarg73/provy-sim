@@ -12,6 +12,7 @@ on:
       count:      { required: false, type: string,  default: '8' }
       seed:       { required: false, type: string,  default: '1' }
       reconcile:  { required: false, type: boolean, default: true }
+      workflow_id: { required: false, type: string, default: '' }  # so the run posts its summary to the console
     secrets:
       GROQ_API_KEY: { required: true }
 
@@ -35,6 +36,10 @@ jobs:
           PROVY_KEY_SUPPORT: ${{ inputs.pack == 'support' && inputs.ingest_key || '' }}
           PROVY_KEY_CLAIMS:  ${{ inputs.pack == 'claims'  && inputs.ingest_key || '' }}
           PROVY_KEY_CRM:     ${{ inputs.pack == 'crm'     && inputs.ingest_key || '' }}
+          # Post the injected-truth summary back to the console scoreboard (best-effort, offline-safe).
+          CONTROL_URL: ${{ secrets.CONTROL_URL }}
+          CONTROL_LEVERS_TOKEN: ${{ secrets.CONTROL_LEVERS_TOKEN }}
+          CONTROL_WORKFLOW_ID: ${{ inputs.workflow_id }}
         run: |
           python scripts/run_batch.py \
             --pack "${{ inputs.pack }}" \

@@ -42,6 +42,15 @@ class ClaimsPack(BasePack):
             Criterion("c5", "Within SLA", "outcome", "sla_met", "eq", True),
         ]
 
+    # Per-occurrence dollar cost — claims carry real payout exposure, so the figures are larger.
+    def failure_cost(self) -> dict:
+        return {
+            "silent_wrong": 4000, "silent_staleness": 3000, "silent_unsupported": 3500,
+            "silent_incomplete": 5000, "silent_policy": 6000, "silent_missed_action": 4500,
+            "tool_fault": 2000, "quality_degrade": 300, "policy_violation": 6000,
+            "sla_breach": 150, "overt_error": 80, "skip_propagation": 200,
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="adjudicator",

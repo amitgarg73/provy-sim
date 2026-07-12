@@ -51,6 +51,26 @@ def test_attribution_truth_only_for_diverged_silent_faults():
     assert by_entity["S2"]["agent"] == "resolver"
 
 
+def test_value_at_risk_from_costs():
+    contract = get_pack("support").contract()
+    good = {"escalated": False, "policy_followed": True, "sla_met": True,
+            "reopened_7d": False, "category_correct": True}
+    bad = dict(good, reopened_7d=True)
+    records = [
+        _rec("S1", [{"lever": "silent_policy", "agent": "reviewer"}], dict(good, policy_followed=False), "fail", diverged=True),
+        _rec("S2", [{"lever": "silent_wrong", "agent": "resolver"}], bad, "fail", diverged=True),
+        _rec("S3", [{"lever": "silent_wrong", "agent": "resolver"}], bad, "fail", diverged=True),
+    ]
+    costs = get_pack("support").failure_cost()
+    agg = aggregate_injected(records, contract, costs)
+    # silent_policy 1*650 + silent_wrong 2*220 = 650 + 440 = 1090
+    assert agg["value"]["by_lever"]["silent_policy"] == 650
+    assert agg["value"]["by_lever"]["silent_wrong"] == 440
+    assert agg["value"]["at_risk"] == 1090
+    # a lever with no cost (or empty costs) contributes nothing
+    assert aggregate_injected(records, contract)["value"]["at_risk"] == 0
+
+
 def test_injected_met_rate_math():
     contract = get_pack("support").contract()
     good = {"escalated": False, "policy_followed": True, "sla_met": True,

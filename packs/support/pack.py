@@ -45,6 +45,15 @@ class SupportPack(BasePack):
             Criterion("c5", "Correct category", "both", "category_correct", "eq", True),
         ]
 
+    # Per-occurrence dollar cost of each failure (illustrative; rework, credits, churn, exposure).
+    def failure_cost(self) -> dict:
+        return {
+            "silent_wrong": 220, "silent_staleness": 200, "silent_unsupported": 200,
+            "silent_incomplete": 200, "silent_policy": 650, "silent_missed_action": 450,
+            "tool_fault": 180, "quality_degrade": 120, "policy_violation": 650,
+            "sla_breach": 60, "overt_error": 50, "skip_propagation": 100,
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="resolver",

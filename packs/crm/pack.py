@@ -37,6 +37,15 @@ class CRMPack(BasePack):
             Criterion("c5", "Followed up within SLA", "outcome", "sla_met", "eq", True),
         ]
 
+    # Per-occurrence dollar cost — misqualified leads, wasted sales time, bad routing.
+    def failure_cost(self) -> dict:
+        return {
+            "silent_wrong": 500, "silent_staleness": 400, "silent_unsupported": 450,
+            "silent_incomplete": 300, "silent_policy": 350, "silent_missed_action": 400,
+            "tool_fault": 300, "quality_degrade": 150, "policy_violation": 350,
+            "sla_breach": 100, "overt_error": 40, "skip_propagation": 120,
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="scorer",

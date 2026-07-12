@@ -51,6 +51,12 @@ class BasePack:
     def build_clean_run(self, item: Any, ground_truth: dict, ctx: RunContext) -> RunResult:
         raise NotImplementedError
 
+    def failure_cost(self) -> dict:
+        """Per-occurrence dollar cost of each failure (lever), domain-specific and illustrative.
+        Drives the 'value at risk' the scoreboard shows. Levers absent here cost 0 (e.g. drift,
+        calibration, which have no clean per-run dollar figure)."""
+        return {}
+
     # ── shared ──────────────────────────────────────────────────────────────
     def entity_id(self, item: Any) -> str:
         return item["id"] if isinstance(item, dict) else str(item)

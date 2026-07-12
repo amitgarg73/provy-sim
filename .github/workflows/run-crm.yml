@@ -10,6 +10,7 @@ on:
       count:      { description: 'Work items (sessions) to run', required: false, type: string, default: '8' }
       seed:       { description: 'RNG seed (deterministic run)', required: false, type: string, default: '1' }
       reconcile:  { description: 'Post the real outcomes after the run', required: false, type: boolean, default: true }
+      workflow_id: { description: 'Fleet workflow id (for scoreboard posting)', required: false, type: string, default: '' }
 
 jobs:
   run:
@@ -21,4 +22,5 @@ jobs:
       count: ${{ inputs.count }}
       seed: ${{ inputs.seed }}
       reconcile: ${{ inputs.reconcile }}
+      workflow_id: ${{ inputs.workflow_id }}
     secrets: inherit

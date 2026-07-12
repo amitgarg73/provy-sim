@@ -23,7 +23,8 @@ from engine.groundtruth import GroundTruthLedger
 from engine.llm import LLM
 from engine.reconcile import backfill_server_judge, reconcile_pending
 from engine.runner import BatchRunner
-from engine.scoreboard import ProvyQuery, build_report, format_report
+from engine.scoreboard import ProvyQuery, aggregate_injected, build_report, format_report
+from engine.control_client import post_injected
 from packs import get_pack
 
 
@@ -69,9 +70,14 @@ def main() -> int:
         res = reconcile_pending(ledger, emitter, workflow=args.pack)
         print(f"reconcile: {res}")
 
+    # Post the injected-truth summary to the console (best-effort, offline-safe) so its scoreboard
+    # has the injected side: lever rates, per-entity attribution truth, and value at risk.
+    records = ledger.read(workflow=args.pack)
+    injected = aggregate_injected(records, pack.contract(), pack.failure_cost())
+    print(f"post injected → console: {post_injected(args.pack, injected)}")
+
     if args.scoreboard:
-        records = ledger.read(workflow=args.pack)
-        report = build_report(records, pack.contract(), ProvyQuery())
+        report = build_report(records, pack.contract(), ProvyQuery(), pack.failure_cost())
         print()
         print(format_report(report, args.pack))
 
