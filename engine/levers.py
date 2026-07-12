@@ -231,25 +231,26 @@ def _silent_staleness(result, gt, m, contract, s, ctx) -> Optional[InjectedFault
 
 
 def _silent_unsupported(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
-    """Cited but unsupported. The retrieval surfaces a weak-support signal (a low match score)
-    that the resolver ignores, answering with HIGH confidence anyway; reality is wrong. No hard
-    tool defect, so this exercises Provy's judge tier: 'ignored a red flag' -> the resolver."""
-    resolver = s.target or m.resolver_agent
-    step = _find_step(result, m.retriever_agent, "tool_call")
+    """Cited but unsupported. The retrieval surfaces a weak-support signal (a low match score) that
+    the answer is built on anyway; reality is wrong. No hard tool defect, so this exercises Provy's
+    judge tier ('ignored a red flag'). Provy's attribution is tool-centric: it names the agent whose
+    tool surfaced the ignored signal (the retriever), so the injected culprit is the retriever too."""
+    retriever = s.target or m.retriever_agent
+    step = _find_step(result, retriever, "tool_call")
     if step is None:
-        step = TraceStep(agent=m.retriever_agent, step_type="tool_call", tool_name="retrieve",
+        step = TraceStep(agent=retriever, step_type="tool_call", tool_name="retrieve",
                          tool_input={}, entity_id=result.entity_id)
         result.traces.insert(0, step)
     # A soft signal only a judge would weigh — deliberately NOT a fallback/stale key.
     step.tool_output = {**(step.tool_output or {}), "match_score": 0.28, "note": "weak match"}
     step.outcome = "ok"
     corrupted = _corrupt_correctness(result, contract, m)
-    msg = _agent_message(result, resolver)
+    msg = _agent_message(result, m.resolver_agent)
     if msg is not None:
         msg.payload_extra["confidence"] = "HIGH"
     result.confidence = max(result.confidence, 0.9)
     result.metadata["silent_unsupported"] = True
-    return InjectedFault("silent_unsupported", resolver, "silent_unsupported",
+    return InjectedFault("silent_unsupported", retriever, "silent_unsupported",
                          {"match_score": 0.28, "signals": corrupted})
 
 
@@ -390,26 +391,37 @@ def finalize(result: RunResult, contract: list[Criterion]) -> None:
 
 # ── Apply ────────────────────────────────────────────────────────────────────
 
+# The outcome-revealed silent levers are mutually exclusive per run: at most one fires, so each
+# diverged run maps to exactly one injected culprit and Provy's attribution scores 1:1. Without
+# this, a stale-tool signal from one lever pollutes the attribution of another on the same run.
+_SILENT_EXCLUSIVE = {
+    "silent_wrong", "silent_staleness", "silent_unsupported",
+    "silent_incomplete", "silent_policy", "silent_missed_action",
+}
+
+
 def apply(result: RunResult, gt, manifest: LeverManifest,
           contract: list[Criterion], config: LeverConfig, ctx: RunContext) -> list[InjectedFault]:
     """Roll each configured lever against the seeded RNG and mutate the run.
     Returns the list of injected faults (ground truth)."""
     faults: list[InjectedFault] = []
+    silent_fired = False
 
     def _fire(name: str) -> None:
+        nonlocal silent_fired
         s = config.get(name)
         if not s:
             return
-        # drift decides by session index; others by coin flip against rate
-        if name == "silent_drift":
-            if ctx.rng.random() >= s.rate:
-                return
-        else:
-            if ctx.rng.random() >= s.rate:
-                return
+        # At most one outcome-revealed silent failure per run (1:1 attribution scoring).
+        if name in _SILENT_EXCLUSIVE and silent_fired:
+            return
+        if ctx.rng.random() >= s.rate:
+            return
         f = _LEVER_FNS[name](result, gt, manifest, contract, s, ctx)
         if f is not None:
             faults.append(f)
+            if name in _SILENT_EXCLUSIVE:
+                silent_fired = True
 
     for name in _PHASE_A:
         _fire(name)

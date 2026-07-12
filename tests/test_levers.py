@@ -134,17 +134,32 @@ def test_silent_staleness_pins_retriever_and_diverges():
         assert "as_of" in step.tool_output and step.outcome == "ok"   # stale but not an error
 
 
-def test_silent_unsupported_pins_resolver_via_soft_signal():
+def test_silent_unsupported_pins_retriever_via_soft_signal():
     pack = get_pack("claims")
     m = pack.lever_manifest()
     outs = _run_with(pack, {"silent_unsupported": 1.0}, n=12, seed=21)
     for o in outs:
         f = _fault(o, "silent_unsupported")
-        assert f is not None and f.agent == m.resolver_agent
+        # Provy's attribution is tool-centric, so the culprit is the retriever whose tool surfaced it.
+        assert f is not None and f.agent == m.retriever_agent
         assert o.result.diverged() is True and all(e.passed for e in o.result.evals)
         step = next(t for t in o.result.traces
                     if t.agent == m.retriever_agent and t.step_type == "tool_call")
         assert step.tool_output.get("match_score") == 0.28         # soft signal, not a hard defect
+
+
+def test_silent_levers_are_mutually_exclusive_per_run():
+    pack = get_pack("support")
+    # Every outcome-revealed silent lever at 100% — only ONE may fire per run.
+    rates = {lv: 1.0 for lv in
+             ["silent_wrong", "silent_staleness", "silent_unsupported", "silent_incomplete",
+              "silent_policy", "silent_missed_action"]}
+    outs = _run_with(pack, rates, n=30, seed=40)
+    for o in outs:
+        silent = [f for f in o.result.faults
+                  if f.lever in ("silent_wrong", "silent_staleness", "silent_unsupported",
+                                 "silent_incomplete", "silent_policy", "silent_missed_action")]
+        assert len(silent) == 1, f"expected exactly one silent fault, got {[f.lever for f in silent]}"
 
 
 def test_silent_incomplete_marks_completed_but_diverges():
