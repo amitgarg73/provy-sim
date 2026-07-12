@@ -3,7 +3,7 @@ import random
 
 from packs import get_pack
 from packs.support.pack import CATEGORIES, _ACTION
-from packs.claims.pack import CLAIM_TYPES
+from packs.claims.pack import CLAIM_TYPES, DOC_SETS
 from packs.crm.pack import TERRITORIES
 
 
@@ -35,6 +35,12 @@ def test_claims_ground_truth_consistent():
         assert gt["within_limit"] == (item["amount"] <= item["policy_limit"])
         assert gt["valid"] == (gt["docs_complete"] and gt["within_limit"] and not gt["is_duplicate"])
         assert gt["correct_decision"] == ("approve" if gt["valid"] else "deny")
+        # The clean baseline is a genuinely complete, first-time claim: every required document is
+        # present (so the docs_present signal and the validator's statement are honest, not a
+        # self-contradicting clean run) and it is never a duplicate.
+        assert gt["docs_complete"] is True
+        assert gt["is_duplicate"] is False
+        assert item["docs_submitted"] == DOC_SETS[item["claim_type"]]
 
 
 def test_crm_ground_truth_consistent():

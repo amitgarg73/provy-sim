@@ -37,7 +37,10 @@ class ClaimsPack(BasePack):
         return [
             Criterion("c1", "Correct decision vs ground truth", "both", "decision_correct", "eq", True),
             Criterion("c2", "Required documents present", "trace", "docs_present", "eq", True),
-            Criterion("c3", "Within policy limit", "outcome", "within_limit", "eq", True),
+            # 'both': the adjudicator claims the payout respects the limit AND reality confirms it.
+            # This is the policy_signal, so an open policy break (policy_violation) fails the Estimated
+            # side too and reads as a VISIBLE failure, while silent_policy corrupts only Real and diverges.
+            Criterion("c3", "Within policy limit", "both", "within_limit", "eq", True),
             Criterion("c4", "No duplicate payout", "outcome", "duplicate_payout", "eq", False),
             Criterion("c5", "Within SLA", "outcome", "sla_met", "eq", True),
         ]
@@ -72,7 +75,11 @@ class ClaimsPack(BasePack):
         policy_limit = rng.choice([10000, 25000, 50000])
         within_limit = amount <= policy_limit
         docs_required = DOC_SETS[claim_type]
-        docs_complete = rng.random() < 0.85
+        # The clean baseline is a genuinely complete, first-time claim: every required document is
+        # present and it is not a duplicate. Those are the levers' job to break (silent_incomplete,
+        # duplicate_payout via silent_wrong), not the baseline's — so docs_present and duplicate_payout
+        # are honestly good here. Decision variety still comes from within_limit (over-limit -> deny).
+        docs_complete = True
         is_duplicate = False   # objective: a legitimate, first-time claim in the clean baseline
         valid = docs_complete and within_limit and not is_duplicate
         correct_decision = "approve" if valid else "deny"
@@ -82,7 +89,7 @@ class ClaimsPack(BasePack):
             "claim_type": claim_type,
             "amount": amount,
             "policy_limit": policy_limit,
-            "docs_submitted": docs_required if docs_complete else docs_required[:-1],
+            "docs_submitted": docs_required,
             "text": f"{claim_type} claim for ${amount} against a ${policy_limit} limit policy.",
         }
         ground_truth = {
@@ -109,18 +116,24 @@ class ClaimsPack(BasePack):
                          "as_of": ctx.now.date().isoformat()},
             entity_id=eid))
         r.traces.append(self.agent_step(
-            ctx, A["validator"], item, decision="documents complete; policy active", entity_id=eid))
+            ctx, A["validator"], item,
+            decision=(f"all {len(DOC_SETS[item['claim_type']])} required documents present; "
+                      f"policy active"),
+            entity_id=eid))
+        # Cite the FACT as amount_within_limit (like support cites 'allows='), distinct from the
+        # within_limit contract signal, so the trace never collides with the Estimated signal value.
         r.traces.append(self.agent_step(
             ctx, A["adjudicator"], item,
             decision=(f"Checked ${item['amount']} against the ${item['policy_limit']} limit "
-                      f"(within_limit={gt['within_limit']}) with {len(item['docs_submitted'])} of "
-                      f"{len(DOC_SETS[item['claim_type']])} required documents; "
+                      f"(amount_within_limit={gt['within_limit']}) with {len(item['docs_submitted'])} of "
+                      f"{len(DOC_SETS[item['claim_type']])} required documents present; "
                       f"therefore decision={gt['correct_decision']}."),
             entity_id=eid,
             payload_extra={"decision": gt["correct_decision"], "policy_limit": item["policy_limit"],
-                           "amount": item["amount"], "within_limit": gt["within_limit"], "confidence": "HIGH"}))
+                           "amount": item["amount"], "amount_within_limit": gt["within_limit"],
+                           "confidence": "HIGH"}))
         r.traces.append(self.agent_step(
-            ctx, A["reviewer"], item, decision="approved: within limit, no duplicate", entity_id=eid))
+            ctx, A["reviewer"], item, decision="approved: within policy limit, no duplicate", entity_id=eid))
 
         r.evals = [
             self.eval_pass("intake", "extraction_accuracy", eid, "all claim fields extracted correctly"),

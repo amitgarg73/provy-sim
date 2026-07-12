@@ -123,6 +123,7 @@ class LeverManifest:
     sla_signal: str              # e.g. 'sla_met'
     secondary_bad_signal: Optional[str] = None   # extra signal silent_wrong also corrupts (e.g. reopened_7d)
     drift_agent: Optional[str] = None            # defaults to resolver_agent when None
+    policy_agent: Optional[str] = None           # agent that owns policy_signal; defaults to resolver_agent
 
 
 @dataclass

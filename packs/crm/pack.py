@@ -31,7 +31,10 @@ class CRMPack(BasePack):
     def contract(self) -> list[Criterion]:
         return [
             Criterion("c1", "Correct qualification vs truth", "both", "qualification_correct", "eq", True),
-            Criterion("c2", "Routed to the correct owner", "outcome", "routed_correct", "eq", True),
+            # 'both': the router asserts the routing is correct AND reality confirms it. As the
+            # policy_signal, an open policy break (policy_violation) fails the Estimated side too and
+            # reads as a VISIBLE failure, while silent_policy corrupts only Real and diverges.
+            Criterion("c2", "Routed to the correct owner", "both", "routed_correct", "eq", True),
             Criterion("c3", "Data enriched correctly", "trace", "enriched_correct", "eq", True),
             Criterion("c4", "No duplicate contact", "outcome", "duplicate_contact", "eq", False),
             Criterion("c5", "Followed up within SLA", "outcome", "sla_met", "eq", True),
@@ -49,6 +52,7 @@ class CRMPack(BasePack):
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="scorer",
+            policy_agent="router",   # routed_correct (the policy_signal) is the router's output
             retriever_agent="enricher",
             reviewer_agent="qa",
             first_agent="enricher",

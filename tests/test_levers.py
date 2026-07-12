@@ -208,6 +208,50 @@ def test_silent_policy_compliant_on_paper():
         assert o.result.diverged() is True and all(e.passed for e in o.result.evals)
 
 
+def test_claims_policy_violation_fails_visibly_not_silently():
+    """On claims the policy_signal (within_limit) is a 'both' condition, so an open policy break
+    fails the Estimated side too — a VISIBLE failure, distinct from silent_policy which diverges.
+    This is what keeps policy_violation and silent_policy attributable 1:1 rather than collapsing."""
+    pack = get_pack("claims")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"policy_violation": 1.0}, n=10, seed=30)
+    for o in outs:
+        assert any(f.lever == "policy_violation" for f in o.result.faults)
+        assert o.result.estimated_signals[m.policy_signal] is False
+        assert o.result.real_signals[m.policy_signal] is False
+        assert o.result.outcome_label == "fail"
+        assert o.result.diverged() is False   # visible: the estimate fails too, not a silent divergence
+
+
+def test_claims_silent_policy_diverges_where_policy_violation_does_not():
+    """Contrast: silent_policy keeps the Estimated side compliant and only corrupts Real -> diverges."""
+    pack = get_pack("claims")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"silent_policy": 1.0}, n=10, seed=31)
+    for o in outs:
+        f = _fault(o, "silent_policy")
+        assert f is not None and f.agent == m.reviewer_agent
+        assert o.result.estimated_signals[m.policy_signal] is True
+        assert o.result.real_signals[m.policy_signal] is False
+        assert o.result.diverged() is True and all(e.passed for e in o.result.evals)
+
+
+def test_claims_clean_run_has_no_contradictory_traces():
+    """A clean claims run must not contradict itself: docs are genuinely complete and no trace
+    reports a within_limit value that clashes with the True Estimated signal (the payload cites the
+    amount check as amount_within_limit, a distinct key). A self-contradicting clean run would make
+    Provy flag a fault where none was injected, breaking 1:1 attribution."""
+    from packs.claims.pack import DOC_SETS
+    pack = get_pack("claims")
+    outs = _run_with(pack, {}, n=40, seed=32)
+    for o in outs:
+        assert len(o.item["docs_submitted"]) == len(DOC_SETS[o.item["claim_type"]])
+        for t in o.result.traces:
+            # No trace may carry within_limit=False on a clean run; the amount fact lives under
+            # its own key so it can never collide with the contract signal.
+            assert t.payload_extra.get("within_limit") in (None, True)
+
+
 def test_silent_missed_action_is_a_clean_looking_omission():
     pack = get_pack("claims")
     m = pack.lever_manifest()

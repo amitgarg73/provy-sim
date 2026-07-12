@@ -178,7 +178,9 @@ def _policy_violation(result, gt, m, contract, s, ctx) -> Optional[InjectedFault
     bad = C.bad_value(c)
     result.estimated_signals[m.policy_signal] = bad
     result.real_signals[m.policy_signal] = bad
-    return InjectedFault("policy_violation", s.target or m.resolver_agent, "policy",
+    # The culprit is the agent that owns the policy signal (e.g. crm's router owns routed_correct),
+    # not necessarily the decision agent — fall back to the resolver when the pack doesn't say.
+    return InjectedFault("policy_violation", s.target or m.policy_agent or m.resolver_agent, "policy",
                          {"signal": m.policy_signal})
 
 
