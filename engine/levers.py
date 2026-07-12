@@ -86,14 +86,28 @@ def _agent_message(result: RunResult, agent: str) -> Optional[TraceStep]:
 def _skip_propagation(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     up = s.target or m.first_agent
     down = m.downstream_agent
-    # Upstream agent skips.
+    # Upstream agent bails, so the downstream decision agent never runs.
     result.traces = [t for t in result.traces if t.agent != down]
     result.traces.append(TraceStep(agent=up, step_type="skip", outcome="skipped",
                                     payload_extra={"reason": "missing_input", "skip_type": "propagated"}))
     result.traces.append(TraceStep(agent=down, step_type="skip", outcome="skipped",
                                     payload_extra={"reason": f"blocked by {up} skip", "skip_type": "propagated"}))
-    result.terminal_reason = "skip_propagated"
-    result.metadata["skipped"] = True
+    # A dropped work item is a FAILURE for these domains, not a benign stand-down (the trading
+    # "skip = no opportunity" convention does not apply — a support ticket must be handled). Make it a
+    # VISIBLE pipeline break, not a silent divergence: fail the correctness signal on the Real side,
+    # and a trace/both signal on BOTH sides (so the estimate can't look clean when the pipeline broke).
+    # Terminal reason is deliberately not a recognized benign skip, so Provy grades + flags it.
+    idx = C.signal_index(contract)
+    c = idx.get(m.correctness_signal)
+    if c is not None:
+        result.real_signals[m.correctness_signal] = C.bad_value(c)
+    for cc in contract:
+        if cc.side in ("trace", "both"):
+            result.estimated_signals[cc.signal] = C.bad_value(cc)
+            result.real_signals[cc.signal] = C.bad_value(cc)
+            break
+    result.terminal_reason = "pipeline_break"
+    result.metadata["pipeline_break"] = {"upstream": up, "downstream": down}
     return InjectedFault("skip_propagation", up, "upstream_gap",
                          {"upstream": up, "downstream": down})
 

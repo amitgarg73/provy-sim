@@ -44,12 +44,14 @@ def test_injection_rate_matches_config():
     assert abs(rate - 0.3) < 0.06, f"observed {rate}, expected ~0.30"
 
 
-def test_skip_propagation_sets_terminal_reason():
+def test_skip_propagation_is_a_visible_failure_not_a_benign_skip():
     pack = get_pack("support")
     outs = _run_with(pack, {"skip_propagation": 1.0}, n=10, seed=3)
     for o in outs:
-        assert o.result.terminal_reason == "skip_propagated"
-        assert o.result.outcome_label == "skipped"
+        # A dropped work item fails — not a benign "correctly stood down" skip.
+        assert o.result.terminal_reason == "pipeline_break"
+        assert o.result.outcome_label == "fail"
+        assert o.result.diverged() is False   # visible (estimate fails too), not a silent divergence
         assert any(t.step_type == "skip" for t in o.result.traces)
         assert any(f.lever == "skip_propagation" for f in o.result.faults)
 
