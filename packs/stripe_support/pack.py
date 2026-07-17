@@ -190,7 +190,7 @@ class StripeSupportPack(BasePack):
         st = sor.settlement(item["order_id"])
         if st.injector is None:
             r.traces.append(TraceStep(
-                agent="settlement", step_type="tool_call", tool_name="stripe.settlement",
+                agent="resolver", step_type="tool_call", tool_name="stripe.settlement",
                 tool_input={"order_id": item["order_id"]},
                 tool_output={"settled": True, "amount_settled": st.amount_settled, "reason": st.reason},
                 outcome="ok", entity_id=eid,
@@ -207,7 +207,7 @@ class StripeSupportPack(BasePack):
             r.real_signals["no_duplicate"] = False
 
         r.traces.append(TraceStep(
-            agent="settlement", step_type="tool_call", tool_name="stripe.settlement",
+            agent="resolver", step_type="tool_call", tool_name="stripe.settlement",
             tool_input={"order_id": item["order_id"]},
             tool_output={"settled": st.settled, "amount_settled": st.amount_settled,
                          "duplicate": st.duplicate, "reason": st.reason},
