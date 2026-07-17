@@ -71,7 +71,7 @@ def seed_evals_payload(pack) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pack", required=True, choices=["support", "claims", "crm"])
+    ap.add_argument("--pack", required=True, choices=["support", "stripe_support", "claims", "crm"])
     ap.add_argument("--seed-evals", action="store_true", help="POST the seed-evals payload")
     ap.add_argument("--key", default=os.environ.get("PROVY_KEY", ""), help="ingest key")
     args = ap.parse_args()

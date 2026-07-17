@@ -1,10 +1,12 @@
 """Domain packs. Each implements the DomainPack interface on the shared engine."""
 from .support.pack import SupportPack
+from .stripe_support.pack import StripeSupportPack
 from .claims.pack import ClaimsPack
 from .crm.pack import CRMPack
 
 PACKS = {
     "support": SupportPack,
+    "stripe_support": StripeSupportPack,
     "claims": ClaimsPack,
     "crm": CRMPack,
 }
@@ -16,4 +18,4 @@ def get_pack(name: str):
     return PACKS[name]()
 
 
-__all__ = ["SupportPack", "ClaimsPack", "CRMPack", "PACKS", "get_pack"]
+__all__ = ["SupportPack", "StripeSupportPack", "ClaimsPack", "CRMPack", "PACKS", "get_pack"]

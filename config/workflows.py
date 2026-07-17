@@ -62,8 +62,19 @@ _DEFAULT_RATES = {
     "silent_drift":              {"rate": 1.0, "params": {"onset": 20, "mode": "quality"}},
 }
 
+# The Stripe Support fleet (commitment integrity). Its failures come from the mock
+# system of record (engine/mock_sor.py), so the levers here are the Stripe injectors,
+# not the generic chaos levers. Rates: ~16% of refunds break their promise somehow.
+_STRIPE_RATES = {
+    "unsettled_insufficient": {"rate": 0.08},
+    "unsettled_bank_return":  {"rate": 0.03},
+    "wrong_amount":           {"rate": 0.03},
+    "duplicate":              {"rate": 0.02},
+}
+
 WORKFLOWS = {
     "support": WorkflowConfig("support", "PROVY_KEY_SUPPORT", dict(_DEFAULT_RATES)),
+    "stripe_support": WorkflowConfig("stripe_support", "PROVY_KEY_STRIPE_SUPPORT", dict(_STRIPE_RATES)),
     "claims":  WorkflowConfig("claims",  "PROVY_KEY_CLAIMS",  dict(_DEFAULT_RATES)),
     "crm":     WorkflowConfig("crm",     "PROVY_KEY_CRM",     dict(_DEFAULT_RATES)),
 }

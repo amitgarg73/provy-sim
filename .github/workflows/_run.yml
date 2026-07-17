@@ -1,6 +1,6 @@
 name: _run (reusable)
 
-# Shared run logic for every fleet. Called by run-support / run-claims / run-crm so the pipeline
+# Shared run logic for every fleet. Called by run-support / run-stripe_support / run-claims / run-crm so the pipeline
 # lives in one place. Not directly dispatchable — the per-fleet callers are. The fleet's ingest key
 # comes in as an input (passed by the Sim Control app at kick time); the only secret is GROQ_API_KEY.
 on:
@@ -34,6 +34,7 @@ jobs:
           # The runner resolves the pack's key from PROVY_KEY_<PACK> (config/workflows.py). Only the
           # selected pack's variable is set, from the caller's input.
           PROVY_KEY_SUPPORT: ${{ inputs.pack == 'support' && inputs.ingest_key || '' }}
+          PROVY_KEY_STRIPE_SUPPORT: ${{ inputs.pack == 'stripe_support' && inputs.ingest_key || '' }}
           PROVY_KEY_CLAIMS:  ${{ inputs.pack == 'claims'  && inputs.ingest_key || '' }}
           PROVY_KEY_CRM:     ${{ inputs.pack == 'crm'     && inputs.ingest_key || '' }}
           # Post the injected-truth summary back to the console scoreboard (best-effort, offline-safe).
