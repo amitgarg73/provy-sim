@@ -19,10 +19,13 @@ from typing import Optional
 from .contract import Criterion, meets, signal_index
 
 # The silent family: levers that leave the estimate green and diverge only on reality.
-# Their culprit truth is what the console scores Provy's attribution against.
+# Their culprit truth is what the console scores Provy's attribution against. The
+# commitment_* faults are the mock-SoR settlement failures (support_ci): the agent
+# claimed the refund was done, the settled ledger silently disagreed.
 _SILENT_LEVERS = {
     "silent_wrong", "silent_staleness", "silent_unsupported",
     "silent_incomplete", "silent_policy", "silent_missed_action",
+    "commitment_unsettled", "commitment_wrong_amount", "commitment_duplicate",
 }
 
 
