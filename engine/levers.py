@@ -81,6 +81,16 @@ def _agent_message(result: RunResult, agent: str) -> Optional[TraceStep]:
     return _find_step(result, agent, "agent_message")
 
 
+def _ensure_tool_call(result: RunResult, agent: str) -> TraceStep:
+    """The agent's tool_call span, creating a placeholder one if the pack didn't emit any."""
+    step = _find_step(result, agent, "tool_call")
+    if step is None:
+        step = TraceStep(agent=agent, step_type="tool_call", tool_name="retrieve",
+                         tool_input={}, entity_id=result.entity_id)
+        result.traces.insert(0, step)
+    return step
+
+
 # ── The levers ───────────────────────────────────────────────────────────────
 
 def _skip_propagation(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
@@ -370,6 +380,62 @@ def _silent_drift(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
                          {"onset": onset, "severity": severity, "mode": mode})
 
 
+# ── L1 / L2 overlay levers ────────────────────────────────────────────────────
+# These aim at a single tool call (L1 Tool Activity) or model call (L2 LLM Calls).
+# They are non-outcome-shaping: no signal moves, so they layer on any run and only
+# light up Provy's L1/L2 activity checks (which feed reliability, never the outcome,
+# quality, or trust aggregates). That is why they are phase-B overlays, not phase-A.
+
+def _tool_latency(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """One tool call runs far slower than the latency budget (Provy L1 Tool Latency).
+    Latency is not an attribution signal, so this can co-fire with a divergence
+    without masking its cause."""
+    agent = s.target or m.retriever_agent
+    latency = int(s.params.get("latency_ms", 12000))
+    step = _ensure_tool_call(result, agent)
+    step.latency_ms = max(step.latency_ms, latency)
+    return InjectedFault("tool_latency", agent, "tool_latency", {"latency_ms": latency})
+
+
+def _tool_errors(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """An agent's tool call errors, pushing its tool error rate over the ceiling
+    (Provy L1 Tool Error Rate). Deliberately does NOT set a terminal error or corrupt
+    a signal, so the session outcome is untouched and the run never diverges from this
+    alone. apply() only fires it on runs with no outcome-shaping fault, so the errored
+    span can't be mistaken for a silent divergence's culprit."""
+    agent = s.target or m.retriever_agent
+    msg = s.params.get("message", "tool backend returned 500")
+    step = _ensure_tool_call(result, agent)
+    step.outcome = "error"
+    step.error = msg
+    return InjectedFault("tool_errors", agent, "tool_error_rate", {"message": msg})
+
+
+def _llm_cost(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """An agent's model call costs far more than the session budget (Provy L2 LLM Cost) —
+    a runaway prompt or an oversized model. Non-outcome-shaping."""
+    agent = s.target or m.resolver_agent
+    cost = float(s.params.get("cost_usd", 0.35))
+    step = _agent_message(result, agent)
+    if step is None:
+        return None
+    step.cost_usd = max(step.cost_usd, cost)
+    return InjectedFault("llm_cost", agent, "llm_cost_budget", {"cost_usd": cost})
+
+
+def _llm_tokens(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """An agent's model call burns far more tokens than the session budget (Provy L2 LLM
+    Tokens — off until a tenant sets a token budget, so this proves the check once one is
+    configured). Non-outcome-shaping; leaves cost alone so the two L2 checks stay independent."""
+    agent = s.target or m.resolver_agent
+    tokens = int(s.params.get("tokens", 60000))
+    step = _agent_message(result, agent)
+    if step is None:
+        return None
+    step.tokens_input = max(step.tokens_input, tokens)
+    return InjectedFault("llm_tokens", agent, "llm_token_budget", {"tokens": tokens})
+
+
 def EvalResultDefault(agent, entity_id, reason):
     from .types import EvalResult
     return EvalResult(agent=agent, eval_name="reasoning_quality", score=0.3,
@@ -391,6 +457,10 @@ _LEVER_FNS = {
     "silent_missed_action": _silent_missed_action,
     "confidence_miscalibration": _confidence_miscalibration,
     "silent_drift": _silent_drift,
+    "tool_latency": _tool_latency,
+    "tool_errors": _tool_errors,
+    "llm_cost": _llm_cost,
+    "llm_tokens": _llm_tokens,
 }
 
 
@@ -419,9 +489,16 @@ def finalize(result: RunResult, contract: list[Criterion]) -> None:
 # ── Apply ────────────────────────────────────────────────────────────────────
 
 def apply(result: RunResult, gt, manifest: LeverManifest,
-          contract: list[Criterion], config: LeverConfig, ctx: RunContext) -> list[InjectedFault]:
+          contract: list[Criterion], config: LeverConfig, ctx: RunContext,
+          pack_injector=None) -> list[InjectedFault]:
     """Roll each configured lever against the seeded RNG and mutate the run.
-    Returns the list of injected faults (ground truth)."""
+    Returns the list of injected faults (ground truth).
+
+    pack_injector, when given, is a pack-specific phase-A outcome-shaping injector
+    (e.g. the Stripe settlement feed). It joins the same exclusion as the generic
+    phase-A levers: it may only cause a failure when no generic phase-A lever fired,
+    so every run still has at most one primary cause and 1:1 attribution holds. Its
+    signature is (result, ctx, primary_fired) -> InjectedFault | None."""
     faults: list[InjectedFault] = []
     primary_fired = False   # at most one phase-A (outcome-shaping) failure per run
 
@@ -443,12 +520,30 @@ def apply(result: RunResult, gt, manifest: LeverManifest,
     for name in _PHASE_A:
         _fire(name)
 
+    # The pack's own phase-A injector runs after the generic ones and defers to them:
+    # it is told whether a primary already fired so it can stand down (show a clean,
+    # promise-kept outcome) instead of stacking a second cause on the same run.
+    if pack_injector is not None:
+        f = pack_injector(result, ctx, primary_fired)
+        if f is not None:
+            faults.append(f)
+            primary_fired = True
+
     finalize(result, contract)
 
     # Calibration + drift are overlays: they don't reshape a single run's outcome, so they layer on
     # freely (a run can be both silently wrong AND overconfident, or in a drifting window).
     _fire("confidence_miscalibration", exclusive=False)
     _fire("silent_drift", exclusive=False)
+
+    # L1/L2 overlays. Latency, cost, and tokens are not attribution signals, so they layer on any
+    # run without masking a cause. An errored tool span IS an attribution signal, so tool_errors
+    # only fires on a run with no divergence to attribute — it still exercises the L1 error-rate
+    # check on clean runs without stealing a silent culprit's blame.
+    for name in ("tool_latency", "llm_cost", "llm_tokens"):
+        _fire(name, exclusive=False)
+    if not primary_fired:
+        _fire("tool_errors", exclusive=False)
 
     result.faults = faults
     return faults

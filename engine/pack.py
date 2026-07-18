@@ -15,6 +15,16 @@ from . import levers as L
 from .types import (AgentSpec, Criterion, EvalResult, LeverManifest,
                     RunContext, RunResult, TraceStep)
 
+# llama-3.3-70b-versatile list price (per token): ~$0.59/M input, $0.79/M output. A clean
+# agent call runs a fraction of a cent, so the L2 LLM Cost check sits far under its budget
+# until the llm_cost lever inflates a run. Keeps the "LLM Calls" tile showing real dollars.
+_PRICE_IN_PER_TOK = 0.59e-6
+_PRICE_OUT_PER_TOK = 0.79e-6
+
+
+def llm_cost_usd(tokens_in: int, tokens_out: int) -> float:
+    return round(tokens_in * _PRICE_IN_PER_TOK + tokens_out * _PRICE_OUT_PER_TOK, 6)
+
 
 @runtime_checkable
 class DomainPack(Protocol):
@@ -107,6 +117,7 @@ class BasePack:
             agent=agent.name, step_type="agent_message", outcome=decision,
             agent_reasoning=reasoning, entity_id=entity_id,
             tokens_input=tokens[0], tokens_output=tokens[1], model="llama-3.3-70b-versatile",
+            cost_usd=llm_cost_usd(tokens[0], tokens[1]),
             latency_ms=ctx.rng.randint(400, 1800),
             payload_extra=payload_extra or {},
         )

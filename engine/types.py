@@ -62,6 +62,7 @@ class TraceStep:
     error: Optional[str] = None
     tokens_input: int = 0
     tokens_output: int = 0
+    cost_usd: float = 0.0
     model: Optional[str] = None
     payload_extra: dict = field(default_factory=dict)   # extra scalar payload fields (estimated signals, confidence)
 

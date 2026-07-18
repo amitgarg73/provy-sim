@@ -103,6 +103,7 @@ class ProvyEmitter:
         if step.latency_ms:                 payload["latency_ms"] = step.latency_ms
         if step.tokens_input:               payload["tokens_input"] = step.tokens_input
         if step.tokens_output:              payload["tokens_output"] = step.tokens_output
+        if step.cost_usd:                   payload["cost_usd"] = step.cost_usd
         if step.model:                      payload["model"] = step.model
         if step.error is not None:          payload["error"] = step.error
         if step.entity_id is not None:      payload["entity_id"] = step.entity_id

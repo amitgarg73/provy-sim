@@ -102,6 +102,40 @@ def test_every_step_is_self_explaining():
     assert "reality disagrees" in settle.payload_extra["narration"]
 
 
+# ── superset: the generic + L1/L2 levers now run on this fleet too ─────────────
+
+def test_generic_silent_lever_runs_on_the_stripe_fleet():
+    """The fleet is a superset now: a generic silent lever fires here just like on the other
+    packs, corrupting the promise on the Real side while the claim stays good."""
+    pack, r, _ = _run({"silent_wrong": 1.0})
+    levers = [f.lever for f in r.faults]
+    assert levers == ["silent_wrong"]                 # the settlement feed stood down
+    assert r.faults[0].agent == "resolver"
+    assert r.estimated_signals["refund_settled"] is True
+    assert r.real_signals["refund_settled"] is False
+    assert r.diverged() is True and all(e.passed for e in r.evals)
+
+
+def test_settlement_and_a_generic_lever_are_mutually_exclusive():
+    """One primary cause per run: when a generic phase-A lever fires, the settlement feed does
+    not stack a commitment fault on the same run, so attribution stays 1:1."""
+    _, r, _ = _run({"silent_wrong": 1.0, "unsettled_insufficient": 1.0})
+    levers = [f.lever for f in r.faults]
+    assert levers == ["silent_wrong"], levers
+    assert not any(lv.startswith("commitment_") for lv in levers)
+
+
+def test_l1_l2_overlays_run_on_the_stripe_fleet():
+    """Tool-latency and LLM-cost overlays layer on a Stripe run without breaking the promise."""
+    _, r, _ = _run({"tool_latency": {"rate": 1.0, "params": {"latency_ms": 12000}},
+                    "llm_cost": {"rate": 1.0, "params": {"cost_usd": 0.4}}})
+    levers = {f.lever for f in r.faults}
+    assert {"tool_latency", "llm_cost"} <= levers
+    assert r.outcome_label == "success" and r.diverged() is False   # the refund still settled
+    assert any(t.step_type == "tool_call" and t.latency_ms >= 12000 for t in r.traces)
+    assert any(t.step_type == "agent_message" and t.cost_usd >= 0.4 for t in r.traces)
+
+
 def test_outcome_post_carries_fail_label_and_signals(tmp_path, monkeypatch):
     """A diverged run posts label=fail plus the settled signals to the one door."""
     monkeypatch.delenv("PROVY_EMIT", raising=False)

@@ -60,16 +60,28 @@ _DEFAULT_RATES = {
     "overt_error":               {"rate": 0.04},
     "skip_propagation":          {"rate": 0.03},
     "silent_drift":              {"rate": 1.0, "params": {"onset": 20, "mode": "quality"}},
+    # L1/L2 activity levers (Provy Tool Activity + LLM Calls checks). Overlays: they don't
+    # reshape the outcome, they just breach a single tool/model call's budget.
+    "tool_latency":              {"rate": 0.05},
+    "tool_errors":               {"rate": 0.05},
+    "llm_cost":                  {"rate": 0.05},
+    "llm_tokens":                {"rate": 0.0},   # off by default (Provy LLM Tokens check needs a budget set)
 }
 
-# The Stripe Support fleet (commitment integrity). Its failures come from the mock
-# system of record (engine/mock_sor.py), so the levers here are the Stripe injectors,
-# not the generic chaos levers. Rates: ~16% of refunds break their promise somehow.
+# The Stripe Support fleet (commitment integrity). Its signature failures still come from the
+# mock system of record (engine/mock_sor.py) — the four injectors below. It is now also a
+# superset: the generic chaos levers and the L1/L2 activity levers all run on it (the run calls
+# the shared lever engine), available at rate 0 for an operator to dial up. Defaults keep the
+# commitment-integrity story plus the L1/L2 overlays on. Rates: ~16% of refunds break somehow.
 _STRIPE_RATES = {
     "unsettled_insufficient": {"rate": 0.08},
     "unsettled_bank_return":  {"rate": 0.03},
     "wrong_amount":           {"rate": 0.03},
     "duplicate":              {"rate": 0.02},
+    "tool_latency":           {"rate": 0.05},
+    "tool_errors":            {"rate": 0.05},
+    "llm_cost":               {"rate": 0.05},
+    "llm_tokens":             {"rate": 0.0},
 }
 
 WORKFLOWS = {

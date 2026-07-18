@@ -274,3 +274,104 @@ def test_faults_recorded_in_ground_truth_record():
         assert rec["faults"], "ground-truth record must log the injected faults"
         assert rec["diverged"] is True
         assert rec["outcome_post"]["label"] == "fail"
+
+
+# ── L1 / L2 activity levers ───────────────────────────────────────────────────
+
+def _tool_call(o, agent):
+    return next((t for t in o.result.traces if t.agent == agent and t.step_type == "tool_call"), None)
+
+
+def _llm_call(o, agent):
+    return next((t for t in o.result.traces if t.agent == agent and t.step_type == "agent_message"), None)
+
+
+def test_baseline_llm_calls_carry_a_small_cost():
+    """Every clean model call reports a real, sub-cent cost so the L2 LLM Cost check has data
+    and sits far under its budget until the llm_cost lever inflates a run."""
+    pack = get_pack("support")
+    outs = _run_with(pack, {}, n=5, seed=50)
+    for o in outs:
+        llm = [t for t in o.result.traces if t.step_type == "agent_message"]
+        assert llm, "a run should have model calls"
+        for t in llm:
+            assert 0 < t.cost_usd < 0.01
+
+
+def test_tool_latency_breaches_the_budget_without_changing_the_outcome():
+    pack = get_pack("support")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"tool_latency": {"rate": 1.0, "params": {"latency_ms": 12000}}}, n=8, seed=51)
+    for o in outs:
+        assert any(f.lever == "tool_latency" for f in o.result.faults)
+        step = _tool_call(o, m.retriever_agent)
+        assert step is not None and step.latency_ms >= 12000
+        # An overlay: the run neither fails nor diverges from a slow tool.
+        assert o.result.outcome_label == "success" and o.result.diverged() is False
+
+
+def test_llm_cost_breaches_the_budget_without_changing_the_outcome():
+    pack = get_pack("claims")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"llm_cost": {"rate": 1.0, "params": {"cost_usd": 0.4}}}, n=8, seed=52)
+    for o in outs:
+        assert any(f.lever == "llm_cost" for f in o.result.faults)
+        step = _llm_call(o, m.resolver_agent)
+        assert step is not None and step.cost_usd >= 0.4
+        assert o.result.outcome_label == "success" and o.result.diverged() is False
+
+
+def test_llm_tokens_breaches_the_budget_without_touching_cost():
+    pack = get_pack("crm")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"llm_tokens": {"rate": 1.0, "params": {"tokens": 60000}}}, n=8, seed=53)
+    for o in outs:
+        assert any(f.lever == "llm_tokens" for f in o.result.faults)
+        step = _llm_call(o, m.resolver_agent)
+        assert step is not None and step.tokens_input >= 60000
+        # Tokens and cost are independent L2 checks: this lever leaves cost at baseline.
+        assert step.cost_usd < 0.01
+        assert o.result.outcome_label == "success" and o.result.diverged() is False
+
+
+def test_tool_errors_marks_an_error_but_never_diverges_on_a_clean_run():
+    pack = get_pack("support")
+    m = pack.lever_manifest()
+    outs = _run_with(pack, {"tool_errors": 1.0}, n=10, seed=54)
+    for o in outs:
+        assert any(f.lever == "tool_errors" for f in o.result.faults)
+        step = _tool_call(o, m.retriever_agent)
+        assert step is not None and step.outcome == "error"
+        # It must NOT set a terminal error or corrupt a signal — pure L1 signal.
+        assert o.result.outcome_label == "success"
+        assert o.result.terminal_reason != "error" and o.result.diverged() is False
+
+
+def test_tool_errors_is_suppressed_on_a_diverged_run_so_it_cannot_mask_the_culprit():
+    """An errored tool span is a deterministic attribution signal. When a silent divergence
+    already owns the run, tool_errors must stand down so Provy still blames the real culprit."""
+    pack = get_pack("support")
+    outs = _run_with(pack, {"silent_wrong": 1.0, "tool_errors": 1.0}, n=20, seed=55)
+    for o in outs:
+        levers = [f.lever for f in o.result.faults]
+        assert "silent_wrong" in levers
+        assert "tool_errors" not in levers, levers
+        assert o.result.diverged() is True
+        # No errored tool span to steal the blame.
+        assert not any(t.step_type == "tool_call" and t.outcome == "error" for t in o.result.traces)
+
+
+def test_non_error_overlays_cofire_with_a_silent_divergence():
+    """Latency, cost, and tokens are not attribution signals, so they layer on a diverged run
+    freely — the silent culprit is still the only outcome-shaping fault."""
+    pack = get_pack("support")
+    rates = {"silent_wrong": 1.0, "tool_latency": 1.0, "llm_cost": 1.0}
+    outs = _run_with(pack, rates, n=15, seed=56)
+    for o in outs:
+        levers = {f.lever for f in o.result.faults}
+        assert "silent_wrong" in levers
+        assert {"tool_latency", "llm_cost"} <= levers, levers
+        # Still exactly one outcome-shaping (phase-A) cause.
+        primary = [f for f in o.result.faults if f.lever in _PHASE_A_LEVERS]
+        assert [f.lever for f in primary] == ["silent_wrong"]
+        assert o.result.diverged() is True

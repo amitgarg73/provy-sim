@@ -162,17 +162,28 @@ class StripeSupportPack(BasePack):
         r.terminal_reason = "resolved"
         return r
 
-    # ── the run: build the clean claim, then let the settlement feed check reality ─
+    # ── the run: build the clean claim, then apply the full lever set with the
+    # settlement feed as this pack's own phase-A injector ─────────────────────────
     def run_pipeline(self, item: dict, gt: dict, ctx: RunContext) -> RunResult:
         r = self.build_clean_run(item, gt, ctx)
+        m = self.lever_manifest()
         amount = item["amount"]
         sor = MockStripe(ctx.rng, self._sor_rates(ctx.levers))
-        sor.refund(item["order_id"], amount)        # roll the settled fate for this order
-        fault = self._settle(r, item, amount, sor, ctx)
 
-        L.finalize(r, self.contract())
-        if fault:
-            r.faults.append(fault)
+        def _settlement_injector(result: RunResult, _ctx: RunContext,
+                                 primary_fired: bool) -> InjectedFault | None:
+            # A generic lever already shaped this run, so the settlement feed stands down
+            # (one primary cause per run keeps attribution 1:1). Otherwise roll the settled
+            # fate and let reality disagree with the claim.
+            if primary_fired:
+                return None
+            sor.refund(item["order_id"], amount)
+            return self._settle(result, item, amount, sor, _ctx)
+
+        # The full generic + L1/L2 lever set runs here too, with the settlement feed folded
+        # into the same one-primary-per-run exclusion. L.apply finalizes the outcome from the
+        # real signals, so this pack is now a superset: commitment integrity plus everything.
+        L.apply(r, gt, m, self.contract(), ctx.levers, ctx, pack_injector=_settlement_injector)
 
         # Stamp the Estimated signals on the reviewer's closing message so the
         # Estimated side of every 'both' condition is readable on a real trace.
