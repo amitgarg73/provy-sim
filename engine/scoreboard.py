@@ -25,7 +25,8 @@ from .contract import Criterion, meets, signal_index
 _SILENT_LEVERS = {
     "silent_wrong", "silent_staleness", "silent_unsupported",
     "silent_incomplete", "silent_policy", "silent_missed_action",
-    "commitment_unsettled", "commitment_wrong_amount", "commitment_duplicate",
+    "commitment_unsettled", "commitment_wrong_amount", "commitment_wrong_target",
+    "commitment_duplicate",
 }
 
 

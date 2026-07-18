@@ -45,6 +45,16 @@ class WorkflowConfig:
 
 # Default lever manifest per workflow. Silent levers lead — they are the
 # differentiator. Overt levers are lower so the fleet still mostly succeeds.
+
+# L1/L2 activity levers (Provy Tool Activity + LLM Calls checks) that EVERY fleet carries.
+# Overlays: they don't reshape the outcome, they just breach a single tool/model call's budget.
+_L1L2_RATES = {
+    "tool_latency":              {"rate": 0.05},
+    "tool_errors":               {"rate": 0.05},
+    "llm_cost":                  {"rate": 0.05},
+    "llm_tokens":                {"rate": 0.0},   # off by default (Provy LLM Tokens check needs a budget set)
+}
+
 _DEFAULT_RATES = {
     "silent_wrong":              {"rate": 0.12},
     "silent_staleness":          {"rate": 0.05},
@@ -60,28 +70,55 @@ _DEFAULT_RATES = {
     "overt_error":               {"rate": 0.04},
     "skip_propagation":          {"rate": 0.03},
     "silent_drift":              {"rate": 1.0, "params": {"onset": 20, "mode": "quality"}},
-    # L1/L2 activity levers (Provy Tool Activity + LLM Calls checks). Overlays: they don't
-    # reshape the outcome, they just breach a single tool/model call's budget.
-    "tool_latency":              {"rate": 0.05},
-    "tool_errors":               {"rate": 0.05},
-    "llm_cost":                  {"rate": 0.05},
-    "llm_tokens":                {"rate": 0.0},   # off by default (Provy LLM Tokens check needs a budget set)
+    **_L1L2_RATES,
 }
 
-# The Stripe Support fleet (commitment integrity). Its signature failures still come from the
-# mock system of record (engine/mock_sor.py) — the four injectors below. It is now also a
-# superset: the generic chaos levers and the L1/L2 activity levers all run on it (the run calls
-# the shared lever engine), available at rate 0 for an operator to dial up. Defaults keep the
-# commitment-integrity story plus the L1/L2 overlays on. Rates: ~16% of refunds break somehow.
+# Commitment-integrity fleets. Their signature failures come from a mock system of record
+# (engine/mock_sor.py for Stripe, engine/commitment.py for the rest) — the injectors below.
+# Each is also a superset: the generic chaos levers run on it too (the pack calls the shared
+# lever engine), available at rate 0 for an operator to dial up. Defaults keep the
+# commitment-integrity story plus the L1/L2 overlays on.
 _STRIPE_RATES = {
     "unsettled_insufficient": {"rate": 0.08},
     "unsettled_bank_return":  {"rate": 0.03},
     "wrong_amount":           {"rate": 0.03},
     "duplicate":              {"rate": 0.02},
-    "tool_latency":           {"rate": 0.05},
-    "tool_errors":            {"rate": 0.05},
-    "llm_cost":               {"rate": 0.05},
-    "llm_tokens":             {"rate": 0.0},
+    **_L1L2_RATES,
+}
+
+_TRAVEL_RATES = {
+    "not_ticketed":     {"rate": 0.06},
+    "segment_reversed": {"rate": 0.03},
+    "wrong_fare":       {"rate": 0.03},
+    "double_booked":    {"rate": 0.02},
+    **_L1L2_RATES,
+}
+
+_REVOPS_RATES = {
+    "write_not_landed":     {"rate": 0.06},
+    "sync_lag":             {"rate": 0.03},
+    "wrong_discount":       {"rate": 0.03},
+    "wrong_record":         {"rate": 0.02},
+    "duplicate_opportunity": {"rate": 0.02},
+    **_L1L2_RATES,
+}
+
+_CLAIMS_PAYOUT_RATES = {
+    "not_disbursed":     {"rate": 0.06},
+    "prompt_pay_lapsed": {"rate": 0.03},
+    "claims_leakage":    {"rate": 0.03},
+    "stale_lienholder":  {"rate": 0.02},
+    "duplicate_payment": {"rate": 0.02},
+    **_L1L2_RATES,
+}
+
+_LEGAL_RATES = {
+    "esign_incomplete":  {"rate": 0.05},
+    "filing_bounced":    {"rate": 0.03},
+    "deadline_lapsed":   {"rate": 0.03},
+    "wrong_counterparty": {"rate": 0.02},
+    "duplicate_filing":  {"rate": 0.02},
+    **_L1L2_RATES,
 }
 
 WORKFLOWS = {
@@ -89,6 +126,10 @@ WORKFLOWS = {
     "stripe_support": WorkflowConfig("stripe_support", "PROVY_KEY_STRIPE_SUPPORT", dict(_STRIPE_RATES)),
     "claims":  WorkflowConfig("claims",  "PROVY_KEY_CLAIMS",  dict(_DEFAULT_RATES)),
     "crm":     WorkflowConfig("crm",     "PROVY_KEY_CRM",     dict(_DEFAULT_RATES)),
+    "travel":  WorkflowConfig("travel",  "PROVY_KEY_TRAVEL",  dict(_TRAVEL_RATES)),
+    "revops":  WorkflowConfig("revops",  "PROVY_KEY_REVOPS",  dict(_REVOPS_RATES)),
+    "claims_payout": WorkflowConfig("claims_payout", "PROVY_KEY_CLAIMS_PAYOUT", dict(_CLAIMS_PAYOUT_RATES)),
+    "legal":   WorkflowConfig("legal",   "PROVY_KEY_LEGAL",   dict(_LEGAL_RATES)),
 }
 
 
