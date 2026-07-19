@@ -21,6 +21,7 @@ its commitment-integrity failures plus everything the generic packs can inject.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Optional
 
 from . import contract as C
@@ -36,6 +37,42 @@ SHAPE_FAULT = {
     "wrong_target": "commitment_wrong_target",  # it settled, but to the wrong recipient/record
     "duplicate":    "commitment_duplicate",     # it posted twice
 }
+
+
+# How a settlement failure is GROUNDED in the run, and who is truly at fault. Picked per diverged
+# run (seeded RNG), DECOUPLED from the settlement shape on purpose: if the shape implied the culprit,
+# attribution would be a lookup, not a test. Each cause plants the footprint Provy's own two-tier
+# attribution can legitimately resolve, so the true culprit varies across agents AND is fair to score:
+#   retriever_stale / retriever_fallback -> the upstream lookup served bad data. Footprint on the
+#       retriever's tool call; Provy's deterministic (Tier-1) scan should name the retriever.
+#   resolver_ignored -> the lookup surfaced a weak/ambiguous signal the decision agent ignored.
+#       Footprint = a low match score; Provy's judge (Tier-2) should name the resolver.
+#   blind_spot -> nothing in the run points anywhere (the classic "the world just disagreed"). No
+#       footprint; the true culprit is undetermined, and the honest expectation is that Provy says so
+#       rather than fabricating one.
+_CAUSE_WEIGHTS = [
+    ("retriever_stale", 0.25),
+    ("retriever_fallback", 0.20),
+    ("resolver_ignored", 0.30),
+    ("blind_spot", 0.25),
+]
+
+
+def _pick_cause(rng) -> str:
+    r = rng.random()
+    acc = 0.0
+    for name, w in _CAUSE_WEIGHTS:
+        acc += w
+        if r < acc:
+            return name
+    return _CAUSE_WEIGHTS[-1][0]
+
+
+def _find_step(result: RunResult, agent: str, step_type: str) -> Optional[TraceStep]:
+    for s in result.traces:
+        if s.agent == agent and s.step_type == step_type:
+            return s
+    return None
 
 
 @dataclass
@@ -127,10 +164,16 @@ class CommitmentPack(BasePack):
     def clean_narration(self, amount: float) -> str:
         return "Settlement check: the commitment cleared. Promise kept."
 
-    def fault_narration(self, st: SoRSettlement) -> str:
+    def fault_narration(self, st: SoRSettlement, cause: str = "blind_spot") -> str:
         inj = next((i for i in self.injectors() if i.name == st.injector), None)
         plain = inj.plain if inj else st.reason
-        return f"Settlement check: {plain}. The agent reported success, reality disagrees."
+        why = {
+            "retriever_stale": " The upstream lookup had served stale data.",
+            "retriever_fallback": " The upstream lookup had served a fallback value.",
+            "resolver_ignored": " The decision agent had ignored a weak-match warning.",
+            "blind_spot": " Nothing in the run pointed at a cause.",
+        }.get(cause, "")
+        return f"Settlement check: {plain}. The agent reported success, reality disagrees.{why}"
 
     # ── shared run + settle ───────────────────────────────────────────────────
     def _sor_rates(self, levers) -> dict[str, float]:
@@ -155,7 +198,7 @@ class CommitmentPack(BasePack):
             if primary_fired:
                 return None
             sor.commit(ref, amount)
-            return self._settle(result, ref, amount, sor)
+            return self._settle(result, ref, amount, sor, _ctx)
 
         L.apply(r, gt, m, self.contract(), ctx.levers, ctx, pack_injector=_settlement_injector)
 
@@ -168,14 +211,16 @@ class CommitmentPack(BasePack):
                 break
         return r
 
-    def _settle(self, r: RunResult, ref: str, amount: float, sor: MockSoR) -> Optional[InjectedFault]:
+    def _settle(self, r: RunResult, ref: str, amount: float, sor: MockSoR,
+                ctx: RunContext) -> Optional[InjectedFault]:
         eid = r.entity_id
-        agent = self.settle_agent()
+        m = self.lever_manifest()
+        promise_agent = self.settle_agent()   # owns the settlement-check trace (the promise-maker)
         st = sor.settlement(ref)
 
         if st.injector is None:
             r.traces.append(TraceStep(
-                agent=agent, step_type="tool_call", tool_name=self.settle_tool,
+                agent=promise_agent, step_type="tool_call", tool_name=self.settle_tool,
                 tool_input={"ref": ref},
                 tool_output={"settled": True, "amount_settled": st.amount_settled, "reason": st.reason},
                 outcome="ok", entity_id=eid,
@@ -192,14 +237,41 @@ class CommitmentPack(BasePack):
         if c is not None:
             r.real_signals[target_signal] = C.bad_value(c)
 
+        # Ground the failure in the trace and pick the TRUE culprit, varied across agents so
+        # attribution is a real test (blind spot -> culprit None).
+        cause, culprit = self._plant_cause(r, m, ctx)
+
         r.traces.append(TraceStep(
-            agent=agent, step_type="tool_call", tool_name=self.settle_tool,
+            agent=promise_agent, step_type="tool_call", tool_name=self.settle_tool,
             tool_input={"ref": ref},
             tool_output={"settled": st.settled, "amount_settled": st.amount_settled, "reason": st.reason},
             outcome="ok", entity_id=eid,
-            payload_extra={"narration": self.fault_narration(st)}))
+            payload_extra={"narration": self.fault_narration(st, cause)}))
 
         return InjectedFault(
-            SHAPE_FAULT[st.shape], agent, "commitment_integrity",
-            {"reason": st.reason, "shape": st.shape,
+            SHAPE_FAULT[st.shape], culprit, "commitment_integrity",
+            {"reason": st.reason, "shape": st.shape, "cause": cause,
              "promised_amount": amount, "settled_amount": st.amount_settled})
+
+    def _plant_cause(self, r: RunResult, m, ctx: RunContext) -> tuple[str, Optional[str]]:
+        """Ground the settlement failure in the trace so Provy's attribution is TESTABLE, and vary
+        the true culprit across agents. Returns (cause, culprit_agent | None for a blind spot). The
+        footprint lands on the upstream retriever's tool call, which every CI pack emits."""
+        cause = _pick_cause(ctx.rng)
+        tool = _find_step(r, m.retriever_agent, "tool_call")
+        if tool is None:                       # no lookup to ground it on -> honest blind spot
+            return "blind_spot", None
+        if cause == "retriever_stale":
+            as_of = (ctx.now - timedelta(days=400)).date().isoformat()
+            tool.tool_output = {**(tool.tool_output or {}), "as_of": as_of, "note": "stale index"}
+            return cause, m.retriever_agent
+        if cause == "retriever_fallback":
+            tool.tool_output = {**(tool.tool_output or {}), "from_cache": True, "note": "served fallback"}
+            return cause, m.retriever_agent
+        if cause == "resolver_ignored":
+            tool.tool_output = {**(tool.tool_output or {}), "match_score": 0.28, "note": "weak match"}
+            msg = _find_step(r, m.resolver_agent, "agent_message")
+            if msg is not None:
+                msg.payload_extra["confidence"] = "HIGH"
+            return cause, m.resolver_agent
+        return "blind_spot", None

@@ -25,12 +25,12 @@ from engine.reconcile import backfill_server_judge, reconcile_pending
 from engine.runner import BatchRunner
 from engine.scoreboard import ProvyQuery, aggregate_injected, build_report, format_report
 from engine.control_client import post_injected
-from packs import get_pack
+from packs import PACKS, get_pack
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--pack", required=True, choices=["support", "stripe_support", "claims", "crm"])
+    ap.add_argument("--pack", required=True, choices=sorted(PACKS))
     ap.add_argument("--count", type=int, default=8)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--start-index", type=int, default=0)

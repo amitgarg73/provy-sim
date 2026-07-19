@@ -73,22 +73,49 @@ def test_clean_run_keeps_the_promise(pack_name):
 
 
 @pytest.mark.parametrize("pack_name", CI_PACKS)
-def test_each_injector_diverges_and_blames_the_commitment_agent(pack_name):
+def test_each_injector_diverges_with_a_grounded_culprit(pack_name):
+    from engine.contract import bad_value
     pack = get_pack(pack_name)
-    culprit = pack.settle_agent()
+    m = pack.lever_manifest()
     for inj in pack.injectors():
-        r = BatchRunner(pack, LeverConfig({inj.name: 1.0}), seed=7).run_batch(1)[0].result
-        assert len(r.faults) == 1, f"{pack_name}/{inj.name}: {[f.lever for f in r.faults]}"
-        f = r.faults[0]
-        assert f.lever == SHAPE_FAULT[inj.shape]
-        assert f.agent == culprit                       # the agent that made the promise
-        assert r.diverged() is True                     # claim good, reality bad
-        assert all(e.passed for e in r.evals)           # silent: every eval still passes
-        # exactly the mapped signal went bad on the Real side; the Estimated side stayed good.
-        sig = pack.settle_map()["promise"] if inj.shape == "unsettled" else pack.settle_map()[inj.shape]
-        c = next(c for c in pack.contract() if c.signal == sig)
-        from engine.contract import bad_value
-        assert r.real_signals[sig] == bad_value(c)
+        # run several so different (RNG-picked) causes surface for the same injector.
+        for o in BatchRunner(pack, LeverConfig({inj.name: 1.0}), seed=7).run_batch(12):
+            r = o.result
+            assert len(r.faults) == 1, f"{pack_name}/{inj.name}: {[f.lever for f in r.faults]}"
+            f = r.faults[0]
+            assert f.lever == SHAPE_FAULT[inj.shape]
+            assert r.diverged() is True and all(e.passed for e in r.evals)   # silent divergence
+            # exactly the mapped signal went bad on the Real side.
+            sig = pack.settle_map()["promise"] if inj.shape == "unsettled" else pack.settle_map()[inj.shape]
+            c = next(c for c in pack.contract() if c.signal == sig)
+            assert r.real_signals[sig] == bad_value(c)
+            # the true culprit is grounded in a footprint Provy can resolve, or an honest blind spot.
+            tool = next((t for t in r.traces if t.agent == m.retriever_agent and t.step_type == "tool_call"), None)
+            out = (tool.tool_output if tool else {}) or {}
+            cause = f.params.get("cause")
+            if cause == "retriever_stale":
+                assert f.agent == m.retriever_agent and out.get("note") == "stale index"
+            elif cause == "retriever_fallback":
+                assert f.agent == m.retriever_agent and out.get("from_cache") is True
+            elif cause == "resolver_ignored":
+                assert f.agent == m.resolver_agent and out.get("match_score") == 0.28
+            else:
+                assert cause == "blind_spot" and f.agent is None
+
+
+@pytest.mark.parametrize("pack_name", CI_PACKS)
+def test_culprit_varies_across_agents(pack_name):
+    """The whole point of the multi-agent fix: over a batch the true culprit is spread across the
+    retriever, the resolver, and honest blind spots — so attribution accuracy is a real signal, not
+    a constant Provy could satisfy by always naming one agent."""
+    pack = get_pack(pack_name)
+    m = pack.lever_manifest()
+    inj = pack.injectors()[0].name
+    outs = BatchRunner(pack, LeverConfig({inj: 1.0}), seed=3).run_batch(80)
+    culprits = {f.agent for o in outs for f in o.result.faults if f.lever.startswith("commitment_")}
+    assert m.retriever_agent in culprits
+    assert m.resolver_agent in culprits
+    assert None in culprits          # blind spots occur — the sim does not fabricate a culprit
 
 
 @pytest.mark.parametrize("pack_name", CI_PACKS)
