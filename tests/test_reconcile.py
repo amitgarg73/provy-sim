@@ -36,3 +36,14 @@ def test_backfill_skips_when_emit_off(monkeypatch):
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     res = R.backfill_server_judge("https://x", "provy_k", session_ids=["a"])
     assert res == {"skipped": "emit off"}
+
+
+def test_request_headers_adds_vercel_bypass_only_when_set(monkeypatch):
+    from engine.emitter import request_headers
+    monkeypatch.delenv("VERCEL_PROTECTION_BYPASS", raising=False)
+    h = request_headers("provy_k")
+    assert h["x-provy-key"] == "provy_k" and "x-vercel-protection-bypass" not in h
+    monkeypatch.setenv("VERCEL_PROTECTION_BYPASS", "tok123")
+    h = request_headers("provy_k")
+    assert h["x-vercel-protection-bypass"] == "tok123"
+    assert h["x-vercel-set-bypass-cookie"] == "true"

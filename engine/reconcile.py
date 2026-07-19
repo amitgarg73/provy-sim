@@ -97,10 +97,11 @@ def _rewrite(ledger: GroundTruthLedger) -> None:
 
 
 def _post_judge(base_url: str, key: str, payload: dict) -> dict:
+    from .emitter import request_headers
     req = urllib.request.Request(
         f"{base_url.rstrip('/')}/api/compute/judge",
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json", "x-provy-key": key},
+        headers=request_headers(key),
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=120) as resp:

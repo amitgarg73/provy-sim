@@ -41,6 +41,18 @@ def emit_enabled(url: str, key: str) -> bool:
     return False
 
 
+def request_headers(key: str) -> dict:
+    """Standard ingest headers, plus the Vercel deployment-protection bypass when
+    VERCEL_PROTECTION_BYPASS is set — so a scripted run can reach an SSO-walled preview
+    (provydev) headlessly. Dev-only convenience; leave the env var unset for prod/CI."""
+    headers = {"Content-Type": "application/json", "x-provy-key": key}
+    bypass = os.environ.get("VERCEL_PROTECTION_BYPASS", "").strip()
+    if bypass:
+        headers["x-vercel-protection-bypass"] = bypass
+        headers["x-vercel-set-bypass-cookie"] = "true"
+    return headers
+
+
 class ProvyEmitter:
     def __init__(self, ingest_key: str | None = None, base_url: str | None = None,
                  is_simulated: bool = False, capture: bool = True):
@@ -64,7 +76,7 @@ class ProvyEmitter:
             req = urllib.request.Request(
                 f"{self.base}{path}",
                 data=json.dumps(payload, default=str).encode(),
-                headers={"Content-Type": "application/json", "x-provy-key": self.key},
+                headers=request_headers(self.key),
                 method="POST",
             )
             resp = urllib.request.urlopen(req, timeout=15)
