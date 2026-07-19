@@ -65,8 +65,10 @@ def main() -> int:
 
     if args.reconcile:
         # Order matters: the server judge writes the trace-based predictions, and an outcome can only
-        # reconcile against a prediction that already exists. Judge FIRST, then post the outcomes.
-        print(f"judge backfill: {backfill_server_judge(emitter.base, emitter.key)}")
+        # reconcile against a prediction that already exists. Judge FIRST (naming THIS batch's sessions
+        # so every one gets a prediction, not just the most-recent 20), then post the outcomes.
+        sids = [o.result.session_id for o in outputs]
+        print(f"judge backfill: {backfill_server_judge(emitter.base, emitter.key, session_ids=sids)}")
         res = reconcile_pending(ledger, emitter, workflow=args.pack)
         print(f"reconcile: {res}")
 

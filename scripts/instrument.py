@@ -94,14 +94,15 @@ def main() -> int:
     # ── measured ingest write path ────────────────────────────────────────────
     runner = BatchRunner(pack, wf.lever_config(), emitter=emitter, ledger=ledger, llm=llm, seed=7)
     t0 = time.perf_counter()
-    runner.run_batch(args.count)
+    outputs = runner.run_batch(args.count)
     ingest_wall = time.perf_counter() - t0
     ingest = bucket(timings)
     timings.clear()
 
-    # ── judge (one server-side batch grade call) ──────────────────────────────
+    # ── judge (name this batch's sessions so every one gets a prediction) ──────
     t0 = time.perf_counter()
-    jb = backfill_server_judge(emitter.base, emitter.key)
+    jb = backfill_server_judge(emitter.base, emitter.key,
+                               session_ids=[o.result.session_id for o in outputs])
     judge_wall = time.perf_counter() - t0
 
     # ── reconcile fan-out (outcome posts do re-grade + attribute + patterns) ───

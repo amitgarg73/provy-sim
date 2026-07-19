@@ -96,22 +96,42 @@ def _rewrite(ledger: GroundTruthLedger) -> None:
     os.replace(tmp, ledger.path)
 
 
-def backfill_server_judge(base_url: str, key: str) -> dict:
-    """Trigger Provy's server judge for the fleet's most recent closed sessions
-    (idempotent server-side). Best-effort; never raises."""
+def _post_judge(base_url: str, key: str, payload: dict) -> dict:
+    req = urllib.request.Request(
+        f"{base_url.rstrip('/')}/api/compute/judge",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "x-provy-key": key},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        try:
+            return json.loads(resp.read().decode() or "{}")
+        except Exception:
+            return {}
+
+
+def backfill_server_judge(base_url: str, key: str,
+                          session_ids: list[str] | None = None, chunk: int = 25) -> dict:
+    """Trigger Provy's server judge. With session_ids, judge EXACTLY those (the batch just emitted),
+    chunked to stay under the request timeout, so every session gets a prediction before reconcile —
+    Provy's default judge only covers the most-recent 20, which silently drops the tail of a larger
+    batch. Without session_ids, fall back to that bounded default. Idempotent server-side; best-effort,
+    never raises."""
     if not (base_url and key):
         return {"skipped": True}
     if os.environ.get("PROVY_EMIT", "").strip().lower() not in ("1", "true", "yes", "on") \
             and os.environ.get("GITHUB_ACTIONS", "").strip().lower() != "true":
         return {"skipped": "emit off"}
     try:
-        req = urllib.request.Request(
-            f"{base_url.rstrip('/')}/api/compute/judge",
-            data=json.dumps({}).encode(),
-            headers={"Content-Type": "application/json", "x-provy-key": key},
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=120)
+        if session_ids:
+            totals = {"sessions": 0, "evals_written": 0, "predictions_written": 0}
+            step = max(1, chunk)
+            for i in range(0, len(session_ids), step):
+                r = _post_judge(base_url, key, {"session_ids": session_ids[i:i + step]})
+                for k in totals:
+                    totals[k] += int(r.get(k) or 0)
+            return {"ok": True, **totals, "at": datetime.now(timezone.utc).isoformat()}
+        _post_judge(base_url, key, {})
         return {"ok": True, "at": datetime.now(timezone.utc).isoformat()}
     except Exception as e:
         return {"error": str(e)}
