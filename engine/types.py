@@ -38,11 +38,14 @@ class Criterion:
     signal: str          # the scalar signal this condition reads
     op: str              # 'eq' | 'gt' | 'gte' | 'lt' | 'lte'
     threshold: Any
+    type: str = "success"  # positive polarity: held -> met. Provy inverts only explicit failure/risk;
+                           # a missing type used to grade every held condition as violated (the Proved-0% bug).
 
     def to_contract_json(self) -> dict:
         return {
             "id": self.id, "text": self.text, "side": self.side,
             "signal": self.signal, "op": self.op, "threshold": self.threshold,
+            "type": self.type,
         }
 
 
