@@ -1,0 +1,26 @@
+name: run-travel
+
+# Dispatchable run for the Travel fleet. The Sim Control app triggers this via the GitHub API and
+# passes the fleet's ingest key + Provy URL. Shares logic with the other fleets via _run.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      ingest_key: { description: 'Provy ingest key (provy_...) for the Travel fleet', required: true,  type: string }
+      provy_url:  { description: 'Provy ingest base URL', required: false, type: string, default: 'https://provyai.vercel.app' }
+      count:      { description: 'Work items (sessions) to run', required: false, type: string, default: '8' }
+      seed:       { description: 'RNG seed (deterministic run)', required: false, type: string, default: '1' }
+      reconcile:  { description: 'Post the real outcomes after the run', required: false, type: boolean, default: true }
+      workflow_id: { description: 'Fleet workflow id (for scoreboard posting)', required: false, type: string, default: '' }
+
+jobs:
+  run:
+    uses: ./.github/workflows/_run.yml
+    with:
+      pack: travel
+      ingest_key: ${{ inputs.ingest_key }}
+      provy_url: ${{ inputs.provy_url }}
+      count: ${{ inputs.count }}
+      seed: ${{ inputs.seed }}
+      reconcile: ${{ inputs.reconcile }}
+      workflow_id: ${{ inputs.workflow_id }}
+    secrets: inherit
