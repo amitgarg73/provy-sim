@@ -47,6 +47,29 @@ def test_dry_run_builds_all_payloads(tmp_path, monkeypatch):
     assert all("faults" in r for r in records)
 
 
+def test_close_rolls_trace_tokens_up_to_the_session(tmp_path, monkeypatch):
+    """session/close must carry total_tokens/total_cost summed from the run's trace steps, so the
+    Sessions list and Command Center spend do not read 0 while the traces clearly have tokens."""
+    monkeypatch.delenv("PROVY_EMIT", raising=False)
+    pack = get_pack("travel")
+    ledger = GroundTruthLedger(str(tmp_path / "gt.jsonl"))
+    em = ProvyEmitter(ingest_key="provy_fake", is_simulated=False)
+    runner = BatchRunner(pack, LeverConfig({}), emitter=em, ledger=ledger, seed=1)
+    runner.run_batch(3)
+
+    traces = [c for c in em.sent if c["path"] == "/api/ingest/trace"]
+    closes = [c for c in em.sent if c["path"] == "/api/ingest/session/close"]
+    assert closes, "a session must close"
+    for c in closes:
+        p = c["payload"]
+        assert "total_tokens_in" in p and "total_tokens_out" in p and "total_cost_usd" in p
+        sid = p["session_id"]
+        exp_in = sum(t["payload"].get("tokens_input", 0) for t in traces
+                     if t["payload"]["session_id"] == sid and "tokens_input" in t["payload"])
+        assert p["total_tokens_in"] == exp_in and p["total_tokens_in"] > 0, "close must sum trace tokens"
+        assert p["total_cost_usd"] >= 0
+
+
 def test_dry_run_outcome_posts_label_and_signals(tmp_path, monkeypatch):
     monkeypatch.delenv("PROVY_EMIT", raising=False)
     pack = get_pack("support")

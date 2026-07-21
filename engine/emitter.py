@@ -145,9 +145,18 @@ class ProvyEmitter:
         })
 
     def close_session(self, result: RunResult) -> dict:
+        # Roll the per-step token/cost usage up to the session, the way a real SDK client does at close.
+        # The trace steps already carry tokens_input/tokens_output/cost_usd; without this the session's
+        # total_* stay 0 and the Sessions list + Command Center spend read "no cost data".
+        tok_in = sum(s.tokens_input or 0 for s in result.traces)
+        tok_out = sum(s.tokens_output or 0 for s in result.traces)
+        cost = round(sum(s.cost_usd or 0.0 for s in result.traces), 6)
         return self._post("/api/ingest/session/close", {
             "session_id": result.session_id,
             "terminal_reason": result.terminal_reason,
+            "total_tokens_in": tok_in,
+            "total_tokens_out": tok_out,
+            "total_cost_usd": cost,
             "metadata": {
                 **result.metadata,
                 "total_steps": len(result.traces),
