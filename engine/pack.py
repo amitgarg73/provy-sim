@@ -44,6 +44,11 @@ class BasePack:
 
     workflow: str = "base"
     session_type: str = "task"
+    # Per-run nonce, set once per batch by BatchRunner. It makes every batch emit FRESH session ids
+    # even when the seed (and therefore the work-item ids) repeat — so Provy creates new sessions with
+    # the real run time instead of matching by external_id and re-closing this morning's rows. Empty =
+    # legacy deterministic ids. Set on the base class so it applies to every pack automatically.
+    run_nonce: str = ""
 
     # ── to implement ──────────────────────────────────────────────────────────
     def generate_work_item(self, rng) -> tuple[Any, dict]:
@@ -72,7 +77,8 @@ class BasePack:
         return item["id"] if isinstance(item, dict) else str(item)
 
     def session_id(self, item: Any) -> str:
-        return f"sim-{self.workflow}-{self.entity_id(item)}"
+        base = f"sim-{self.workflow}-{self.entity_id(item)}"
+        return f"{base}-{self.run_nonce}" if self.run_nonce else base
 
     def run_pipeline(self, item: Any, ground_truth: dict, ctx: RunContext) -> RunResult:
         result = self.build_clean_run(item, ground_truth, ctx)

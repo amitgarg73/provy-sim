@@ -8,6 +8,7 @@ every payload and records ground truth; nothing is sent.
 from __future__ import annotations
 
 import random
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -24,7 +25,7 @@ class BatchRunner:
                  emitter: Optional[ProvyEmitter] = None,
                  ledger: Optional[GroundTruthLedger] = None,
                  llm: Optional[LLM] = None, seed: int = 0,
-                 start_index: int = 0):
+                 start_index: int = 0, run_id: Optional[str] = None):
         self.pack = pack
         self.levers = lever_config
         self.emitter = emitter
@@ -32,6 +33,10 @@ class BatchRunner:
         self.llm = llm or LLM()
         self.rng = random.Random(seed)
         self.index = start_index
+        # Per-batch nonce so every run emits fresh session ids (fresh Provy sessions with real
+        # timestamps), even when the seed repeats the work-item ids. NON-deterministic on purpose —
+        # not drawn from the seeded rng — so re-runs don't collide. Pass run_id to pin it (tests).
+        pack.run_nonce = run_id or uuid.uuid4().hex[:8]
 
     def run_one(self) -> "RunOutput":
         item, gt = self.pack.generate_work_item(self.rng)
