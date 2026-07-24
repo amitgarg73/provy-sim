@@ -63,18 +63,27 @@ def main() -> int:
     runner = BatchRunner(pack, wf.lever_config(), emitter=emitter, ledger=ledger,
                          llm=llm, seed=args.seed, start_index=args.start_index)
 
-    def flush(chunk):
+    def flush(chunk, final: bool):
         """Judge, then post this chunk's outcomes.
 
         Order matters: the server judge writes the trace-based predictions, and an outcome can only
         reconcile against a prediction that already exists. Judge FIRST, naming exactly this chunk's
         sessions so every one gets a prediction rather than just the most-recent 20.
+
+        Retry budget is deliberately asymmetric. reconcile_pending waits `backoff` seconds between
+        retries for outcomes whose prediction is not visible yet, which is right ONCE but disastrous
+        per chunk: at the default 5 retries x 20s, a five-chunk batch could spend ten minutes asleep
+        (observed on a 20-run batch that finished emitting long before the job ended). An intermediate
+        chunk does not need to wait, because reconcile_pending drains ALL pending outcomes for the
+        workflow — anything it leaves unmatched is retried by the next chunk, and the final sweep
+        keeps the full budget as the backstop.
         """
         if args.settle_lag > 0:
             time.sleep(args.settle_lag)
         sids = [o.result.session_id for o in chunk]
         print(f"  judge backfill: {backfill_server_judge(emitter.base, emitter.key, session_ids=sids)}")
-        print(f"  reconcile: {reconcile_pending(ledger, emitter, workflow=args.pack)}")
+        kw = {} if final else {"retries": 0}
+        print(f"  reconcile: {reconcile_pending(ledger, emitter, workflow=args.pack, **kw)}")
 
     # Chunked so outcomes stream in with the runs. Without --reconcile-every this is a single chunk
     # and the behaviour is unchanged.
@@ -85,7 +94,7 @@ def main() -> int:
         outputs.extend(chunk)
         if args.reconcile and len(sizes) > 1:
             print(f"chunk {i + 1}/{len(sizes)} ({size} runs):")
-            flush(chunk)
+            flush(chunk, final=False)
 
     for o in outputs[:args.show]:
         r = o.result
@@ -98,7 +107,7 @@ def main() -> int:
     if args.reconcile:
         if len(sizes) > 1:
             print("final sweep:")
-        flush(outputs)
+        flush(outputs, final=True)
 
     # Post the injected-truth summary to the console (best-effort, offline-safe) so its scoreboard
     # has the injected side: lever rates, per-entity attribution truth, and value at risk.
