@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -22,7 +23,7 @@ from engine.emitter import ProvyEmitter
 from engine.groundtruth import GroundTruthLedger
 from engine.llm import LLM
 from engine.reconcile import backfill_server_judge, reconcile_pending
-from engine.runner import BatchRunner
+from engine.runner import BatchRunner, chunk_sizes
 from engine.scoreboard import ProvyQuery, aggregate_injected, build_report, format_report
 from engine.control_client import post_injected
 from packs import PACKS, get_pack
@@ -36,6 +37,12 @@ def main() -> int:
     ap.add_argument("--start-index", type=int, default=0)
     ap.add_argument("--ledger", default=None, help="ground-truth JSONL path")
     ap.add_argument("--reconcile", action="store_true", help="post the day's outcomes")
+    ap.add_argument("--reconcile-every", type=int, default=0, metavar="N",
+                    help="post outcomes every N runs instead of only at the end, so outcomes stream "
+                         "in alongside the runs (0 = at the end, the old behaviour)")
+    ap.add_argument("--settle-lag", type=float, default=0.0, metavar="SECONDS",
+                    help="wait this long before posting a chunk's outcomes, modelling the gap between "
+                         "a decision and its real-world outcome settling")
     ap.add_argument("--scoreboard", action="store_true", help="print the scoreboard")
     ap.add_argument("--show", type=int, default=2, help="print N run summaries")
     args = ap.parse_args()
@@ -55,7 +62,30 @@ def main() -> int:
 
     runner = BatchRunner(pack, wf.lever_config(), emitter=emitter, ledger=ledger,
                          llm=llm, seed=args.seed, start_index=args.start_index)
-    outputs = runner.run_batch(args.count)
+
+    def flush(chunk):
+        """Judge, then post this chunk's outcomes.
+
+        Order matters: the server judge writes the trace-based predictions, and an outcome can only
+        reconcile against a prediction that already exists. Judge FIRST, naming exactly this chunk's
+        sessions so every one gets a prediction rather than just the most-recent 20.
+        """
+        if args.settle_lag > 0:
+            time.sleep(args.settle_lag)
+        sids = [o.result.session_id for o in chunk]
+        print(f"  judge backfill: {backfill_server_judge(emitter.base, emitter.key, session_ids=sids)}")
+        print(f"  reconcile: {reconcile_pending(ledger, emitter, workflow=args.pack)}")
+
+    # Chunked so outcomes stream in with the runs. Without --reconcile-every this is a single chunk
+    # and the behaviour is unchanged.
+    sizes = chunk_sizes(args.count, args.reconcile_every if args.reconcile else 0)
+    outputs = []
+    for i, size in enumerate(sizes):
+        chunk = runner.run_batch(size)
+        outputs.extend(chunk)
+        if args.reconcile and len(sizes) > 1:
+            print(f"chunk {i + 1}/{len(sizes)} ({size} runs):")
+            flush(chunk)
 
     for o in outputs[:args.show]:
         r = o.result
@@ -63,14 +93,12 @@ def main() -> int:
         print(f"  {r.entity_id}: outcome={r.outcome_label} diverged={r.diverged()} "
               f"terminal={r.terminal_reason} faults=[{faults}]")
 
+    # Single-chunk runs reconcile once at the end; chunked runs already flushed as they went, but a
+    # final sweep catches anything whose prediction was not yet visible when its chunk posted.
     if args.reconcile:
-        # Order matters: the server judge writes the trace-based predictions, and an outcome can only
-        # reconcile against a prediction that already exists. Judge FIRST (naming THIS batch's sessions
-        # so every one gets a prediction, not just the most-recent 20), then post the outcomes.
-        sids = [o.result.session_id for o in outputs]
-        print(f"judge backfill: {backfill_server_judge(emitter.base, emitter.key, session_ids=sids)}")
-        res = reconcile_pending(ledger, emitter, workflow=args.pack)
-        print(f"reconcile: {res}")
+        if len(sizes) > 1:
+            print("final sweep:")
+        flush(outputs)
 
     # Post the injected-truth summary to the console (best-effort, offline-safe) so its scoreboard
     # has the injected side: lever rates, per-entity attribution truth, and value at risk.

@@ -57,6 +57,26 @@ class BatchRunner:
         return [self.run_one() for _ in range(n)]
 
 
+def chunk_sizes(count: int, every: int) -> list[int]:
+    """Split a batch into reconcile chunks.
+
+    Outcomes used to be posted only after the WHOLE batch finished, so Provy saw a wall of runs with
+    nothing reconciled and then every outcome at once. For a demo that means the trust score, the
+    ledger and the divergence surfaces say nothing until the run is over. Chunking lets outcomes
+    stream in alongside the runs that produced them.
+
+    every <= 0 keeps the old behaviour (one chunk, reconcile at the end), so nothing changes unless
+    asked. A remainder becomes its own final chunk rather than being dropped or merged, so the last
+    few runs still reconcile.
+    """
+    if count <= 0:
+        return []
+    if every <= 0 or every >= count:
+        return [count]
+    full, rest = divmod(count, every)
+    return [every] * full + ([rest] if rest else [])
+
+
 class RunOutput:
     def __init__(self, item, ground_truth, result, record):
         self.item = item

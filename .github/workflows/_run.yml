@@ -13,6 +13,10 @@ on:
       count:      { required: false, type: string,  default: '8' }
       seed:       { required: false, type: string,  default: '1' }
       reconcile:  { required: false, type: boolean, default: true }
+      # Outcomes stream in every N runs instead of only after the whole batch, so Provy's trust score
+      # and divergence surfaces fill in DURING a run rather than saying nothing until it ends (#3).
+      # 0 restores the old post-everything-at-the-end behaviour.
+      reconcile_every: { required: false, type: string, default: '4' }
       workflow_id: { required: false, type: string, default: '' }  # so the run posts its summary to the console
     secrets:
       GROQ_API_KEY: { required: true }
@@ -51,4 +55,5 @@ jobs:
             --pack "${{ inputs.pack }}" \
             --count "${{ inputs.count }}" \
             --seed "${{ inputs.seed }}" \
-            ${{ inputs.reconcile && '--reconcile' || '' }}
+            ${{ inputs.reconcile && '--reconcile' || '' }} \
+            --reconcile-every "${{ inputs.reconcile_every }}"
