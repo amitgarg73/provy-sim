@@ -112,10 +112,18 @@ class BasePack:
 
     def agent_step(self, ctx: RunContext, agent: AgentSpec, item: Any, decision: str,
                    entity_id: str, tokens=(300, 60), payload_extra: dict | None = None) -> TraceStep:
-        reasoning = ctx.llm.reason(agent.name, agent.role, self._summ(item), decision)
+        summary = self._summ(item)
+        reasoning = ctx.llm.reason(agent.name, agent.role, summary, decision)
+        # A realistic prompt + output so Provy's Prompt and Output tabs are populated, matching what a
+        # real tenant would log. System = the agent's standing instructions, user = this work item,
+        # output = what the agent concluded.
+        system = f"You are the {agent.name} agent in a {ctx.workflow} pipeline. {agent.role.rstrip('.')}."
+        user = f"Work item {entity_id}:\n{summary}"
         return TraceStep(
             agent=agent.name, step_type="agent_message", outcome=decision,
-            agent_reasoning=reasoning, entity_id=entity_id,
+            agent_reasoning=reasoning, system=system, user=user,
+            tool_output={"decision": decision, "detail": reasoning},
+            entity_id=entity_id,
             tokens_input=tokens[0], tokens_output=tokens[1], model="llama-3.3-70b-versatile",
             cost_usd=llm_cost_usd(tokens[0], tokens[1]),
             latency_ms=ctx.rng.randint(400, 1800),

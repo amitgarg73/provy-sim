@@ -123,6 +123,8 @@ class ProvyEmitter:
         # Assemble the payload blob the ingest route stores on ag_traces.payload
         blob: dict[str, Any] = {}
         if step.agent_reasoning is not None: blob["agent_reasoning"] = step.agent_reasoning
+        if step.system is not None:          blob["system"] = step.system
+        if step.user is not None:            blob["user"] = step.user
         if step.tool_input is not None:      blob["tool_input"] = step.tool_input
         if step.tool_output is not None:     blob["tool_output"] = step.tool_output
         if step.entity_id is not None:       blob["entity_id"] = step.entity_id

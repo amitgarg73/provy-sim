@@ -60,6 +60,11 @@ class TraceStep:
     tool_input: Optional[dict] = None
     tool_output: Optional[dict] = None
     agent_reasoning: Optional[str] = None
+    # The prompt the model saw (system = its instructions, user = the work item). Emitted so Provy's
+    # Prompt tab is populated instead of showing the instrumentation-gap message — the same
+    # argus.system_prompt / argus.user_message attributes a real tenant would log.
+    system: Optional[str] = None
+    user: Optional[str] = None
     entity_id: Optional[str] = None
     latency_ms: int = 0
     error: Optional[str] = None
