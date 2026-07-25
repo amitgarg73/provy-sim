@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       ingest_key: { description: 'Provy ingest key (provy_...) for the CRM fleet', required: true,  type: string }
-      provy_url:  { description: 'Provy ingest base URL', required: false, type: string, default: 'https://provyai.vercel.app' }
+      provy_url:  { description: 'Provy ingest base URL', required: false, type: string, default: 'https://provydev.vercel.app' }
       count:      { description: 'Work items (sessions) to run', required: false, type: string, default: '8' }
       seed:       { description: 'RNG seed (deterministic run)', required: false, type: string, default: '1' }
       reconcile:  { description: 'Post the real outcomes after the run', required: false, type: boolean, default: true }

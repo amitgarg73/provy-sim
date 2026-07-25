@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from engine.contract import contract_json
 from packs import get_pack
 
-BASE = os.environ.get("PROVY_URL", "https://provyai.vercel.app").rstrip("/")
+BASE = os.environ.get("PROVY_URL", "https://provydev.vercel.app").rstrip("/")
 
 
 def seed_evals_payload(pack) -> dict:

@@ -1,7 +1,7 @@
 """Provy REST emitter — copied/adapted from trading-agent-c/trace/logger.py.
 
 Raw REST over the x-provy-key header, no framework lock-in. Base URL is
-Provy production (https://provyai.vercel.app), NOT the retired argusobs. Honors
+Provy pre-prod (https://provydev.vercel.app), where simulated fleets live, NOT production. Honors
 the PROVY_EMIT gotcha: a no-op unless PROVY_EMIT is truthy (or GITHUB_ACTIONS
 is true) AND a url + key are present. Every payload is also captured in memory
 so a dry-run can inspect exactly what WOULD have been sent.
@@ -25,7 +25,7 @@ from typing import Any, Optional
 
 from .types import RunResult
 
-DEFAULT_BASE_URL = "https://provyai.vercel.app"
+DEFAULT_BASE_URL = "https://provydev.vercel.app"
 
 
 def emit_enabled(url: str, key: str) -> bool:
@@ -43,8 +43,9 @@ def emit_enabled(url: str, key: str) -> bool:
 
 def request_headers(key: str) -> dict:
     """Standard ingest headers, plus the Vercel deployment-protection bypass when
-    VERCEL_PROTECTION_BYPASS is set — so a scripted run can reach an SSO-walled preview
-    (provydev) headlessly. Dev-only convenience; leave the env var unset for prod/CI."""
+    VERCEL_PROTECTION_BYPASS is set. provydev sits behind Vercel SSO, so a headless run needs this
+    to reach the ingest routes at all: without it every emit gets the SSO redirect, not the API.
+    Since simulated fleets target provydev, CI sets it too."""
     headers = {"Content-Type": "application/json", "x-provy-key": key}
     bypass = os.environ.get("VERCEL_PROTECTION_BYPASS", "").strip()
     if bypass:

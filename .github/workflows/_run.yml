@@ -9,7 +9,11 @@ on:
     inputs:
       pack:       { required: true,  type: string }
       ingest_key: { required: true,  type: string }
-      provy_url:  { required: false, type: string,  default: 'https://provyai.vercel.app' }
+      # Simulated fleets belong on pre-prod, which provydev serves. Production holds real customer
+      # data only. Pointing this at provyai would create the fleet in one database and send its runs
+      # to the other, where the ingest key does not exist, so every call 401s while provisioning
+      # still reports success.
+      provy_url:  { required: false, type: string,  default: 'https://provydev.vercel.app' }
       count:      { required: false, type: string,  default: '8' }
       seed:       { required: false, type: string,  default: '1' }
       reconcile:  { required: false, type: boolean, default: true }
@@ -20,6 +24,9 @@ on:
       workflow_id: { required: false, type: string, default: '' }  # so the run posts its summary to the console
     secrets:
       GROQ_API_KEY: { required: true }
+      # provydev sits behind Vercel SSO, so a headless run needs the protection-bypass token to
+      # reach the ingest routes at all. Without it every emit gets the SSO redirect, not the API.
+      VERCEL_PROTECTION_BYPASS: { required: false }
 
 jobs:
   run:
@@ -35,6 +42,7 @@ jobs:
         env:
           PROVY_EMIT: '1'
           PROVY_URL: ${{ inputs.provy_url }}
+          VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           # The runner resolves the pack's key from PROVY_KEY_<PACK> (config/workflows.py). Only the
           # selected pack's variable is set, from the caller's input.

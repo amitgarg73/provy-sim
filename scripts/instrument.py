@@ -6,7 +6,7 @@ p50/p95/p99/max per stage. Warms the functions first so cold starts don't pollut
 Runs a normal reconciled batch (same paths as run_batch), so the SAME execution also writes the
 ground-truth ledger with the varied injected culprits — one run measures latency AND attribution.
 
-    PROVY_EMIT=1 PROVY_KEY_TRAVEL=provy_xxx PROVY_URL=https://provyai.vercel.app \
+    PROVY_EMIT=1 PROVY_KEY_TRAVEL=provy_xxx PROVY_URL=https://provydev.vercel.app \
         python scripts/instrument.py --pack travel --count 40 --warmup 3
 """
 from __future__ import annotations

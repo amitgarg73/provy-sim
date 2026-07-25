@@ -30,7 +30,7 @@ def run_fleet(fleet: dict, count: str) -> int:
     pack = fleet["pack"]
     env = dict(os.environ)
     env[f"PROVY_KEY_{pack.upper()}"] = fleet["ingest_key"]
-    env["PROVY_URL"] = fleet.get("provy_url") or "https://provyai.vercel.app"
+    env["PROVY_URL"] = fleet.get("provy_url") or "https://provydev.vercel.app"
     env["PROVY_EMIT"] = "1"
     # So run_batch can post its injected summary back to the console for this fleet.
     if fleet.get("workflow_id"):
