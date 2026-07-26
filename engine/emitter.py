@@ -50,7 +50,10 @@ def request_headers(key: str) -> dict:
     bypass = os.environ.get("VERCEL_PROTECTION_BYPASS", "").strip()
     if bypass:
         headers["x-vercel-protection-bypass"] = bypass
-        headers["x-vercel-set-bypass-cookie"] = "true"
+        # Deliberately NOT x-vercel-set-bypass-cookie. That header asks Vercel to hand back a
+        # cookie, which it does by answering 307 instead of running the route, so every emit
+        # became a redirect and no data ever landed. It is for browsers keeping a session; a
+        # headless caller sends the token on each request and wants the route to run.
     return headers
 
 

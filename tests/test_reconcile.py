@@ -46,4 +46,7 @@ def test_request_headers_adds_vercel_bypass_only_when_set(monkeypatch):
     monkeypatch.setenv("VERCEL_PROTECTION_BYPASS", "tok123")
     h = request_headers("provy_k")
     assert h["x-vercel-protection-bypass"] == "tok123"
-    assert h["x-vercel-set-bypass-cookie"] == "true"
+    # Never ask for the bypass cookie. Vercel answers that request with a 307 redirect instead of
+    # running the route, which silently turned every emit into a no-op: the run went green and not
+    # one session landed. Verified against provydev — token alone 200, token plus this header 307.
+    assert "x-vercel-set-bypass-cookie" not in h
