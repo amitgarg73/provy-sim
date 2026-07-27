@@ -78,11 +78,38 @@ _DEFAULT_RATES = {
 # Each is also a superset: the generic chaos levers run on it too (the pack calls the shared
 # lever engine), available at rate 0 for an operator to dial up. Defaults keep the
 # commitment-integrity story plus the L1/L2 overlays on.
+# A realistic fleet does not fail the same way every time.
+#
+# These two fleets previously carried ONLY their commitment injectors, so every miss on the demo
+# tenants had the identical cause and Provy had one story to tell over and over: five sessions,
+# five "Refund actually settled with the customer", no shared cause, nothing to attribute. A
+# prospect looking at that sees a fixture, not a product.
+#
+# The generic chaos levers are folded back in at low rates so the miss mix is MIXED: some runs fail
+# because a tool went wrong inside the run (traceable, attributable), some because the promise did
+# not hold downstream (only reconciliation can see it), and most succeed. That is what a real fleet
+# looks like, and it is the only way the attribution demo has anything to attribute.
+#
+# Rates are deliberately LOW in total. The lever engine allows one primary cause per run, and the
+# generic levers are evaluated before the pack's settlement feed, so a high generic total silently
+# crowds the commitment story out entirely: a first pass at 30% produced 24 runs with zero
+# settlement failures. Roughly 14% generic against ~16% commitment keeps both families visible.
+_MIXED_GENERIC = {
+    "tool_fault":                {"rate": 0.04},   # a tool returns junk mid-run -> deterministic culprit
+    "silent_staleness":          {"rate": 0.02},   # stale read the agent acted on
+    "silent_incomplete":         {"rate": 0.02},   # partial work reported as done
+    "silent_wrong":              {"rate": 0.02},   # confidently wrong answer
+    "confidence_miscalibration": {"rate": 0.02},   # sure and wrong / unsure and right
+    "sla_breach":                {"rate": 0.01},
+    "overt_error":               {"rate": 0.01},   # a run that visibly breaks
+}
+
 _STRIPE_RATES = {
     "unsettled_insufficient": {"rate": 0.08},
     "unsettled_bank_return":  {"rate": 0.03},
     "wrong_amount":           {"rate": 0.03},
     "duplicate":              {"rate": 0.02},
+    **_MIXED_GENERIC,
     **_L1L2_RATES,
 }
 
@@ -91,6 +118,7 @@ _TRAVEL_RATES = {
     "segment_reversed": {"rate": 0.03},
     "wrong_fare":       {"rate": 0.03},
     "double_booked":    {"rate": 0.02},
+    **_MIXED_GENERIC,
     **_L1L2_RATES,
 }
 

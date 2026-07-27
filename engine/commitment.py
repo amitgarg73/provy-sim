@@ -219,10 +219,15 @@ class CommitmentPack(BasePack):
         st = sor.settlement(ref)
 
         if st.injector is None:
+            clean_out = {"settled": True, "amount_settled": st.amount_settled, "reason": st.reason}
+            # Same fields on the clean path, carrying the GOOD values, so a detector reading this
+            # is reading the value rather than the presence of the schema.
+            for _sig, _c in C.signal_index(self.contract()).items():
+                clean_out[_sig] = C.good_value(_c)
             r.traces.append(TraceStep(
                 agent=promise_agent, step_type="tool_call", tool_name=self.settle_tool,
                 tool_input={"ref": ref},
-                tool_output={"settled": True, "amount_settled": st.amount_settled, "reason": st.reason},
+                tool_output=clean_out,
                 outcome="ok", entity_id=eid,
                 payload_extra={"narration": self.clean_narration(amount)}))
             return None
@@ -241,10 +246,20 @@ class CommitmentPack(BasePack):
         # attribution is a real test (blind spot -> culprit None).
         cause, culprit = self._plant_cause(r, m, ctx)
 
+        # Report the CONTRACT'S OWN SIGNAL alongside the feed's native fields.
+        #
+        # Provy attributes a miss to a tool by matching the tool's output against the signal the
+        # contract grades, on an exact field name — a fuzzy match would be a guess dressed as
+        # evidence. Emitting only `settled` while the contract grades `refund_settled` left every
+        # commitment divergence unattributable, with the answer sitting in the payload under a
+        # different name. This is the instrumentation the product's whole claim depends on.
+        settle_out = {"settled": st.settled, "amount_settled": st.amount_settled, "reason": st.reason}
+        if c is not None:
+            settle_out[target_signal] = C.bad_value(c)
         r.traces.append(TraceStep(
             agent=promise_agent, step_type="tool_call", tool_name=self.settle_tool,
             tool_input={"ref": ref},
-            tool_output={"settled": st.settled, "amount_settled": st.amount_settled, "reason": st.reason},
+            tool_output=settle_out,
             outcome="ok", entity_id=eid,
             payload_extra={"narration": self.fault_narration(st, cause)}))
 

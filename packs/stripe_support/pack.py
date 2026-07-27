@@ -203,7 +203,11 @@ class StripeSupportPack(BasePack):
             r.traces.append(TraceStep(
                 agent="resolver", step_type="tool_call", tool_name="stripe.settlement",
                 tool_input={"order_id": item["order_id"]},
-                tool_output={"settled": True, "amount_settled": st.amount_settled, "reason": st.reason},
+                # Same signal names on the clean path, so a healthy run looks identical in shape.
+                # A detector that only ever sees the signal on failures would be reading the schema,
+                # not the value.
+                tool_output={"settled": True, "amount_settled": st.amount_settled, "reason": st.reason,
+                             "refund_settled": True, "amount_correct": True, "no_duplicate": True},
                 outcome="ok", entity_id=eid,
                 payload_extra={"narration": f"Settlement check: the refund cleared for ${st.amount_settled:.2f}. Promise kept."}))
             return None
@@ -217,11 +221,25 @@ class StripeSupportPack(BasePack):
         elif st.reason == "duplicate_charge":
             r.real_signals["no_duplicate"] = False
 
+        # The settlement feed reports the CONTRACT'S OWN SIGNAL NAMES alongside its native fields.
+        #
+        # This is the instrumentation that makes a divergence attributable. Provy can only trace a
+        # miss back to a tool when the tool's output carries the signal the contract grades: it
+        # matches on the exact field name, because a fuzzy match would be a guess dressed as
+        # evidence. Emitting `settled` when the contract grades `refund_settled` left every one of
+        # these runs unattributable — the answer was in the payload under a different name.
+        #
+        # Realistic, not a fixture: a settlement feed that knows it is answering "did the refund
+        # settle" should say so in the customer's vocabulary.
+        settle_out = {"settled": st.settled, "amount_settled": st.amount_settled,
+                      "duplicate": st.duplicate, "reason": st.reason,
+                      "refund_settled": st.settled,
+                      "amount_correct": st.reason != "wrong_amount",
+                      "no_duplicate": not st.duplicate}
         r.traces.append(TraceStep(
             agent="resolver", step_type="tool_call", tool_name="stripe.settlement",
             tool_input={"order_id": item["order_id"]},
-            tool_output={"settled": st.settled, "amount_settled": st.amount_settled,
-                         "duplicate": st.duplicate, "reason": st.reason},
+            tool_output=settle_out,
             outcome="ok", entity_id=eid,
             payload_extra={"narration": (f"Settlement check: {_PLAIN[st.reason]}. "
                                          f"The agent told the customer it was done, reality disagrees.")}))
