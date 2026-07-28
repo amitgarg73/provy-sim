@@ -118,14 +118,41 @@ def main() -> int:
     # A pack whose runs contain real waiting works its items concurrently, the way a desk does.
     # Sequentially, one held ticket delays every ticket behind it, so the delay lands on the wrong
     # tickets and how long anything waited comes back to its position in the loop.
-    desk = None
     if args.concurrency > 1 and supports_journey(pack):
-        desk = Desk(runner, concurrency=args.concurrency, log=lambda m: print(m, flush=True))
+        # ONE desk for the whole run, not one per chunk. Chunking a desk puts a barrier back in:
+        # it works N, waits for the slowest to finish, judges, and only then picks up the next N.
+        # Measured on the 28 July run, chunk 1 held two tickets for eight minutes while five newly
+        # arrived incidents sat untouched and blew their response targets before anyone looked at
+        # them. Judging streams off completions instead, so a finished ticket is judged while the
+        # rest are still being worked.
         print(f"desk: {args.concurrency} tickets in flight; waits overlap")
+        waiting: list = []
+
+        def judge_waiting():
+            if not waiting:
+                return
+            batch, waiting[:] = list(waiting), []
+            if args.reconcile:
+                flush(batch, final=False)
+            elif not pack_owns:
+                sids = [o.result.session_id for o in batch]
+                print(f"  judge {len(batch)}: "
+                      f"{backfill_server_judge(emitter.base, emitter.key, session_ids=sids)}",
+                      flush=True)
+
+        def on_complete(out):
+            waiting.append(out)
+            if args.reconcile_every > 0 and len(waiting) >= args.reconcile_every:
+                judge_waiting()
+
+        desk = Desk(runner, concurrency=args.concurrency, on_complete=on_complete,
+                    log=lambda m: print(m, flush=True))
+        outputs = desk.run(args.count)
+        judge_waiting()
+        sizes = []
+
     for i, size in enumerate(sizes):
-        if desk is not None:
-            chunk = desk.run(size)
-        elif args.pace > 0:
+        if args.pace > 0:
             chunk = []
             for j in range(size):
                 if outputs or chunk:

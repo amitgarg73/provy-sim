@@ -32,7 +32,8 @@ from collections import deque
 from typing import Any, Optional
 
 from engine.pack import BasePack
-from engine.servicenow import (CORRECT_GROUP, DEMO_RESPONSE_TARGET_S,
+from engine.servicenow import (CORRECT_GROUP, DEMO_RESOLUTION_TARGET_S,
+                               DEMO_RESPONSE_TARGET_S,
                                GENUINE_FIX_CODES, MARKER, STATE_IN_PROGRESS,
                                STATE_ON_HOLD, STATE_RESOLVED, SUBCATEGORIES,
                                ServiceNowClient, ServiceNowError, client_from_env)
@@ -96,6 +97,12 @@ class ItsmPack(BasePack):
         self._client = client
         self._queue: deque[dict] = deque()
         self._fetched = 0
+        # Tickets this run has already picked up. The desk keeps several open at once, and an open
+        # ticket still matches the waiting-work query, so without this the same incident is handed
+        # out again the moment the queue runs dry. Two journeys then work one ticket, write over
+        # each other in the instance, and collide on the session id, so the run reports fewer
+        # sessions than it worked and nobody is told why.
+        self._issued: set = set()
 
     # ── the system of record ────────────────────────────────────────────────
     @property
@@ -161,7 +168,7 @@ class ItsmPack(BasePack):
 
     # ── work items come from ServiceNow, not from the generator ─────────────
     def generate_work_item(self, rng) -> tuple[dict, dict]:
-        if not self._queue:
+        if not self._fresh_queued():
             # An empty queue is not necessarily an error. When incidents arrive during the run
             # rather than all up front, the agent catches up with the backlog and waits, which is
             # what a desk does between tickets. Only a queue that stays empty is a real problem.
@@ -177,6 +184,7 @@ class ItsmPack(BasePack):
 
     def _take_queued(self) -> tuple[dict, dict]:
         inc = self._queue.popleft()
+        self._issued.add(inc.get("sys_id"))
         item = {
             "id": inc["number"],
             "sys_id": inc["sys_id"],
@@ -203,13 +211,22 @@ class ItsmPack(BasePack):
         run waits for the next arrival, so their holds would stop running down and the delay would
         land on whatever happened to be open at the time. Waiting is the caller's decision.
         """
-        if not self._queue:
-            batch = self.client.open_demo_incidents(limit=_FETCH_SIZE)
+        if not self._fresh_queued():
+            batch = self._fresh(self.client.open_demo_incidents(limit=_FETCH_SIZE))
             self._fetched += len(batch)
             if not batch:
                 return None
             self._queue.extend(batch)
         return self._take_queued()
+
+    def _fresh(self, rows: list) -> list:
+        """Drop anything this run is already working. See `_issued`."""
+        return [r for r in rows if r.get("sys_id") not in self._issued]
+
+    def _fresh_queued(self) -> bool:
+        while self._queue and self._queue[0].get("sys_id") in self._issued:
+            self._queue.popleft()
+        return bool(self._queue)
 
     def _await_work(self) -> list:
         """Poll for waiting incidents, giving arrivals time to land before calling it empty.
@@ -220,7 +237,7 @@ class ItsmPack(BasePack):
         """
         deadline = time.monotonic() + _IDLE_TIMEOUT_S
         while True:
-            batch = self.client.open_demo_incidents(limit=_FETCH_SIZE)
+            batch = self._fresh(self.client.open_demo_incidents(limit=_FETCH_SIZE))
             if batch or time.monotonic() >= deadline:
                 return batch
             time.sleep(_IDLE_POLL_S)
@@ -437,21 +454,32 @@ class ItsmPack(BasePack):
             }
             return r
 
-    def _target_seconds(self, item: dict) -> float:
-        """The response target this ticket arrived carrying, in seconds.
+    def _targets(self, item: dict) -> tuple[float, float]:
+        """The (response, resolution) targets this ticket arrived carrying, in seconds.
 
-        Delays are sized against this rather than against fixed seconds, so the same mistake costs
-        what it should: a misroute blows a P2's one-minute promise and may still come in under a
-        P4's eight-minute one.
+        Waits are sized against these rather than against fixed seconds, so the same mistake costs
+        what it should: it blows a P2's tight promise and may still come in under a P4's loose one.
+
+        Two targets, not one, because they are ended by different things. The response clock stops
+        when the ticket reaches a team; the resolution clock stops when it is actually resolved. A
+        delay is only worth modelling against the promise it can still threaten.
         """
-        return float(DEMO_RESPONSE_TARGET_S.get(str(item.get("priority") or "3"), 240))
+        p = str(item.get("priority") or "3")
+        return (float(DEMO_RESPONSE_TARGET_S.get(p, 60)),
+                float(DEMO_RESOLUTION_TARGET_S.get(p, 360)))
 
     def _work_ticket(self, r: RunResult, item: dict, d: dict, ctx: RunContext) -> RunResult:
         A = {a.name: a for a in self.agents()}
         eid = r.entity_id
         sys_id = item["sys_id"]
         rng = ctx.rng
-        target = self._target_seconds(item)
+        response_target, resolution_target = self._targets(item)
+
+        # 0. The ticket sits in the queue until the desk gets to it. This is the ONLY wait that can
+        # touch the response target, whose clock stops the moment a group is assigned, and it is
+        # not bought by any decision: it is how busy the desk was. The desk's own capacity supplies
+        # most of it, so what is added here is just the ordinary moment before anyone picks up.
+        yield Wait("waiting_to_be_picked_up", rng.uniform(0.05, 0.35) * response_target, cause=None)
 
         # 1. Triage: decide, then write it to the incident.
         r.traces.append(self.agent_step(
@@ -499,8 +527,12 @@ class ItsmPack(BasePack):
         # 2a. The ticket now SITS in whatever queue the agent put it in. This is where a routing
         # mistake becomes expensive: the right team picks it up well inside the promise, the wrong
         # team leaves it until somebody notices it is not theirs.
+        #
+        # Sized against RESOLUTION, not response. The response clock stopped on the line above, when
+        # the group was set, so nothing here can breach it. What a misroute actually costs is time
+        # to resolve, and that is the promise this has to be measured against.
         if d["landed_wrong"]:
-            yield Wait("queued_with_the_wrong_team", rng.uniform(1.2, 2.5) * target,
+            yield Wait("queued_with_the_wrong_team", rng.uniform(0.8, 1.5) * resolution_target,
                        cause="router")
             # Somebody notices. The reassignment is a real second touch on the record, which is
             # what the handled-without-handoff condition reads.
@@ -521,7 +553,7 @@ class ItsmPack(BasePack):
                                f"Reassigned to {fixed_group}."},
                 eid, extra_output={"assignment_group_name": fixed_group}))
         else:
-            yield Wait("queued_with_the_right_team", rng.uniform(0.7, 1.3) * 0.15 * target,
+            yield Wait("queued_with_the_right_team", rng.uniform(0.05, 0.2) * resolution_target,
                        cause=None)
 
         # 2b. A shallow diagnosis shows up as a ticket parked on the caller. The agent resolves
@@ -537,7 +569,8 @@ class ItsmPack(BasePack):
                 {"state": STATE_ON_HOLD,
                  "work_notes": "[AI resolution] Awaiting further detail from the caller."},
                 eid))
-            yield Wait("awaiting_the_caller", rng.uniform(0.8, 1.5) * target, cause="resolver")
+            yield Wait("awaiting_the_caller", rng.uniform(0.5, 1.1) * resolution_target,
+                       cause="resolver")
             r.traces.append(self._sn_step(
                 ctx, A["resolver"], "servicenow.resume_incident", sys_id,
                 {"state": STATE_IN_PROGRESS,

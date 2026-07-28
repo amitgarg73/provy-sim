@@ -22,6 +22,7 @@ from scripts.seed_itsm_incidents import (PRIORITY_MIXES, arrival_gaps,
 REPO = Path(__file__).resolve().parents[1]
 RUN_ITSM = (REPO / ".github" / "workflows" / "run-itsm.yml").read_text()
 SHARED = (REPO / ".github" / "workflows" / "_run.yml").read_text()
+RUN_BATCH = (REPO / "scripts" / "run_batch.py").read_text()
 
 
 # ── topping up the backlog ──────────────────────────────────────────────────
@@ -143,13 +144,25 @@ def test_itsm_does_not_pace_because_the_journey_provides_the_waiting():
     assert "default: '0'" in line
 
 
-def test_itsm_works_several_tickets_at_once():
-    """Sequentially, a ticket held five minutes delays every ticket behind it, so the delay lands
-    on the wrong tickets and position decides the outcome again."""
+def test_the_desk_is_wide_enough_not_to_be_the_bottleneck():
+    """Sequentially, a ticket held five minutes delays every ticket behind it. A narrow desk does
+    the same thing more quietly: only the wait BEFORE pickup can breach a response target, so a
+    desk short of slots makes its own saturation the reason tickets miss them. Measured on the
+    28 July run: five arrivals sat untouched for seven minutes and breached before anyone looked."""
     line = next(ln for ln in RUN_ITSM.splitlines()
                 if ln.strip().startswith("concurrency:") and "default" in ln)
-    assert "default: '4'" in line
+    count = next(ln for ln in RUN_ITSM.splitlines()
+                 if ln.strip().startswith("count:") and "default" in ln)
+    assert "default: '12'" in line
+    assert "default: '10'" in count, "desk must not be narrower than a default run"
     assert '--concurrency "${{ inputs.concurrency }}"' in SHARED
+
+
+def test_the_desk_runs_the_whole_batch_rather_than_a_chunk_at_a_time():
+    """Chunking a desk puts the barrier back: it works N, waits for the slowest, judges, and only
+    then picks up the next N. Judging has to stream off completions instead."""
+    assert "desk.run(args.count)" in RUN_BATCH
+    assert "on_complete=on_complete" in RUN_BATCH
 
 
 def test_the_shared_workflow_still_defaults_to_no_pacing():

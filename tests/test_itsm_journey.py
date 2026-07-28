@@ -18,7 +18,8 @@ import pytest
 from conftest import make_ctx
 from engine.desk import Desk
 from engine.levers import LeverConfig
-from engine.servicenow import DEMO_RESPONSE_TARGET_S
+from engine.servicenow import (DEMO_RESOLUTION_TARGET_S,
+                               DEMO_RESPONSE_TARGET_S)
 from engine.types import Wait
 from packs.itsm.pack import ItsmPack
 from test_itsm_pack import FakeServiceNow, _INCIDENTS
@@ -70,13 +71,31 @@ def test_every_wait_is_either_caused_or_ordinary():
 
 
 def test_a_clean_run_never_spends_enough_to_breach():
-    """Routed right, diagnosed properly: the ticket must come in well inside its promise, or the
-    condition would fail for tickets nobody mishandled."""
+    """Routed right, diagnosed properly: the ticket must come in inside BOTH promises, or the
+    conditions would fail for tickets nobody mishandled.
+
+    Measured against the right target for each. The response clock stops when a group is assigned,
+    so only the wait before pickup can breach it; everything after counts against resolution."""
     pack, item, ctx = journey_for(rates={"misroute": 0.0, "misclassify": 0.0,
                                          "shallow_diagnosis": 0.0})
     waits, _ = drive(pack, item, ctx)
-    assert sum(w.seconds for w in waits) < DEMO_RESPONSE_TARGET_S["3"]
+    before_pickup = sum(w.seconds for w in waits if w.reason == "waiting_to_be_picked_up")
+    assert before_pickup < DEMO_RESPONSE_TARGET_S["3"]
+    assert sum(w.seconds for w in waits) < DEMO_RESOLUTION_TARGET_S["3"]
     assert all(w.cause is None for w in waits)
+
+
+def test_only_the_wait_before_pickup_can_touch_the_response_target():
+    """The lesson from the first real journey run. The response SLA stops on 'assignment group is
+    not empty', which routing satisfies within seconds, so a ticket that sat 461s with the wrong
+    team used 2% of its response target. Every wait after routing has to be measured against
+    resolution instead, or it is modelling a delay that cannot cost anything."""
+    pack, item, ctx = journey_for(rates={"misroute": 1.0, "shallow_diagnosis": 1.0})
+    waits, _ = drive(pack, item, ctx)
+    assert waits[0].reason == "waiting_to_be_picked_up"
+    after_pickup = [w for w in waits[1:]]
+    assert after_pickup, "nothing left to charge against the resolution target"
+    assert sum(w.seconds for w in after_pickup) > DEMO_RESOLUTION_TARGET_S["3"]
 
 
 def test_a_misroute_costs_more_than_the_promise():
@@ -156,7 +175,8 @@ def test_the_desk_records_where_each_ticket_lost_its_time():
     out = Desk(runner, concurrency=2, clock=FakeClock()).run(1)[0]
     journey = out.result.metadata["journey"]
     assert journey["delayed_by_agent"] == ["queued_with_the_wrong_team"]
-    assert journey["waits"][0]["cause"] == "router"
+    caused = [w for w in journey["waits"] if w["cause"]]
+    assert [w["cause"] for w in caused] == ["router"]
 
 
 def test_a_clean_ticket_is_not_reported_as_delayed_by_anyone():
@@ -227,3 +247,34 @@ def test_a_desk_that_never_gets_work_fails_rather_than_spinning():
     with pytest.raises(RuntimeError, match="no incidents are arriving"):
         Desk(_StubRunner(pack), concurrency=2, clock=FakeClock(),
              idle_timeout_s=10, idle_poll_s=1).run(3)
+
+
+def test_a_ticket_already_in_flight_is_never_handed_out_twice():
+    """Caught on the first real journey run. The desk keeps several tickets open at once, and an
+    open ticket still matches the waiting-work query, so when the queue ran dry the pack served
+    INC0010095 and INC0010096 a second time. Two journeys worked one ticket, wrote over each other
+    in the instance, and collided on the session id: the run worked 12 and Provy stored 10.
+
+    Impossible before concurrency, because a sequential run took each ticket to Resolved before the
+    next fetch."""
+    incidents = [dict(_INCIDENTS[i], sys_id=f"s{i}", number=f"INC{i:07d}") for i in range(2)]
+    pack = ItsmPack(client=FakeServiceNow(incidents))
+
+    # The fake instance keeps handing back both, exactly as the real one does while they are open.
+    taken = []
+    while True:
+        got = pack.try_generate_work_item()
+        if got is None:
+            break
+        taken.append(got[0]["id"])
+    assert taken == ["INC0000000", "INC0000001"], taken
+
+
+def test_the_desk_does_not_double_work_a_short_backlog():
+    incidents = [dict(_INCIDENTS[i], sys_id=f"s{i}", number=f"INC{i:07d}") for i in range(2)]
+    pack = ItsmPack(client=FakeServiceNow(incidents))
+    # Asked for four, only two exist: it must work two and fail rather than inventing repeats.
+    with pytest.raises(RuntimeError, match="no incidents are arriving"):
+        Desk(_StubRunner(pack), concurrency=4, clock=FakeClock(),
+             idle_timeout_s=10, idle_poll_s=1).run(4)
+    assert len(pack._issued) == 2

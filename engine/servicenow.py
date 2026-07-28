@@ -76,14 +76,26 @@ STATE_ON_HOLD = "3"
 STATE_RESOLVED = "6"
 STATE_CLOSED = "7"
 
-# The demo's compressed response targets, in seconds, by priority. The instance's real targets run
-# from 15 minutes for a P1 to 8 hours for a P4; these are the same figures compressed by 60 so a
-# short run can breach one honestly.
+# The demo's compressed targets, in seconds, by priority. ONE compression factor for both, so every
+# ratio a real desk has is preserved: a P3 is still answered in a sixth of the time it is resolved
+# in, and a P1 is still four times tighter than a P3.
+#
+# 240x rather than the 60x used before. Response alone was compressed then, so nothing could breach
+# a resolution target inside a run and a misroute had nothing to cost. At 240x a 4-hour response and
+# a 24-hour resolution become 60s and 6 minutes, and both land inside one run.
 #
 # Single source of truth on purpose. install_servicenow_lifecycle.py builds the SLA definitions from
-# this, and the pack sizes its queue and hold delays against it. If the two ever disagreed, a delay
-# meant to breach a target would quietly stop breaching it and nothing would say so.
-DEMO_RESPONSE_TARGET_S = {"1": 15, "2": 60, "3": 240, "4": 480, "5": 480}
+# these, and the pack sizes its waits against them. If the two ever disagreed, a delay meant to
+# breach a target would quietly stop breaching it and nothing would say so.
+COMPRESSION = 240
+_REAL_RESPONSE_S = {"1": 15 * 60, "2": 60 * 60, "3": 4 * 3600, "4": 8 * 3600}
+_REAL_RESOLUTION_S = {"1": 4 * 3600, "2": 8 * 3600, "3": 24 * 3600, "4": 48 * 3600}
+
+DEMO_RESPONSE_TARGET_S = {p: max(5, round(s / COMPRESSION)) for p, s in _REAL_RESPONSE_S.items()}
+DEMO_RESOLUTION_TARGET_S = {p: round(s / COMPRESSION) for p, s in _REAL_RESOLUTION_S.items()}
+# A P5 is not a priority this demo seeds; fall back to the loosest promise rather than KeyError.
+DEMO_RESPONSE_TARGET_S["5"] = DEMO_RESPONSE_TARGET_S["4"]
+DEMO_RESOLUTION_TARGET_S["5"] = DEMO_RESOLUTION_TARGET_S["4"]
 
 
 class ServiceNowError(RuntimeError):

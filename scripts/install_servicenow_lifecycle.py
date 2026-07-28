@@ -28,8 +28,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from engine.servicenow import (DEMO_RESPONSE_TARGET_S, MARKER, ServiceNowError,
-                               client_from_env)
+from engine.servicenow import (COMPRESSION, DEMO_RESOLUTION_TARGET_S,
+                               DEMO_RESPONSE_TARGET_S, MARKER, STATE_RESOLVED,
+                               ServiceNowError, client_from_env)
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SN_DIR = os.path.join(HERE, "servicenow")
@@ -60,44 +61,59 @@ PROPERTIES = [
 
 # Compressed response SLAs, scoped to this demo's incidents only.
 #
-# The instance's own response targets run from 15 minutes for a P1 to 40 hours for
-# a P5, and nothing can breach a four-hour target in a run that resolves tickets in
-# seconds, so made_sla came back true on every single ticket and the contract's SLA
-# condition graded nothing. These mirror the real targets compressed by the same
-# factor of 60, alongside the already-compressed reopen loop, so the whole timeline
-# runs on one clock. The SLA engine still computes the verdict; only the target
-# moved, and an aggressive target is an ordinary customer configuration choice.
+# The instance's own targets run from a 15-minute P1 response to a two-day P4 resolution, and
+# nothing can breach either in a run that lasts minutes, so made_sla came back true on every ticket
+# and the contract's SLA condition graded nothing. These mirror the real targets compressed by one
+# factor, so the whole timeline runs on one clock and every ratio a real desk has survives.
 #
-# A real desk misses 36.6% of these (servicenow/BENCHMARK.md). Whether this one does
-# depends on how fast the agent works the backlog, which is what run_batch --pace
-# controls. Report whatever comes out rather than tuning it to match the benchmark.
-COMPRESSION = 60
-_REAL_TARGETS = {"1": "15 minutes", "2": "1 hour", "3": "4 hours", "4": "8 hours"}
-# Built from DEMO_RESPONSE_TARGET_S rather than written out again. The pack sizes its queue and hold
-# delays against those same seconds, and a delay meant to breach a target that quietly stopped
-# breaching it would be invisible.
+# BOTH families are installed. Only response was compressed at first, and its stop condition is
+# "Assignment group is not empty", which the agent satisfies within seconds of picking a ticket up.
+# So no delay the agent caused could ever touch it: a ticket that sat 461 seconds with the wrong
+# team used 2% of its response target. The mistakes a desk makes after assignment cost RESOLUTION
+# time, and until that target existed in compressed form there was nothing for them to breach.
+#
+# A real desk misses 36.6% of its response targets (servicenow/BENCHMARK.md). Whether this one does
+# depends on how fast it picks tickets up. Report whatever comes out rather than tuning to match.
+_REAL_LABELS = {
+    "response": {"1": "15 minutes", "2": "1 hour", "3": "4 hours", "4": "8 hours"},
+    "resolution": {"1": "4 hours", "2": "8 hours", "3": "24 hours", "4": "48 hours"},
+}
+
+
+def _duration(seconds: int) -> str:
+    return "1970-01-01 %02d:%02d:%02d" % (seconds // 3600, seconds % 3600 // 60, seconds % 60)
+
+
+# Built from the shared constants rather than written out again. The pack sizes its waits against
+# those same seconds, and a delay meant to breach a target that quietly stopped breaching it would
+# be invisible.
 DEMO_SLAS = [
-    # (priority, real target, compressed duration)
-    (p, _REAL_TARGETS[p],
-     "1970-01-01 %02d:%02d:%02d" % (DEMO_RESPONSE_TARGET_S[p] // 3600,
-                                    DEMO_RESPONSE_TARGET_S[p] % 3600 // 60,
-                                    DEMO_RESPONSE_TARGET_S[p] % 60))
+    # (target kind, priority, real target, compressed duration)
+    (kind, p, _REAL_LABELS[kind][p], _duration(secs[p]))
+    for kind, secs in (("response", DEMO_RESPONSE_TARGET_S),
+                       ("resolution", DEMO_RESOLUTION_TARGET_S))
     for p in ("1", "2", "3", "4")
 ]
 
 
-def sla_name(priority: str) -> str:
-    return f"Provy demo P{priority} response (compressed)"
+def sla_name(priority: str, kind: str = "response") -> str:
+    return f"Provy demo P{priority} {kind} (compressed)"
 
 
 def ensure_demo_slas(sn, dry_run: bool) -> list[str]:
     out = []
-    for priority, real_target, duration in DEMO_SLAS:
-        name = sla_name(priority)
+    for kind, priority, real_target, duration in DEMO_SLAS:
+        name = sla_name(priority, kind)
+        # What ends the clock. Response stops when the ticket reaches a team, which is what a
+        # response target means. Resolution stops when it is actually resolved, so everything the
+        # agent spends after assignment counts against it: the wrong team's queue, the wait on the
+        # caller, the second attempt after a reassignment.
+        stop = ("assignment_groupISNOTEMPTY^EQ" if kind == "response"
+                else f"state={STATE_RESOLVED}^EQ")
         payload = {
             "collection": "incident",
             "type": "SLA",
-            "target": "response",
+            "target": kind,
             "active": "true",
             "duration": duration,
             # NO schedule. The stock definitions attach one, which means elapsed time
@@ -107,18 +123,17 @@ def ensure_demo_slas(sn, dry_run: bool) -> list[str]:
             # timeline needs.
             "schedule": "",
             "set_start_to": "sys_created_on",
-            # Starts the moment the incident exists and stops when the agent takes it.
-            # A ticket sitting in the backlog is exactly what breaches a response
-            # target, which is the honest reason a real desk misses 36.6% of them.
+            # Starts the moment the incident exists. A ticket sitting in the backlog is exactly
+            # what breaches a response target, which is the honest reason a real desk misses 36.6%.
             "start_condition": f"correlation_id={MARKER}^active=true^priority={priority}^EQ",
-            "stop_condition": "assignment_groupISNOTEMPTY^EQ",
+            "stop_condition": stop,
             "retroactive": "true",
             "reset_action": "cancel",
             "when_to_cancel": "no_match",
             "when_to_resume": "no_match",
             "description": f"Compressed {COMPRESSION}x from the instance's own "
-                           f"P{priority} response target of {real_target}, so a demo that "
-                           f"resolves tickets in seconds can still breach one. Scoped to "
+                           f"P{priority} {kind} target of {real_target}, so a demo that runs for "
+                           f"minutes can still breach one. Scoped to "
                            f"correlation_id={MARKER}: no other incident is affected.",
         }
         out.append(upsert(sn, "contract_sla", name, payload, dry_run))

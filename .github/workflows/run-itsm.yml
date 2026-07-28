@@ -14,7 +14,11 @@ on:
       # queue or was parked on the caller, not because the loop paused between items. Pacing on top
       # of that would put the old positional delay back alongside the modelled one.
       pace:       { description: 'Ignored for ITSM: the journey provides the waiting', required: false, type: string, default: '0' }
-      concurrency: { description: 'Tickets the desk works at once, so their waits overlap', required: false, type: string, default: '4' }
+      # Wide enough that no ticket waits for a free slot. Only the wait BEFORE pickup can breach a
+      # response target, so a narrow desk would make its own saturation the reason tickets missed
+      # them, which is the artefact this whole model exists to remove. Narrow it deliberately if you
+      # ever want to demo an under-provisioned desk.
+      concurrency: { description: 'Tickets the desk works at once, so their waits overlap', required: false, type: string, default: '12' }
       # Tickets arrive while the agent works instead of all landing at once. The gap defaults to
       # roughly the time the agent takes per incident (pace plus about 15s of work), so the queue
       # hovers rather than emptying or piling up, and the wait varies per ticket.
