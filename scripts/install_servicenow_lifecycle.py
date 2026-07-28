@@ -57,6 +57,68 @@ PROPERTIES = [
 ]
 
 
+# Compressed response SLAs, scoped to this demo's incidents only.
+#
+# The instance's own response targets run from 15 minutes for a P1 to 40 hours for
+# a P5, and nothing can breach a four-hour target in a run that resolves tickets in
+# seconds, so made_sla came back true on every single ticket and the contract's SLA
+# condition graded nothing. These mirror the real targets compressed by the same
+# factor of 60, alongside the already-compressed reopen loop, so the whole timeline
+# runs on one clock. The SLA engine still computes the verdict; only the target
+# moved, and an aggressive target is an ordinary customer configuration choice.
+#
+# A real desk misses 36.6% of these (servicenow/BENCHMARK.md). Whether this one does
+# depends on how fast the agent works the backlog, which is what run_batch --pace
+# controls. Report whatever comes out rather than tuning it to match the benchmark.
+COMPRESSION = 60
+DEMO_SLAS = [
+    # (priority, real target, compressed duration)
+    ("1", "15 minutes", "1970-01-01 00:00:15"),
+    ("2", "1 hour",     "1970-01-01 00:01:00"),
+    ("3", "4 hours",    "1970-01-01 00:04:00"),
+    ("4", "8 hours",    "1970-01-01 00:08:00"),
+]
+
+
+def sla_name(priority: str) -> str:
+    return f"Provy demo P{priority} response (compressed)"
+
+
+def ensure_demo_slas(sn, dry_run: bool) -> list[str]:
+    out = []
+    for priority, real_target, duration in DEMO_SLAS:
+        name = sla_name(priority)
+        payload = {
+            "collection": "incident",
+            "type": "SLA",
+            "target": "response",
+            "active": "true",
+            "duration": duration,
+            # NO schedule. The stock definitions attach one, which means elapsed time
+            # only counts inside business hours: a four-minute target would not tick
+            # at all on a Sunday evening, and the demo would look broken rather than
+            # slow. Blank is 24/7 real elapsed time, which is what a compressed
+            # timeline needs.
+            "schedule": "",
+            "set_start_to": "sys_created_on",
+            # Starts the moment the incident exists and stops when the agent takes it.
+            # A ticket sitting in the backlog is exactly what breaches a response
+            # target, which is the honest reason a real desk misses 36.6% of them.
+            "start_condition": f"correlation_id={MARKER}^active=true^priority={priority}^EQ",
+            "stop_condition": "assignment_groupISNOTEMPTY^EQ",
+            "retroactive": "true",
+            "reset_action": "cancel",
+            "when_to_cancel": "no_match",
+            "when_to_resume": "no_match",
+            "description": f"Compressed {COMPRESSION}x from the instance's own "
+                           f"P{priority} response target of {real_target}, so a demo that "
+                           f"resolves tickets in seconds can still breach one. Scoped to "
+                           f"correlation_id={MARKER}: no other incident is affected.",
+        }
+        out.append(upsert(sn, "contract_sla", name, payload, dry_run))
+    return out
+
+
 def read_script(filename: str) -> str:
     with open(os.path.join(SN_DIR, filename)) as f:
         return f.read()
@@ -127,6 +189,9 @@ def main() -> int:
 
     print(f"instance={sn.instance}")
     for line in ensure_properties(sn, args.dry_run):
+        print("  " + line)
+
+    for line in ensure_demo_slas(sn, args.dry_run):
         print("  " + line)
 
     # The business rule that pushes a closed incident's outcome to Provy.

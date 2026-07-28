@@ -60,14 +60,45 @@ four seconds.
 That is a real gap, not a cosmetic one: `made_sla` is one of the four contract
 conditions, and right now it can never fail, so it grades nothing.
 
-Two honest ways to close it, and one dishonest one:
+**RESOLVED 2026-07-27** by compressing the clock, option 2 below.
 
 1. **Real elapsed time.** Seed the backlog, let it age past its response target,
    then work it. Genuine, and it needs the run paced over hours.
-2. **A demo SLA definition with a compressed target** (a "Provy demo response"
-   SLA of a few minutes) alongside the compressed reopen loop. The SLA engine
-   still computes the result; only the target changes, and an aggressive target
-   is an ordinary customer configuration choice. This keeps the whole timeline
-   consistently compressed.
+2. **A demo SLA definition with a compressed target.** CHOSEN. Four
+   `Provy demo P<n> response (compressed)` definitions mirror the instance's own
+   response targets compressed by the same factor of 60 (P1 15 min becomes 15 s,
+   P3 4 hours becomes 4 min), scoped to `correlation_id=provy-itsm` so no other
+   incident is touched. The SLA engine still computes the verdict; only the target
+   moved, and an aggressive target is an ordinary customer configuration choice.
+   Pair it with `run_batch.py --pace` so the backlog genuinely ages.
 3. **Writing `made_sla` directly.** Never do this. It is the one field a third
    party computes for us, and faking it removes the only reason this demo exists.
+
+### `made_sla` is a dead field in this instance. Do not read it.
+
+It is the obvious field and it is a trap. Stock incidents with a genuinely
+breached SLA still carry `made_sla = true` (INC0000050 and INC0000060 both do),
+and no active business rule in the instance writes it. It is seeded demo data,
+not a computed result, so grading on it means grading on a constant.
+
+The SLA engine's real output is **`task_sla`**, one record per attached target,
+carrying the `has_breached` the platform actually calculates. The outcome push
+reads it there and derives `made_sla` from it, and sends `sla_targets` and
+`sla_breached` alongside so the verdict can be traced back to the records it came
+from. This is not a workaround: it is reading the answer from where the platform
+keeps it rather than from a mirror the platform never updates.
+
+### Measured after the change
+
+24 incidents, worked at `--pace 12`: **13 missed their response target, 11 met
+it** (54% missed, against the benchmark's 36.6%), and 8 of 24 passed all four
+contract conditions. The miss rate is above benchmark because the agent works
+strictly oldest-first and the pace was slow relative to a four-minute target;
+`--pace` and the compression factor are the two dials.
+
+**Every P1 breached, and that is a real finding rather than an artifact.** The
+response clock runs from `sys_created_on`, but nothing knows an incident is a P1
+until the agent triages it. A ticket that sits four minutes before anyone looks
+at it has already blown a fifteen-second target by the time its priority exists.
+Real desks miss P1 response targets for exactly this reason: nobody realised it
+was a P1 yet. It is a good demo beat, not a bug to tune away.

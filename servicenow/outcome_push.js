@@ -48,7 +48,26 @@
     var closeCode = current.close_code + '';
     var reopenCount = parseInt(current.reopen_count + '', 10) || 0;
     var reassignCount = parseInt(current.reassignment_count + '', 10) || 0;
-    var madeSla = (current.made_sla + '') === 'true';
+
+    // DO NOT read current.made_sla. It looks like the obvious field and it is a trap:
+    // nothing in this instance maintains it. Stock incidents with a genuinely breached
+    // SLA still carry made_sla = true (INC0000050, INC0000060), and there is no active
+    // business rule that writes it. It is seeded demo data, not a computed result.
+    //
+    // The SLA engine's real output is task_sla, one record per attached target,
+    // carrying the has_breached the platform actually calculates. Reading it there is
+    // not a workaround: it is reading the verdict from where the platform keeps it,
+    // instead of from a mirror the platform never updates.
+    var slaTotal = 0, slaBreached = 0;
+    var sla = new GlideRecord('task_sla');
+    sla.addQuery('task', current.sys_id);
+    sla.query();
+    while (sla.next()) {
+        slaTotal++;
+        if ((sla.has_breached + '') === 'true') slaBreached++;
+    }
+    // No target attached means nothing was committed to, so nothing was missed.
+    var madeSla = slaBreached === 0;
 
     // Setting the assignment group counts as a reassignment in ServiceNow, so the
     // agent's own routing always leaves 1. A handoff is anything beyond that.
@@ -86,6 +105,10 @@
         occurred_at: new GlideDateTime().getDisplayValueInternal(),
         signals: {
             made_sla: madeSla,
+            // Shown alongside so the graded verdict can be traced back to the SLA
+            // records it came from, rather than being an unexplained boolean.
+            sla_targets: slaTotal,
+            sla_breached: slaBreached,
             reopen_count: reopenCount,
             close_code: closeCode,
             reassignment_count: reassignCount,

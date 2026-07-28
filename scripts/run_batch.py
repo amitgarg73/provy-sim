@@ -43,6 +43,11 @@ def main() -> int:
     ap.add_argument("--settle-lag", type=float, default=0.0, metavar="SECONDS",
                     help="wait this long before posting a chunk's outcomes, modelling the gap between "
                          "a decision and its real-world outcome settling")
+    ap.add_argument("--pace", type=float, default=0.0, metavar="SECONDS",
+                    help="wait this long between work items, so a backlog ages while the agent "
+                         "works it. Without this the whole batch finishes in seconds and no "
+                         "response SLA can breach, which leaves made_sla true on every ticket "
+                         "and the SLA condition grading nothing.")
     ap.add_argument("--scoreboard", action="store_true", help="print the scoreboard")
     ap.add_argument("--show", type=int, default=2, help="print N run summaries")
     args = ap.parse_args()
@@ -100,7 +105,14 @@ def main() -> int:
     sizes = chunk_sizes(args.count, args.reconcile_every if args.reconcile else 0)
     outputs = []
     for i, size in enumerate(sizes):
-        chunk = runner.run_batch(size)
+        if args.pace > 0:
+            chunk = []
+            for j in range(size):
+                if outputs or chunk:
+                    time.sleep(args.pace)
+                chunk.append(runner.run_one())
+        else:
+            chunk = runner.run_batch(size)
         outputs.extend(chunk)
         if args.reconcile and len(sizes) > 1:
             print(f"chunk {i + 1}/{len(sizes)} ({size} runs):")
