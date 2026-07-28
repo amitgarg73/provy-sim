@@ -10,6 +10,11 @@ on:
       provy_url:  { description: 'Provy ingest base URL', required: false, type: string, default: 'https://provydev.vercel.app' }
       count:      { description: 'Incidents to work in this run', required: false, type: string, default: '10' }
       seed:       { description: 'RNG seed (deterministic agent behaviour)', required: false, type: string, default: '1' }
+      # Declared but IGNORED. The Sim Control console sends this input to every fleet, and
+      # GitHub rejects a dispatch carrying an input the workflow does not declare, so the
+      # console's Kick run button would 422 without it. The value is discarded below: this
+      # fleet's outcomes come from ServiceNow and the simulation has none to post.
+      reconcile:  { description: 'Ignored for ITSM: ServiceNow settles and pushes the outcome', required: false, type: boolean, default: false }
       workflow_id: { description: 'Fleet workflow id (for scoreboard posting)', required: false, type: string, default: '' }
 
 jobs:
