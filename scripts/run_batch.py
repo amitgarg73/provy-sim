@@ -59,7 +59,8 @@ def main() -> int:
     # posted by the simulation. Refusing here rather than quietly ignoring the flag:
     # a run that silently self-reported would look identical and would invalidate
     # every number the demo produces.
-    if args.reconcile and not getattr(pack, "owns_outcome", True):
+    pack_owns = getattr(pack, "owns_outcome", True)
+    if args.reconcile and not pack_owns:
         print(f"error: --reconcile is not valid for '{args.pack}'. This fleet's outcomes are "
               f"settled and pushed by its system of record, not by the simulation.",
               file=sys.stderr)
@@ -102,7 +103,13 @@ def main() -> int:
 
     # Chunked so outcomes stream in with the runs. Without --reconcile-every this is a single chunk
     # and the behaviour is unchanged.
-    sizes = chunk_sizes(args.count, args.reconcile_every if args.reconcile else 0)
+    # A fleet whose outcomes come from a system of record has a RACE, not just a
+    # missing step. That system settles a ticket on its own clock: on a long paced
+    # run the first incidents are closed and pushed while the batch is still going,
+    # so judging once at the end is far too late and those pushes land on nothing.
+    # Judge in chunks instead, so a prediction exists within moments of each run.
+    judge_every = args.reconcile_every if not pack_owns else 0
+    sizes = chunk_sizes(args.count, args.reconcile_every if args.reconcile else judge_every)
     outputs = []
     for i, size in enumerate(sizes):
         if args.pace > 0:
@@ -117,6 +124,21 @@ def main() -> int:
         if args.reconcile and len(sizes) > 1:
             print(f"chunk {i + 1}/{len(sizes)} ({size} runs):")
             flush(chunk, final=False)
+        elif not pack_owns:
+            sids = [o.result.session_id for o in chunk]
+            print(f"chunk {i + 1}/{len(sizes)}: judge "
+                  f"{backfill_server_judge(emitter.base, emitter.key, session_ids=sids)}")
+
+    # A fleet whose outcomes arrive from its own system of record still needs its
+    # PREDICTIONS written here, and the server judge is what writes them. That call
+    # used to live only inside flush(), which this fleet never reaches, so every
+    # push from ServiceNow landed on nothing: Provy answered 200 with
+    # {"reconciled":0,"sessionId":null} and the ledger stayed empty. Reconciliation
+    # needs both halves, and only the outcome half comes from outside.
+    if not pack_owns and outputs:
+        sids = [o.result.session_id for o in outputs]
+        print(f"final judge sweep ({len(sids)} sessions): "
+              f"{backfill_server_judge(emitter.base, emitter.key, session_ids=sids)}")
 
     for o in outputs[:args.show]:
         r = o.result
