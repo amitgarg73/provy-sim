@@ -48,9 +48,11 @@ PROPERTIES = [
      "before it ever reaches Provy, which looks like a Provy fault and is not one."),
     ("provy.demo.reopen_after_min", "3",
      "Minutes after resolution before verification runs. Compresses the real world's days."),
-    ("provy.demo.reopen_pct", "30",
-     "Overall percentage of resolved demo incidents that come back. Each ticket moves around "
-     "this figure based on how it was actually resolved."),
+    ("provy.demo.reopen_pct", "6",
+     "Overall percentage of resolved demo incidents that come back; each ticket moves around "
+     "this figure based on how it was actually resolved. A real ServiceNow instance reopens "
+     "1.1% (see servicenow/BENCHMARK.md). This demo desk is deliberately worse so 500 "
+     "incidents yield ~30 reopens instead of 5, and the real figure gets quoted alongside it."),
     ("provy.demo.tickets_per_run", "3", "How many demo incidents the generator creates per run."),
 ]
 

@@ -285,22 +285,24 @@ class ItsmPack(BasePack):
     def _urgency_impact(text: str, rng) -> tuple[str, str]:
         """Return (urgency, impact) on ServiceNow's 1=High .. 3=Low scale.
 
-        Weighted to the mix a real desk sees, roughly P1 3%, P2 12%, P3 40%,
-        P4 30%, P5 15%. The first pass here put impact at 3 for anything without a
-        keyword, which pinned nearly every ticket to P5 and attached the same
-        40-hour response SLA to all of them. Priority has to vary or the SLA
-        condition has nothing to grade: the instance's SLA definitions are
-        per-priority, from 15 minutes for a P1 response to 40 hours for a P5.
+        Calibrated to a real ServiceNow instance rather than to a rule of thumb:
+        P3 94.2%, P4 3.1%, P2 1.6%, P1 1.1%, and no P5 at all, measured over 24,918
+        incidents (see servicenow/BENCHMARK.md). A desk being almost entirely P3 is
+        not a quirk of that company, it is what ITIL priority assignment produces.
+        The invented spread this replaces put a third of tickets at P4 and P5, which
+        is not a desk anybody runs.
         """
         low = (text or "").lower()
         if any(w in low for w in ("outage", "site down", "everyone", "all users", "no network")):
             return "1", "1"
         if any(w in low for w in ("team", "department", "several users", "blocked", "everyone on")):
             return rng.choice([("1", "2"), ("2", "2"), ("2", "2")])
-        pairs = ([("1", "1")] * 3 + [("1", "2"), ("2", "1")] * 6
-                 + [("2", "2")] * 20 + [("1", "3")] * 5 + [("3", "1")] * 15
-                 + [("2", "3")] * 15 + [("3", "2")] * 15
-                 + [("3", "3")] * 15)
+        # P1 1%, P2 2%, P3 94%, P4 3%. The (urgency, impact) pairs below map through
+        # ServiceNow's stock matrix, which is keyed the other way round.
+        pairs = ([("1", "1")] * 1                          # P1
+                 + [("1", "2"), ("2", "1")] * 1            # P2
+                 + [("2", "2")] * 40 + [("3", "1")] * 40 + [("1", "3")] * 14   # P3
+                 + [("2", "3")] * 2 + [("3", "2")] * 1)    # P4
         return rng.choice(pairs)
 
     @staticmethod

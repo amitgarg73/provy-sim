@@ -8,6 +8,7 @@ The second is the point of the whole fleet. If the sim ever posted an ITSM
 outcome, every number in the demo would be self-graded again and nothing would
 look different from the outside, which is why it is asserted from several angles.
 """
+import collections
 import random
 import subprocess
 import sys
@@ -258,19 +259,25 @@ def test_a_cleanly_handled_ticket_still_counts_as_one_assignment():
     assert r.estimated_signals["reassignment_count"] == 1
 
 
-def test_priority_varies_across_a_backlog():
-    """Per-priority SLA definitions are what make the SLA condition gradeable, from a
-    15 minute P1 response to 40 hours for a P5. If every ticket comes out P5 the
-    condition has nothing to say."""
-    incidents = [dict(_INCIDENTS[i % 3], sys_id=f"s{i}", number=f"INC00200{i:02d}")
-                 for i in range(40)]
-    pack = ItsmPack(client=FakeServiceNow(incidents))
-    ctx = make_ctx(levers=LeverConfig({}), seed=5, workflow="itsm")
-    seen = set()
-    for _ in range(40):
-        item, gt = pack.generate_work_item(random.Random(0))
-        seen.add(pack.run_pipeline(item, gt, ctx).metadata["forecasts"]["predicted_priority"])
-    assert len(seen) >= 3, f"priority barely varies across a backlog: {sorted(seen)}"
+def test_priority_mix_matches_the_real_servicenow_benchmark():
+    """Measured over 24,918 incidents of a real instance: P3 94.2%, P4 3.1%, P2 1.6%,
+    P1 1.1%, no P5 (servicenow/BENCHMARK.md). A desk being almost entirely P3 is what
+    ITIL priority assignment produces, not a quirk of that company. Asserted on the
+    distribution rather than on a handful of draws, which would be flaky at these
+    proportions."""
+    from packs.itsm.pack import _PRIORITY_MATRIX
+    rng = random.Random(1)
+    counts = collections.Counter()
+    for _ in range(20000):
+        u, i = ItsmPack._urgency_impact("Excel will not open files from the shared drive", rng)
+        counts[_PRIORITY_MATRIX[(i, u)]] += 1
+    pct = {k: 100 * v / 20000 for k, v in counts.items()}
+
+    assert pct.get("5", 0) == 0, "the real instance issues no P5 at all"
+    assert 92 <= pct["3"] <= 96, f"P3 should dominate at ~94%, got {pct['3']:.1f}%"
+    assert 1.5 <= pct["4"] <= 5, f"P4 ~3%, got {pct['4']:.1f}%"
+    assert 0.5 <= pct["2"] <= 3.5, f"P2 ~1.6%, got {pct['2']:.1f}%"
+    assert 0.3 <= pct["1"] <= 2.5, f"P1 ~1.1%, got {pct['1']:.1f}%"
 
 
 def test_forecasts_are_falsifiable_values_not_prose():
