@@ -21,12 +21,20 @@ on:
       # and divergence surfaces fill in DURING a run rather than saying nothing until it ends (#3).
       # 0 restores the old post-everything-at-the-end behaviour.
       reconcile_every: { required: false, type: string, default: '4' }
+      # Seconds between work items. A fleet whose outcomes come from a system of record needs this:
+      # without it the batch finishes in seconds, no response SLA can breach, and the SLA condition
+      # grades nothing at all. 0 keeps the old burst behaviour for the self-contained packs.
+      pace:       { required: false, type: string, default: '0' }
       workflow_id: { required: false, type: string, default: '' }  # so the run posts its summary to the console
     secrets:
       GROQ_API_KEY: { required: true }
       # provydev sits behind Vercel SSO, so a headless run needs the protection-bypass token to
       # reach the ingest routes at all. Without it every emit gets the SSO redirect, not the API.
       VERCEL_PROTECTION_BYPASS: { required: false }
+      # ITSM only. The pack works real tickets in a real ServiceNow instance and has no offline mode.
+      SERVICENOW_INSTANCE: { required: false }
+      SERVICENOW_USER: { required: false }
+      SERVICENOW_PASSWORD: { required: false }
 
 jobs:
   run:
@@ -38,6 +46,31 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      # ── ITSM only: the fleet is re-onboarded often, and every re-onboard mints a NEW ingest key.
+      # The instance is what pushes outcomes back, so it has to be re-pointed at that key before the
+      # run, or the push logs "disabled" and Provy sees traces with no outcomes. Doing it here rather
+      # than by hand is what makes a fresh tenant work from the console alone.
+      - name: Wire ServiceNow to this fleet
+        if: inputs.pack == 'itsm'
+        env:
+          PROVY_INGEST_KEY: ${{ inputs.ingest_key }}
+          VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
+          SERVICENOW_INSTANCE: ${{ secrets.SERVICENOW_INSTANCE }}
+          SERVICENOW_USER: ${{ secrets.SERVICENOW_USER }}
+          SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
+        run: python scripts/wire_itsm_fleet.py --provy-url "${{ inputs.provy_url }}"
+
+      # The pack works tickets that already exist in the instance; it invents none. Top up rather than
+      # seed a flat count, so a fleet run repeatedly does not accumulate a backlog it never works.
+      - name: Top up the incident backlog
+        if: inputs.pack == 'itsm'
+        env:
+          SERVICENOW_INSTANCE: ${{ secrets.SERVICENOW_INSTANCE }}
+          SERVICENOW_USER: ${{ secrets.SERVICENOW_USER }}
+          SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
+        run: python scripts/seed_itsm_incidents.py --top-up "${{ inputs.count }}" --seed "${{ inputs.seed }}"
+
       - name: Run batch (emit + reconcile)
         env:
           PROVY_EMIT: '1'
@@ -70,4 +103,5 @@ jobs:
             --count "${{ inputs.count }}" \
             --seed "${{ inputs.seed }}" \
             ${{ inputs.reconcile && '--reconcile' || '' }} \
-            --reconcile-every "${{ inputs.reconcile_every }}"
+            --reconcile-every "${{ inputs.reconcile_every }}" \
+            --pace "${{ inputs.pace }}"

@@ -10,6 +10,11 @@ on:
       provy_url:  { description: 'Provy ingest base URL', required: false, type: string, default: 'https://provydev.vercel.app' }
       count:      { description: 'Incidents to work in this run', required: false, type: string, default: '10' }
       seed:       { description: 'RNG seed (deterministic agent behaviour)', required: false, type: string, default: '1' }
+      # Not optional for this fleet, which is why it defaults to a real value rather than 0. The
+      # response-target condition can only breach if the backlog ages while the agent works it; on an
+      # unpaced run every ticket is answered within seconds, nothing breaches, and the one condition
+      # that carries the demo grades nothing.
+      pace:       { description: 'Seconds between incidents, so the backlog ages and SLAs can breach', required: false, type: string, default: '20' }
       # Declared but IGNORED. The Sim Control console sends this input to every fleet, and
       # GitHub rejects a dispatch carrying an input the workflow does not declare, so the
       # console's Kick run button would 422 without it. The value is discarded below: this
@@ -26,6 +31,7 @@ jobs:
       provy_url: ${{ inputs.provy_url }}
       count: ${{ inputs.count }}
       seed: ${{ inputs.seed }}
+      pace: ${{ inputs.pace }}
       # Not an option for this fleet. The simulation has no outcome to post.
       reconcile: false
       workflow_id: ${{ inputs.workflow_id }}

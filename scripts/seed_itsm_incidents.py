@@ -151,9 +151,23 @@ def build_incident(rng: random.Random, callers: list[dict]) -> dict:
     return payload
 
 
+def to_create(target: int, waiting: int) -> int:
+    """How many incidents a top-up must create to leave `target` waiting to be worked.
+
+    Seeding a flat count on every run is wrong once the same fleet is run repeatedly: whatever the
+    last run left unworked stays in the backlog, so the queue grows without bound and a run works
+    tickets opened days ago instead of the ones it just seeded. Topping up creates only the
+    shortfall, which makes a repeated run idempotent in the only sense that matters here.
+    """
+    return max(0, target - max(0, waiting))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--count", type=int, default=5)
+    ap.add_argument("--top-up", type=int, default=0, metavar="N",
+                    help="ensure N incidents are waiting to be worked, creating only the shortfall. "
+                         "Use this instead of --count on a fleet that is run more than once.")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--sleep", type=float, default=0.25,
                     help="seconds between creates. The PDI's rate limit is the binding "
@@ -175,21 +189,33 @@ def main() -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
 
+    count = args.count
+    if args.top_up:
+        # Ask for exactly the target: the query is capped at that limit, and all we need to know is
+        # whether the backlog already reaches it. This is the same query the pack works from, so a
+        # ticket that is counted here is a ticket the run can actually pick up.
+        waiting = len(sn.open_demo_incidents(limit=args.top_up))
+        count = to_create(args.top_up, waiting)
+        print(f"top-up: {waiting} waiting, target {args.top_up}, creating {count}")
+        if count == 0:
+            print("backlog already deep enough; nothing to create")
+            return 0
+
     callers = sn.query("sys_user", "active=true^emailISNOTEMPTY", ["sys_id", "name"], limit=25)
-    print(f"instance={sn.instance} callers={len(callers)} creating={args.count}")
+    print(f"instance={sn.instance} callers={len(callers)} creating={count}")
 
     created = []
-    for i in range(args.count):
+    for i in range(count):
         payload = build_incident(rng, callers)
         try:
             row = sn.create("incident", payload)
         except ServiceNowError as e:
-            print(f"  failed at {i + 1}/{args.count}: {e}", file=sys.stderr)
+            print(f"  failed at {i + 1}/{count}: {e}", file=sys.stderr)
             print(f"  created {len(created)} before failing: {', '.join(created[-5:])}")
             return 1
         created.append(row.get("number", "?"))
-        if (i + 1) % 25 == 0 or i + 1 == args.count:
-            print(f"  {i + 1}/{args.count} created (latest {created[-1]})")
+        if (i + 1) % 25 == 0 or i + 1 == count:
+            print(f"  {i + 1}/{count} created (latest {created[-1]})")
         if args.sleep:
             time.sleep(args.sleep)
 
