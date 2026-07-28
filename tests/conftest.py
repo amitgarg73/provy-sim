@@ -13,7 +13,18 @@ from engine.types import RunContext
 from packs import PACKS, get_pack
 
 
-@pytest.fixture(params=list(PACKS))
+# Packs whose work items AND outcomes come from a system the simulation does not
+# own. The shared fixture below drives every pack through tests that assume the
+# sim owns truth: it can generate a work item offline, its clean run emits real
+# signals, and that run passes the contract. All three are deliberately false for
+# an external-system fleet, which has its own test module instead. Excluding a
+# pack here is only legitimate if it declares owns_outcome = False, and
+# test_itsm_pack.py enforces exactly that so this list cannot become a way to
+# dodge a failing test.
+EXTERNAL_PACKS = {"itsm"}
+
+
+@pytest.fixture(params=[p for p in PACKS if p not in EXTERNAL_PACKS])
 def pack(request):
     return get_pack(request.param)
 

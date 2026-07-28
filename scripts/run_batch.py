@@ -49,6 +49,16 @@ def main() -> int:
 
     wf = get_workflow(args.pack)
     pack = get_pack(args.pack)
+
+    # A fleet whose outcomes come from a real system of record must never have them
+    # posted by the simulation. Refusing here rather than quietly ignoring the flag:
+    # a run that silently self-reported would look identical and would invalidate
+    # every number the demo produces.
+    if args.reconcile and not getattr(pack, "owns_outcome", True):
+        print(f"error: --reconcile is not valid for '{args.pack}'. This fleet's outcomes are "
+              f"settled and pushed by its system of record, not by the simulation.",
+              file=sys.stderr)
+        return 2
     ledger_path = args.ledger or os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "data", f"groundtruth_{args.pack}.jsonl")

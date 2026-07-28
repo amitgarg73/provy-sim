@@ -7,6 +7,7 @@ from .travel.pack import TravelPack
 from .revops.pack import RevOpsPack
 from .claims_payout.pack import ClaimsPayoutPack
 from .legal.pack import LegalPack
+from .itsm.pack import ItsmPack
 
 PACKS = {
     "support": SupportPack,
@@ -17,6 +18,9 @@ PACKS = {
     "revops": RevOpsPack,
     "claims_payout": ClaimsPayoutPack,
     "legal": LegalPack,
+    # The only fleet whose work items and outcomes come from a system this
+    # simulation does not own.
+    "itsm": ItsmPack,
 }
 
 
@@ -27,4 +31,4 @@ def get_pack(name: str):
 
 
 __all__ = ["SupportPack", "StripeSupportPack", "ClaimsPack", "CRMPack", "TravelPack",
-           "RevOpsPack", "ClaimsPayoutPack", "LegalPack", "PACKS", "get_pack"]
+           "RevOpsPack", "ClaimsPayoutPack", "LegalPack", "ItsmPack", "PACKS", "get_pack"]

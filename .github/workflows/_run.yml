@@ -54,6 +54,12 @@ jobs:
           PROVY_KEY_REVOPS:  ${{ inputs.pack == 'revops'  && inputs.ingest_key || '' }}
           PROVY_KEY_CLAIMS_PAYOUT: ${{ inputs.pack == 'claims_payout' && inputs.ingest_key || '' }}
           PROVY_KEY_LEGAL:   ${{ inputs.pack == 'legal'   && inputs.ingest_key || '' }}
+          PROVY_KEY_ITSM:    ${{ inputs.pack == 'itsm'    && inputs.ingest_key || '' }}
+          # ITSM works real tickets in a real ServiceNow instance. No credentials,
+          # no run: the pack has no offline mode on purpose.
+          SERVICENOW_INSTANCE: ${{ secrets.SERVICENOW_INSTANCE }}
+          SERVICENOW_USER: ${{ secrets.SERVICENOW_USER }}
+          SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
           # Post the injected-truth summary back to the console scoreboard (best-effort, offline-safe).
           CONTROL_URL: ${{ secrets.CONTROL_URL }}
           CONTROL_LEVERS_TOKEN: ${{ secrets.CONTROL_LEVERS_TOKEN }}

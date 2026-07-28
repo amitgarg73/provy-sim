@@ -44,6 +44,12 @@ class BasePack:
 
     workflow: str = "base"
     session_type: str = "task"
+    # Whether the simulation is entitled to report this fleet's outcome. True for
+    # every invented-work-item pack. False when a real third-party system of record
+    # settles the work and pushes the result itself, which is the whole point of
+    # those fleets: if the sim posted the outcome it would be marking its own
+    # homework again, and from the outside nothing would look different.
+    owns_outcome: bool = True
     # Per-run nonce, set once per batch by BatchRunner. It makes every batch emit FRESH session ids
     # even when the seed (and therefore the work-item ids) repeat — so Provy creates new sessions with
     # the real run time instead of matching by external_id and re-closing this morning's rows. Empty =

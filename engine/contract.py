@@ -12,6 +12,11 @@ from typing import Any
 from .types import Criterion
 
 
+# A value guaranteed to sit outside any real enum, used as the failing value for
+# an 'in' condition and the passing value for 'not_in'.
+_OUTSIDE = "__not_in_set__"
+
+
 def signal_index(contract: list[Criterion]) -> dict[str, Criterion]:
     """Map signal -> the (first) criterion that reads it."""
     idx: dict[str, Criterion] = {}
@@ -28,6 +33,10 @@ def good_value(c: Criterion) -> Any:
         return c.threshold + 1
     if c.op in ("lt", "lte"):
         return c.threshold - 1
+    if c.op == "in":
+        return c.threshold[0] if c.threshold else None
+    if c.op == "not_in":
+        return _OUTSIDE
     return c.threshold
 
 
@@ -41,6 +50,10 @@ def bad_value(c: Criterion) -> Any:
         return c.threshold - 1
     if c.op in ("lt", "lte"):
         return c.threshold + 1
+    if c.op == "in":
+        return _OUTSIDE
+    if c.op == "not_in":
+        return c.threshold[0] if c.threshold else None
     return None
 
 
@@ -57,6 +70,12 @@ def meets(c: Criterion, value: Any) -> bool:
         return value < c.threshold
     if c.op == "lte":
         return value <= c.threshold
+    # String enums. Provy's own contract-eval String()-coerces both sides for
+    # in/not_in, so a close code from ServiceNow grades the same here as there.
+    if c.op in ("in", "not_in"):
+        members = {str(t) for t in (c.threshold or [])}
+        inside = str(value) in members
+        return inside if c.op == "in" else not inside
     return False
 
 

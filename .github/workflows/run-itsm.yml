@@ -1,0 +1,27 @@
+name: run-itsm
+
+# Dispatchable run for the ITSM fleet. Unlike every other fleet, this one works real
+# incidents in a real ServiceNow instance, so it needs the SERVICENOW_* secrets and it
+# never reconciles: ServiceNow settles the outcome and pushes it to Provy itself.
+on:
+  workflow_dispatch:
+    inputs:
+      ingest_key: { description: 'Provy ingest key (provy_...) for the ITSM fleet', required: true, type: string }
+      provy_url:  { description: 'Provy ingest base URL', required: false, type: string, default: 'https://provydev.vercel.app' }
+      count:      { description: 'Incidents to work in this run', required: false, type: string, default: '10' }
+      seed:       { description: 'RNG seed (deterministic agent behaviour)', required: false, type: string, default: '1' }
+      workflow_id: { description: 'Fleet workflow id (for scoreboard posting)', required: false, type: string, default: '' }
+
+jobs:
+  run:
+    uses: ./.github/workflows/_run.yml
+    with:
+      pack: itsm
+      ingest_key: ${{ inputs.ingest_key }}
+      provy_url: ${{ inputs.provy_url }}
+      count: ${{ inputs.count }}
+      seed: ${{ inputs.seed }}
+      # Not an option for this fleet. The simulation has no outcome to post.
+      reconcile: false
+      workflow_id: ${{ inputs.workflow_id }}
+    secrets: inherit

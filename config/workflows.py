@@ -149,6 +149,18 @@ _LEGAL_RATES = {
     **_L1L2_RATES,
 }
 
+# ITSM is the odd one out and its rates mean something different. These are not
+# chaos levers that rewrite the outcome: the ITSM pack never writes a real signal,
+# because ServiceNow settles those. They are the AGENT'S OWN ERROR RATES, applied
+# to actions the agent really takes against the instance. Whether a misrouted or
+# weakly-fixed ticket then fails is ServiceNow's verdict, not ours.
+_ITSM_RATES = {
+    "misclassify":   {"rate": 0.10},   # picks the wrong category off the incident text
+    "misroute":      {"rate": 0.09},   # assigns a group that does not own that category
+    "weak_fix":      {"rate": 0.14},   # workaround, advice, or "no fault found" instead of a fix
+    "overconfidence": {"rate": 0.10},  # sure and wrong: high confidence on a weak resolution
+}
+
 WORKFLOWS = {
     "support": WorkflowConfig("support", "PROVY_KEY_SUPPORT", dict(_DEFAULT_RATES)),
     "stripe_support": WorkflowConfig("stripe_support", "PROVY_KEY_STRIPE_SUPPORT", dict(_STRIPE_RATES)),
@@ -158,6 +170,7 @@ WORKFLOWS = {
     "revops":  WorkflowConfig("revops",  "PROVY_KEY_REVOPS",  dict(_REVOPS_RATES)),
     "claims_payout": WorkflowConfig("claims_payout", "PROVY_KEY_CLAIMS_PAYOUT", dict(_CLAIMS_PAYOUT_RATES)),
     "legal":   WorkflowConfig("legal",   "PROVY_KEY_LEGAL",   dict(_LEGAL_RATES)),
+    "itsm":    WorkflowConfig("itsm",    "PROVY_KEY_ITSM",    dict(_ITSM_RATES)),
 }
 
 
