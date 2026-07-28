@@ -27,6 +27,7 @@ along on the trace so the report can settle them without new platform code.
 """
 from __future__ import annotations
 
+import time
 from collections import deque
 from typing import Any, Optional
 
@@ -39,6 +40,11 @@ from engine.types import (AgentSpec, Criterion, LeverManifest, RunContext,
 
 # How many incidents to pull per read, so a batch is not one REST call per ticket.
 _FETCH_SIZE = 25
+# How long the agent will wait for a ticket to arrive before treating the queue as genuinely empty,
+# and how often it looks. Long enough to cover a quiet stretch in a paced arrival stream, short
+# enough that a truly unseeded instance still fails fast rather than hanging a CI job.
+_IDLE_TIMEOUT_S = 120
+_IDLE_POLL_S = 5
 
 # Keyword -> category. This is the agent's classifier: crude on purpose, because a
 # crude classifier is what produces the honest mix of confident-and-right,
@@ -155,12 +161,15 @@ class ItsmPack(BasePack):
     # ── work items come from ServiceNow, not from the generator ─────────────
     def generate_work_item(self, rng) -> tuple[dict, dict]:
         if not self._queue:
-            batch = self.client.open_demo_incidents(limit=_FETCH_SIZE)
+            # An empty queue is not necessarily an error. When incidents arrive during the run
+            # rather than all up front, the agent catches up with the backlog and waits, which is
+            # what a desk does between tickets. Only a queue that stays empty is a real problem.
+            batch = self._await_work()
             self._fetched += len(batch)
             if not batch:
                 raise RuntimeError(
-                    "no open incidents tagged '%s' in the instance. Seed some first: "
-                    "python scripts/seed_itsm_incidents.py --count 20" % MARKER
+                    "no open incidents tagged '%s' arrived within %ds. Seed some first: "
+                    "python scripts/seed_itsm_incidents.py --count 20" % (MARKER, _IDLE_TIMEOUT_S)
                 )
             self._queue.extend(batch)
         inc = self._queue.popleft()
@@ -182,6 +191,20 @@ class ItsmPack(BasePack):
         # reads. Returning {} keeps that honest and makes it impossible for pack
         # code to peek.
         return item, {}
+
+    def _await_work(self) -> list:
+        """Poll for waiting incidents, giving arrivals time to land before calling it empty.
+
+        The wait is real elapsed time and it counts against the response targets of everything
+        already in the queue, which is the honest behaviour: a desk that is idle is not a desk that
+        is ahead. It only ever waits when there is nothing at all to work on.
+        """
+        deadline = time.monotonic() + _IDLE_TIMEOUT_S
+        while True:
+            batch = self.client.open_demo_incidents(limit=_FETCH_SIZE)
+            if batch or time.monotonic() >= deadline:
+                return batch
+            time.sleep(_IDLE_POLL_S)
 
     def entity_id(self, item: Any) -> str:
         return item["id"]

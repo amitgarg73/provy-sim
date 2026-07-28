@@ -128,19 +128,44 @@ TEMPLATES = {
 # A few of these mention that more than one person is affected, which is what
 # drives urgency and impact up. The agent has to read that out of the text.
 
+# ServiceNow computes priority from (impact, urgency), so the ticket arrives carrying the response
+# target it will be graded against. Seeding without these left every ticket on the instance default,
+# which is P3: one target for the whole batch, so the response condition reduced to a stopwatch and
+# every miss looked identical.
+_IMPACT_URGENCY = {"1": ("1", "1"), "2": ("1", "2"), "3": ("2", "2"), "4": ("3", "2")}
+
+PRIORITY_MIXES = {
+    # What a real desk looks like: 24,918 incidents on a live instance came out P3 94.2%, P4 3.1%,
+    # P2 1.6%, P1 1.1% (servicenow/BENCHMARK.md). Keep this as the default so the honest shape is
+    # what you get unless you ask for something else.
+    "benchmark": [("1", 1), ("2", 2), ("3", 94), ("4", 3)],
+    # For a short demo run. The compressed targets are 15s/1m/4m/8m by priority, so a single-priority
+    # batch can only ever breach on elapsed time. A spread means the same delay passes one ticket and
+    # breaches another, which is the point: the verdict starts depending on the ticket.
+    "spread": [("1", 12), ("2", 26), ("3", 42), ("4", 20)],
+}
+
 
 def pick_category(rng: random.Random) -> str:
     pool = [c for c, w in CATEGORY_WEIGHTS for _ in range(w)]
     return rng.choice(pool)
 
 
-def build_incident(rng: random.Random, callers: list[dict]) -> dict:
+def pick_priority(rng: random.Random, mix: str) -> str:
+    pool = [p for p, w in PRIORITY_MIXES[mix] for _ in range(w)]
+    return rng.choice(pool)
+
+
+def build_incident(rng: random.Random, callers: list[dict], mix: str = "benchmark") -> dict:
     category = pick_category(rng)
     short, desc = rng.choice(TEMPLATES[category])
+    impact, urgency = _IMPACT_URGENCY[pick_priority(rng, mix)]
     payload = {
         "short_description": short,
         "description": desc,
         "contact_type": rng.choice(CONTACT_TYPES),
+        "impact": impact,
+        "urgency": urgency,
         # The marker the agent and the reporting both filter on.
         "correlation_id": MARKER,
         # The answer key, held by the system of record. The agent never reads it.
@@ -149,6 +174,21 @@ def build_incident(rng: random.Random, callers: list[dict]) -> dict:
     if callers:
         payload["caller_id"] = rng.choice(callers)["sys_id"]
     return payload
+
+
+def arrival_gaps(rng: random.Random, n: int, mean_gap: float) -> list[float]:
+    """Seconds to wait before each arrival, drawn from an exponential distribution.
+
+    Tickets do not arrive on a metronome and they do not all arrive at once. Both of those produce
+    the same artefact in the end: how long a ticket waits becomes a function of its position in the
+    queue, so the response condition passes for the first N and fails for the rest, every run, with
+    nothing about the ticket or the agent deciding it. Exponential gaps are what an arrival process
+    actually looks like, and they make the wait vary per ticket instead of counting upward.
+
+    The tail is clipped at four times the mean. Untruncated it is occasionally long enough that the
+    agent stands idle for most of a short run, which is realistic and useless in a demo.
+    """
+    return [min(rng.expovariate(1.0 / mean_gap), mean_gap * 4) for _ in range(n)]
 
 
 def to_create(target: int, waiting: int) -> int:
@@ -168,6 +208,16 @@ def main() -> int:
     ap.add_argument("--top-up", type=int, default=0, metavar="N",
                     help="ensure N incidents are waiting to be worked, creating only the shortfall. "
                          "Use this instead of --count on a fleet that is run more than once.")
+    ap.add_argument("--arrivals", type=int, default=0, metavar="N",
+                    help="create N incidents DURING a run, at random intervals, instead of seeding "
+                         "them all up front. Run this alongside the batch, not before it.")
+    ap.add_argument("--mean-gap", type=float, default=35.0, metavar="SECONDS",
+                    help="average seconds between arrivals. Set it near the time the agent takes "
+                         "per incident: much faster and a queue just piles up, much slower and the "
+                         "agent stands idle.")
+    ap.add_argument("--priority-mix", choices=sorted(PRIORITY_MIXES), default="benchmark",
+                    help="benchmark matches a real instance (94%% P3). spread widens it so the four "
+                         "response targets are all exercised in a short run.")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--sleep", type=float, default=0.25,
                     help="seconds between creates. The PDI's rate limit is the binding "
@@ -180,7 +230,7 @@ def main() -> int:
 
     if args.dry_run:
         for _ in range(args.count):
-            print(build_incident(rng, []))
+            print(build_incident(rng, [], args.priority_mix))
         return 0
 
     try:
@@ -201,12 +251,23 @@ def main() -> int:
             print("backlog already deep enough; nothing to create")
             return 0
 
+    gaps = None
+    if args.arrivals:
+        count = args.arrivals
+        gaps = arrival_gaps(rng, count, args.mean_gap)
+        print(f"arrivals: {count} over ~{sum(gaps) / 60:.1f} min, mean gap {args.mean_gap:.0f}s")
+
     callers = sn.query("sys_user", "active=true^emailISNOTEMPTY", ["sys_id", "name"], limit=25)
-    print(f"instance={sn.instance} callers={len(callers)} creating={count}")
+    print(f"instance={sn.instance} callers={len(callers)} creating={count} "
+          f"priority_mix={args.priority_mix}")
 
     created = []
     for i in range(count):
-        payload = build_incident(rng, callers)
+        # Wait BEFORE creating, so the first arrival lands after the run has already started on the
+        # opening backlog rather than alongside it.
+        if gaps:
+            time.sleep(gaps[i])
+        payload = build_incident(rng, callers, args.priority_mix)
         try:
             row = sn.create("incident", payload)
         except ServiceNowError as e:
@@ -214,9 +275,11 @@ def main() -> int:
             print(f"  created {len(created)} before failing: {', '.join(created[-5:])}")
             return 1
         created.append(row.get("number", "?"))
-        if (i + 1) % 25 == 0 or i + 1 == count:
+        if gaps:
+            print(f"  arrival {i + 1}/{count}: {created[-1]} (after {gaps[i]:.0f}s)", flush=True)
+        elif (i + 1) % 25 == 0 or i + 1 == count:
             print(f"  {i + 1}/{count} created (latest {created[-1]})")
-        if args.sleep:
+        if args.sleep and not gaps:
             time.sleep(args.sleep)
 
     print(f"done. {len(created)} incidents tagged correlation_id={MARKER}")

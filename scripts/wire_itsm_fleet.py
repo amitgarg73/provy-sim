@@ -156,9 +156,12 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
-    print("\nwired. Seed incidents and run the pack:")
-    print("  python scripts/seed_itsm_incidents.py --count 12")
+    print("\nwired. Open the queue, then run the pack with arrivals alongside it:")
+    print("  python scripts/seed_itsm_incidents.py --top-up 2 --priority-mix spread")
+    print("  python scripts/seed_itsm_incidents.py --arrivals 10 --mean-gap 35 --priority-mix spread &")
     print("  PROVY_EMIT=1 PROVY_KEY_ITSM=$PROVY_INGEST_KEY python scripts/run_batch.py --pack itsm --count 12 --pace 20")
+    print("\nSeeding the whole batch up front instead makes the response condition a stopwatch:")
+    print("every ticket opens at the same moment, so the first N pass and the rest fail, every run.")
     return 0
 
 

@@ -15,6 +15,15 @@ on:
       # unpaced run every ticket is answered within seconds, nothing breaches, and the one condition
       # that carries the demo grades nothing.
       pace:       { description: 'Seconds between incidents, so the backlog ages and SLAs can breach', required: false, type: string, default: '20' }
+      # Tickets arrive while the agent works instead of all landing at once. The gap defaults to
+      # roughly the time the agent takes per incident (pace plus about 15s of work), so the queue
+      # hovers rather than emptying or piling up, and the wait varies per ticket.
+      opening_backlog: { description: 'Incidents waiting when the run starts; the rest arrive during it', required: false, type: string, default: '2' }
+      arrival_gap:     { description: 'Average seconds between arrivals (random, not fixed)', required: false, type: string, default: '35' }
+      # spread, not benchmark: a real desk is 94% P3, which in a compressed demo means one response
+      # target for the whole batch. A spread exercises all four targets, so the same delay passes one
+      # ticket and breaches another. The benchmark figure stays quotable alongside it.
+      priority_mix:    { description: 'spread (all four targets exercised) or benchmark (94% P3, as measured)', required: false, type: string, default: 'spread' }
       # Declared but IGNORED. The Sim Control console sends this input to every fleet, and
       # GitHub rejects a dispatch carrying an input the workflow does not declare, so the
       # console's Kick run button would 422 without it. The value is discarded below: this
@@ -32,6 +41,9 @@ jobs:
       count: ${{ inputs.count }}
       seed: ${{ inputs.seed }}
       pace: ${{ inputs.pace }}
+      opening_backlog: ${{ inputs.opening_backlog }}
+      arrival_gap: ${{ inputs.arrival_gap }}
+      priority_mix: ${{ inputs.priority_mix }}
       # Not an option for this fleet. The simulation has no outcome to post.
       reconcile: false
       workflow_id: ${{ inputs.workflow_id }}

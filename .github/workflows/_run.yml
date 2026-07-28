@@ -25,6 +25,12 @@ on:
       # without it the batch finishes in seconds, no response SLA can breach, and the SLA condition
       # grades nothing at all. 0 keeps the old burst behaviour for the self-contained packs.
       pace:       { required: false, type: string, default: '0' }
+      # ITSM only. How much work is waiting when the run starts, how far apart the rest arrive, and
+      # how the arriving tickets are spread across priorities. Ignored by the self-contained packs,
+      # which generate their own work items.
+      opening_backlog: { required: false, type: string, default: '2' }
+      arrival_gap:     { required: false, type: string, default: '35' }
+      priority_mix:    { required: false, type: string, default: 'benchmark' }
       workflow_id: { required: false, type: string, default: '' }  # so the run posts its summary to the console
     secrets:
       GROQ_API_KEY: { required: true }
@@ -61,15 +67,22 @@ jobs:
           SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
         run: python scripts/wire_itsm_fleet.py --provy-url "${{ inputs.provy_url }}"
 
-      # The pack works tickets that already exist in the instance; it invents none. Top up rather than
-      # seed a flat count, so a fleet run repeatedly does not accumulate a backlog it never works.
-      - name: Top up the incident backlog
+      # The pack works tickets that already exist in the instance; it invents none. Only a small
+      # opening backlog is seeded here: the rest arrive DURING the run, from the step below. Seeding
+      # the whole batch up front gave every ticket the same opening timestamp, so how long one waited
+      # was just its position in the queue and the response condition passed for the first N and
+      # failed for the rest, every run, with nothing about the ticket deciding it.
+      - name: Open the queue with a small backlog
         if: inputs.pack == 'itsm'
         env:
           SERVICENOW_INSTANCE: ${{ secrets.SERVICENOW_INSTANCE }}
           SERVICENOW_USER: ${{ secrets.SERVICENOW_USER }}
           SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
-        run: python scripts/seed_itsm_incidents.py --top-up "${{ inputs.count }}" --seed "${{ inputs.seed }}"
+        run: |
+          python scripts/seed_itsm_incidents.py \
+            --top-up "${{ inputs.opening_backlog }}" \
+            --priority-mix "${{ inputs.priority_mix }}" \
+            --seed "${{ inputs.seed }}"
 
       - name: Run batch (emit + reconcile)
         env:
@@ -98,6 +111,21 @@ jobs:
           CONTROL_LEVERS_TOKEN: ${{ secrets.CONTROL_LEVERS_TOKEN }}
           CONTROL_WORKFLOW_ID: ${{ inputs.workflow_id }}
         run: |
+          # ITSM only: tickets keep arriving while the agent works, so how long any one of them
+          # waited depends on when it turned up and what else was in front of it. The arrivals run
+          # in the background against the same instance; the agent picks up whatever is waiting and
+          # idles when nothing is. Both have to be in one step to share a shell.
+          if [ "${{ inputs.pack }}" = "itsm" ]; then
+            ARRIVALS=$(( ${{ inputs.count }} - ${{ inputs.opening_backlog }} ))
+            if [ "$ARRIVALS" -gt 0 ]; then
+              python scripts/seed_itsm_incidents.py \
+                --arrivals "$ARRIVALS" \
+                --mean-gap "${{ inputs.arrival_gap }}" \
+                --priority-mix "${{ inputs.priority_mix }}" \
+                --seed "$(( ${{ inputs.seed }} + 1 ))" &
+              ARRIVALS_PID=$!
+            fi
+          fi
           python scripts/run_batch.py \
             --pack "${{ inputs.pack }}" \
             --count "${{ inputs.count }}" \
@@ -105,3 +133,7 @@ jobs:
             ${{ inputs.reconcile && '--reconcile' || '' }} \
             --reconcile-every "${{ inputs.reconcile_every }}" \
             --pace "${{ inputs.pace }}"
+          RC=$?
+          # Never let a straggling arrival hold the job open, and never let it mask the run's result.
+          [ -n "${ARRIVALS_PID:-}" ] && wait "$ARRIVALS_PID" || true
+          exit $RC

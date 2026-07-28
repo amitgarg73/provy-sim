@@ -51,7 +51,9 @@ class FakeServiceNow:
     that were created in it."""
 
     def __init__(self, incidents=None):
-        self.incidents = [dict(i) for i in (incidents or _INCIDENTS)]
+        # `is None`, not a falsy check: an empty instance is a state worth testing, and
+        # `incidents or _INCIDENTS` quietly handed back the default three instead.
+        self.incidents = [dict(i) for i in (_INCIDENTS if incidents is None else incidents)]
         self.updates = []
         self.queries = []
 
@@ -378,3 +380,40 @@ def test_legacy_close_codes_do_not_count_as_a_fix():
     c3 = next(c for c in get_pack("itsm").contract() if c.signal == "close_code")
     assert meets(c3, "Solved (Permanently)") is False
     assert meets(c3, "Closed/Resolved by Caller") is False
+
+
+# ── an idle queue is a wait, not a crash ────────────────────────────────────
+class EmptyThenFilling(FakeServiceNow):
+    """Hands back nothing until it has been asked `after` times, the way an instance behaves when
+    the next ticket has not been raised yet."""
+
+    def __init__(self, after):
+        super().__init__()
+        self.after = after
+        self.asked = 0
+
+    def open_demo_incidents(self, limit=25):
+        self.asked += 1
+        if self.asked <= self.after:
+            return []
+        return super().open_demo_incidents(limit)
+
+
+def test_the_agent_waits_for_a_ticket_that_has_not_arrived_yet(monkeypatch):
+    """Incidents arrive during a run now, so the agent catches up with the backlog and has to wait.
+    Treating that as a fatal error would kill the run at exactly the moment a real desk is idle."""
+    monkeypatch.setattr("packs.itsm.pack._IDLE_POLL_S", 0)
+    client = EmptyThenFilling(after=3)
+    pack = ItsmPack(client=client)
+    item, _ = pack.generate_work_item(random.Random(1))
+    assert item["id"] == "INC0010001"
+    assert client.asked == 4
+
+
+def test_a_queue_that_never_fills_still_fails(monkeypatch):
+    """The wait is bounded. An instance with nothing in it must fail fast and say so, rather than
+    hanging a CI job until the job timeout."""
+    monkeypatch.setattr("packs.itsm.pack._IDLE_POLL_S", 0)
+    monkeypatch.setattr("packs.itsm.pack._IDLE_TIMEOUT_S", 0)
+    with pytest.raises(RuntimeError, match="no open incidents"):
+        ItsmPack(client=FakeServiceNow(incidents=[])).generate_work_item(random.Random(1))
