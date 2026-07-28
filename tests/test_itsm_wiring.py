@@ -135,13 +135,21 @@ def test_the_batch_is_paced():
     assert '--pace "${{ inputs.pace }}"' in SHARED
 
 
-def test_itsm_paces_by_default():
-    """0 is the right default for the self-contained packs and wrong for this one: an unpaced ITSM
-    run answers every ticket within seconds, so no response target breaches and the condition that
-    carries the whole demo grades nothing."""
-    assert "pace: ${{ inputs.pace }}" in RUN_ITSM
+def test_itsm_does_not_pace_because_the_journey_provides_the_waiting():
+    """Pacing was the stand-in for a model that had no time in it. Now a ticket waits because it
+    sat in the wrong team's queue or was parked on the caller. Pacing on top would put the old
+    positional delay back alongside the modelled one, and the two would be indistinguishable."""
     line = next(ln for ln in RUN_ITSM.splitlines() if ln.strip().startswith("pace:") and "default" in ln)
-    assert "default: '20'" in line
+    assert "default: '0'" in line
+
+
+def test_itsm_works_several_tickets_at_once():
+    """Sequentially, a ticket held five minutes delays every ticket behind it, so the delay lands
+    on the wrong tickets and position decides the outcome again."""
+    line = next(ln for ln in RUN_ITSM.splitlines()
+                if ln.strip().startswith("concurrency:") and "default" in ln)
+    assert "default: '4'" in line
+    assert '--concurrency "${{ inputs.concurrency }}"' in SHARED
 
 
 def test_the_shared_workflow_still_defaults_to_no_pacing():

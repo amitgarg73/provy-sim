@@ -19,6 +19,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config.workflows import get_workflow
+from engine.desk import Desk, supports_journey
 from engine.emitter import ProvyEmitter
 from engine.groundtruth import GroundTruthLedger
 from engine.llm import LLM
@@ -43,6 +44,9 @@ def main() -> int:
     ap.add_argument("--settle-lag", type=float, default=0.0, metavar="SECONDS",
                     help="wait this long before posting a chunk's outcomes, modelling the gap between "
                          "a decision and its real-world outcome settling")
+    ap.add_argument("--concurrency", type=int, default=1, metavar="N",
+                    help="how many work items to keep in flight at once. Only used by a pack whose "
+                         "runs contain real waiting (ITSM). 1 keeps the sequential behaviour.")
     ap.add_argument("--pace", type=float, default=0.0, metavar="SECONDS",
                     help="wait this long between work items, so a backlog ages while the agent "
                          "works it. Without this the whole batch finishes in seconds and no "
@@ -111,8 +115,17 @@ def main() -> int:
     judge_every = args.reconcile_every if not pack_owns else 0
     sizes = chunk_sizes(args.count, args.reconcile_every if args.reconcile else judge_every)
     outputs = []
+    # A pack whose runs contain real waiting works its items concurrently, the way a desk does.
+    # Sequentially, one held ticket delays every ticket behind it, so the delay lands on the wrong
+    # tickets and how long anything waited comes back to its position in the loop.
+    desk = None
+    if args.concurrency > 1 and supports_journey(pack):
+        desk = Desk(runner, concurrency=args.concurrency, log=lambda m: print(m, flush=True))
+        print(f"desk: {args.concurrency} tickets in flight; waits overlap")
     for i, size in enumerate(sizes):
-        if args.pace > 0:
+        if desk is not None:
+            chunk = desk.run(size)
+        elif args.pace > 0:
             chunk = []
             for j in range(size):
                 if outputs or chunk:

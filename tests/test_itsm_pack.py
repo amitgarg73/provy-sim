@@ -140,7 +140,10 @@ def test_no_offline_fallback():
 # ── the agent really works the ticket ───────────────────────────────────────
 
 def test_agent_writes_triage_routing_and_resolution_to_the_record():
-    pack, item, r = run_one()
+    """Triage, routing and resolution are the three writes every ticket gets. A journey may add
+    more (a reassignment after a misroute, a hold while the caller is chased), so this pins the
+    three that are always there and their order rather than the total."""
+    pack, item, r = run_one(rates={"misroute": 0.0, "misclassify": 0.0, "shallow_diagnosis": 0.0})
     sn = pack.client
     assert len(sn.updates) == 3, [u["payload"] for u in sn.updates]
     triage, route, resolve = (u["payload"] for u in sn.updates)

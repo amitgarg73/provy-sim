@@ -96,6 +96,22 @@ class InjectedFault:
 
 
 @dataclass
+class Wait:
+    """Real time passing inside a run, and what bought it.
+
+    A pack yields these from `journey()` so the desk can hold the ticket without blocking the ones
+    behind it. `cause` names the agent whose decision spent the time, or None when the wait is just
+    the ordinary cost of doing the work. That distinction is the point of the whole model: a
+    response target missed after `queued_with_the_wrong_team` has a cause the trace already carries,
+    while one missed after `queued_with_the_right_team` says the promise was too tight, not that
+    anybody erred.
+    """
+    reason: str
+    seconds: float
+    cause: Optional[str] = None
+
+
+@dataclass
 class RunResult:
     entity_id: str
     session_type: str

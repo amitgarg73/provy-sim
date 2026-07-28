@@ -25,6 +25,9 @@ on:
       # without it the batch finishes in seconds, no response SLA can breach, and the SLA condition
       # grades nothing at all. 0 keeps the old burst behaviour for the self-contained packs.
       pace:       { required: false, type: string, default: '0' }
+      # ITSM only. How many tickets the desk keeps in flight. Its runs contain real waiting, and
+      # working them one at a time would let a held ticket delay the ones behind it.
+      concurrency: { required: false, type: string, default: '1' }
       # ITSM only. How much work is waiting when the run starts, how far apart the rest arrive, and
       # how the arriving tickets are spread across priorities. Ignored by the self-contained packs,
       # which generate their own work items.
@@ -132,7 +135,8 @@ jobs:
             --seed "${{ inputs.seed }}" \
             ${{ inputs.reconcile && '--reconcile' || '' }} \
             --reconcile-every "${{ inputs.reconcile_every }}" \
-            --pace "${{ inputs.pace }}"
+            --pace "${{ inputs.pace }}" \
+            --concurrency "${{ inputs.concurrency }}"
           RC=$?
           # Never let a straggling arrival hold the job open, and never let it mask the run's result.
           [ -n "${ARRIVALS_PID:-}" ] && wait "$ARRIVALS_PID" || true

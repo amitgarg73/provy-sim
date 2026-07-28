@@ -10,11 +10,11 @@ on:
       provy_url:  { description: 'Provy ingest base URL', required: false, type: string, default: 'https://provydev.vercel.app' }
       count:      { description: 'Incidents to work in this run', required: false, type: string, default: '10' }
       seed:       { description: 'RNG seed (deterministic agent behaviour)', required: false, type: string, default: '1' }
-      # Not optional for this fleet, which is why it defaults to a real value rather than 0. The
-      # response-target condition can only breach if the backlog ages while the agent works it; on an
-      # unpaced run every ticket is answered within seconds, nothing breaches, and the one condition
-      # that carries the demo grades nothing.
-      pace:       { description: 'Seconds between incidents, so the backlog ages and SLAs can breach', required: false, type: string, default: '20' }
+      # 0 now: the journey provides the time. A ticket waits because it sat in the wrong team's
+      # queue or was parked on the caller, not because the loop paused between items. Pacing on top
+      # of that would put the old positional delay back alongside the modelled one.
+      pace:       { description: 'Ignored for ITSM: the journey provides the waiting', required: false, type: string, default: '0' }
+      concurrency: { description: 'Tickets the desk works at once, so their waits overlap', required: false, type: string, default: '4' }
       # Tickets arrive while the agent works instead of all landing at once. The gap defaults to
       # roughly the time the agent takes per incident (pace plus about 15s of work), so the queue
       # hovers rather than emptying or piling up, and the wait varies per ticket.
@@ -41,6 +41,7 @@ jobs:
       count: ${{ inputs.count }}
       seed: ${{ inputs.seed }}
       pace: ${{ inputs.pace }}
+      concurrency: ${{ inputs.concurrency }}
       opening_backlog: ${{ inputs.opening_backlog }}
       arrival_gap: ${{ inputs.arrival_gap }}
       priority_mix: ${{ inputs.priority_mix }}

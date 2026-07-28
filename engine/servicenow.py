@@ -76,6 +76,15 @@ STATE_ON_HOLD = "3"
 STATE_RESOLVED = "6"
 STATE_CLOSED = "7"
 
+# The demo's compressed response targets, in seconds, by priority. The instance's real targets run
+# from 15 minutes for a P1 to 8 hours for a P4; these are the same figures compressed by 60 so a
+# short run can breach one honestly.
+#
+# Single source of truth on purpose. install_servicenow_lifecycle.py builds the SLA definitions from
+# this, and the pack sizes its queue and hold delays against it. If the two ever disagreed, a delay
+# meant to breach a target would quietly stop breaching it and nothing would say so.
+DEMO_RESPONSE_TARGET_S = {"1": 15, "2": 60, "3": 240, "4": 480, "5": 480}
+
 
 class ServiceNowError(RuntimeError):
     pass

@@ -32,11 +32,12 @@ from collections import deque
 from typing import Any, Optional
 
 from engine.pack import BasePack
-from engine.servicenow import (CORRECT_GROUP, GENUINE_FIX_CODES, MARKER,
-                               STATE_IN_PROGRESS, STATE_RESOLVED, SUBCATEGORIES,
+from engine.servicenow import (CORRECT_GROUP, DEMO_RESPONSE_TARGET_S,
+                               GENUINE_FIX_CODES, MARKER, STATE_IN_PROGRESS,
+                               STATE_ON_HOLD, STATE_RESOLVED, SUBCATEGORIES,
                                ServiceNowClient, ServiceNowError, client_from_env)
 from engine.types import (AgentSpec, Criterion, LeverManifest, RunContext,
-                          RunResult, TraceStep)
+                          RunResult, TraceStep, Wait)
 
 # How many incidents to pull per read, so a batch is not one REST call per ticket.
 _FETCH_SIZE = 25
@@ -172,6 +173,9 @@ class ItsmPack(BasePack):
                     "python scripts/seed_itsm_incidents.py --count 20" % (MARKER, _IDLE_TIMEOUT_S)
                 )
             self._queue.extend(batch)
+        return self._take_queued()
+
+    def _take_queued(self) -> tuple[dict, dict]:
         inc = self._queue.popleft()
         item = {
             "id": inc["number"],
@@ -191,6 +195,21 @@ class ItsmPack(BasePack):
         # reads. Returning {} keeps that honest and makes it impossible for pack
         # code to peek.
         return item, {}
+
+    def try_generate_work_item(self):
+        """Take a ticket if one is waiting, or return None immediately.
+
+        The desk needs this. Blocking here would freeze every ticket already in flight while the
+        run waits for the next arrival, so their holds would stop running down and the delay would
+        land on whatever happened to be open at the time. Waiting is the caller's decision.
+        """
+        if not self._queue:
+            batch = self.client.open_demo_incidents(limit=_FETCH_SIZE)
+            self._fetched += len(batch)
+            if not batch:
+                return None
+            self._queue.extend(batch)
+        return self._take_queued()
 
     def _await_work(self) -> list:
         """Poll for waiting incidents, giving arrivals time to land before calling it empty.
@@ -248,7 +267,8 @@ class ItsmPack(BasePack):
         weak_fix_rate = self._rate(ctx, "weak_fix", 0.14) * (1.0 if unambiguous else 1.8)
         overconfident_rate = self._rate(ctx, "overconfidence", 0.10)
 
-        if rng.random() < miss_rate:
+        misclassified = rng.random() < miss_rate
+        if misclassified:
             others = [c for c in CORRECT_GROUP if c != category]
             category = rng.choice(others)
         predicted_category = category
@@ -259,11 +279,24 @@ class ItsmPack(BasePack):
         predicted_priority = _PRIORITY_MATRIX[(impact, urgency)]
 
         right_group = CORRECT_GROUP[predicted_category]
-        if rng.random() < misroute_rate:
+        misrouted = rng.random() < misroute_rate
+        if misrouted:
             wrong = [g for g in sorted(set(CORRECT_GROUP.values())) if g != right_group]
             recommended_group = rng.choice(wrong)
         else:
             recommended_group = right_group
+
+        # Whether the ticket landed with a team that can actually work it. The pack knows this from
+        # the faults it INJECTED, never from what the instance holds: a misclassification routes
+        # "correctly" for the wrong category, which is just as wrong in the queue. Reading the
+        # instance's own record of what each incident really is would let the simulation grade its
+        # own routing, which is the one thing this fleet exists to make impossible.
+        landed_wrong = misrouted or misclassified
+
+        # Diagnosis depth. A shallow diagnosis is not a wrong answer, it is an unfinished one: the
+        # agent resolves without establishing what it needed, so the ticket goes on hold waiting for
+        # detail from the caller that a documented procedure would have told it to collect up front.
+        shallow = rng.random() < self._rate(ctx, "shallow_diagnosis", 0.18) * (1.0 if unambiguous else 1.6)
 
         # Resolution approach. A weak approach is a real, visible thing in the
         # record: a workaround, advice to the caller, or nothing found.
@@ -302,6 +335,11 @@ class ItsmPack(BasePack):
             "reopen_risk": reopen_risk,
             "predicted_sla_result": predicted_sla_result,
             "unambiguous": unambiguous,
+            # The injected faults, carried forward so the journey can charge real time for them.
+            "landed_wrong": landed_wrong,
+            "misrouted": misrouted,
+            "misclassified": misclassified,
+            "shallow": shallow,
         }
 
     @staticmethod
@@ -346,6 +384,29 @@ class ItsmPack(BasePack):
         return self.run_pipeline(item, gt, ctx)
 
     def run_pipeline(self, item: dict, gt: dict, ctx: RunContext) -> RunResult:
+        """Work the ticket start to finish with no waiting. Kept for tests and for a quick run.
+
+        The real fleet runs `journey()` instead, which is the same work with the desk's waits in it.
+        """
+        journey = self.journey(item, gt, ctx)
+        try:
+            while True:
+                next(journey)
+        except StopIteration as done:
+            return done.value
+
+    def journey(self, item: dict, gt: dict, ctx: RunContext):
+        """The ticket's path through the desk, yielding a Wait wherever real time passes.
+
+        A generator rather than a straight function so the caller owns the clock. The desk runs
+        several of these at once and sleeps on whichever is due next, which is what a service desk
+        does and what keeps one held ticket from delaying the ones behind it.
+
+        Every wait here is bought by a decision the agent made, and that is the whole point: a
+        response target that breaches because the ticket sat in the wrong group has a cause the
+        record and the trace both carry. A target that breaches because of where the run happened
+        to be in a loop has no cause at all, which is what this replaces.
+        """
         d = self._decide(item, ctx)
         r = RunResult(
             entity_id=self.entity_id(item),
@@ -359,7 +420,7 @@ class ItsmPack(BasePack):
             confidence=d["confidence"],
         )
         try:
-            return self._work_ticket(r, item, d, ctx)
+            return (yield from self._work_ticket(r, item, d, ctx))
         except WriteRejected as rejected:
             # The instance refused one of the agent's writes. That is a failed run,
             # not a missing one: the session still goes to Provy carrying the error,
@@ -376,10 +437,21 @@ class ItsmPack(BasePack):
             }
             return r
 
+    def _target_seconds(self, item: dict) -> float:
+        """The response target this ticket arrived carrying, in seconds.
+
+        Delays are sized against this rather than against fixed seconds, so the same mistake costs
+        what it should: a misroute blows a P2's one-minute promise and may still come in under a
+        P4's eight-minute one.
+        """
+        return float(DEMO_RESPONSE_TARGET_S.get(str(item.get("priority") or "3"), 240))
+
     def _work_ticket(self, r: RunResult, item: dict, d: dict, ctx: RunContext) -> RunResult:
         A = {a.name: a for a in self.agents()}
         eid = r.entity_id
         sys_id = item["sys_id"]
+        rng = ctx.rng
+        target = self._target_seconds(item)
 
         # 1. Triage: decide, then write it to the incident.
         r.traces.append(self.agent_step(
@@ -423,6 +495,54 @@ class ItsmPack(BasePack):
         r.traces.append(self._sn_step(
             ctx, A["router"], "servicenow.assign_incident", sys_id, route_patch,
             eid, extra_output={"assignment_group_name": d["recommended_group"]}))
+
+        # 2a. The ticket now SITS in whatever queue the agent put it in. This is where a routing
+        # mistake becomes expensive: the right team picks it up well inside the promise, the wrong
+        # team leaves it until somebody notices it is not theirs.
+        if d["landed_wrong"]:
+            yield Wait("queued_with_the_wrong_team", rng.uniform(1.2, 2.5) * target,
+                       cause="router")
+            # Somebody notices. The reassignment is a real second touch on the record, which is
+            # what the handled-without-handoff condition reads.
+            fixed_group = CORRECT_GROUP[self.classify(
+                f"{item['short_description']} {item['description']}")[0]]
+            r.traces.append(self.agent_step(
+                ctx, A["router"], item,
+                decision=(f"{d['recommended_group']} did not own this; reassigned to {fixed_group} "
+                          f"after it sat in their queue"),
+                entity_id=eid,
+                payload_extra={"reassigned_from": d["recommended_group"],
+                               "reassigned_to": fixed_group,
+                               "reason": "misroute" if d["misrouted"] else "misclassification"}))
+            r.traces.append(self._sn_step(
+                ctx, A["router"], "servicenow.reassign_incident", sys_id,
+                {"assignment_group": self.client.group_sys_id(fixed_group), "assigned_to": "",
+                 "work_notes": f"[service desk] Not owned by {d['recommended_group']}. "
+                               f"Reassigned to {fixed_group}."},
+                eid, extra_output={"assignment_group_name": fixed_group}))
+        else:
+            yield Wait("queued_with_the_right_team", rng.uniform(0.7, 1.3) * 0.15 * target,
+                       cause=None)
+
+        # 2b. A shallow diagnosis shows up as a ticket parked on the caller. The agent resolves
+        # without having established what it needed, so it has to go back and ask.
+        if d["shallow"]:
+            r.traces.append(self.agent_step(
+                ctx, A["resolver"], item,
+                decision="no documented procedure followed; asked the caller for detail before continuing",
+                entity_id=eid,
+                payload_extra={"procedure_followed": False, "awaiting_caller": True}))
+            r.traces.append(self._sn_step(
+                ctx, A["resolver"], "servicenow.hold_incident", sys_id,
+                {"state": STATE_ON_HOLD,
+                 "work_notes": "[AI resolution] Awaiting further detail from the caller."},
+                eid))
+            yield Wait("awaiting_the_caller", rng.uniform(0.8, 1.5) * target, cause="resolver")
+            r.traces.append(self._sn_step(
+                ctx, A["resolver"], "servicenow.resume_incident", sys_id,
+                {"state": STATE_IN_PROGRESS,
+                 "work_notes": "[AI resolution] Caller responded; continuing."},
+                eid))
 
         # 3. Resolution: work it, then resolve the real ticket.
         r.traces.append(self.agent_step(

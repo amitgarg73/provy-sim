@@ -28,7 +28,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from engine.servicenow import MARKER, ServiceNowError, client_from_env
+from engine.servicenow import (DEMO_RESPONSE_TARGET_S, MARKER, ServiceNowError,
+                               client_from_env)
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SN_DIR = os.path.join(HERE, "servicenow")
@@ -71,12 +72,17 @@ PROPERTIES = [
 # depends on how fast the agent works the backlog, which is what run_batch --pace
 # controls. Report whatever comes out rather than tuning it to match the benchmark.
 COMPRESSION = 60
+_REAL_TARGETS = {"1": "15 minutes", "2": "1 hour", "3": "4 hours", "4": "8 hours"}
+# Built from DEMO_RESPONSE_TARGET_S rather than written out again. The pack sizes its queue and hold
+# delays against those same seconds, and a delay meant to breach a target that quietly stopped
+# breaching it would be invisible.
 DEMO_SLAS = [
     # (priority, real target, compressed duration)
-    ("1", "15 minutes", "1970-01-01 00:00:15"),
-    ("2", "1 hour",     "1970-01-01 00:01:00"),
-    ("3", "4 hours",    "1970-01-01 00:04:00"),
-    ("4", "8 hours",    "1970-01-01 00:08:00"),
+    (p, _REAL_TARGETS[p],
+     "1970-01-01 %02d:%02d:%02d" % (DEMO_RESPONSE_TARGET_S[p] // 3600,
+                                    DEMO_RESPONSE_TARGET_S[p] % 3600 // 60,
+                                    DEMO_RESPONSE_TARGET_S[p] % 60))
+    for p in ("1", "2", "3", "4")
 ]
 
 
