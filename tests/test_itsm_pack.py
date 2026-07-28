@@ -214,6 +214,23 @@ def test_incidents_are_scoped_to_this_demo():
     assert "stateIN1,2" in captured["q"]
 
 
+def test_the_agent_never_gets_a_second_go_at_the_same_incident():
+    """A reopened ticket returns to In Progress. Without excluding it, the agent would
+    work it again and emit a second session for the same entity on the same
+    business_date, which is the ledger's unique key: the two runs would fight over one
+    row. A ticket that came back belongs to second line."""
+    sn = ServiceNowClient(instance="https://x", user="u", password="p")
+    captured = {}
+
+    def fake_query(table, q="", fields=None, limit=100, offset=0):
+        captured["q"] = q
+        return []
+
+    sn.query = fake_query
+    sn.open_demo_incidents(limit=5)
+    assert "reopen_count=0" in captured["q"]
+
+
 # ── the forecasts ───────────────────────────────────────────────────────────
 
 FORECASTS = ["predicted_category", "predicted_priority", "recommended_group",

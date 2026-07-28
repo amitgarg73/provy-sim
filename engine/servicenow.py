@@ -202,8 +202,18 @@ class ServiceNowClient:
         """Incidents this demo created that are still waiting to be worked.
 
         Ordered oldest first so a paced run works the backlog the way a desk does.
+
+        reopen_count=0 matters more than it looks. A reopened ticket goes back to In
+        Progress, so without this the agent would pick the same incident up a second
+        time and emit a second session for the same entity_id on the same
+        business_date. That pair is the ledger's unique key, so the two runs would
+        fight over one row and the reopen would end up reconciled against the wrong
+        attempt. A ticket that came back belongs to the second-line engineer, not to
+        the agent: the agent gets one shot at each incident, which is also the only
+        way "the resolution held" means anything.
         """
-        q = f"correlation_id={MARKER}^stateIN{STATE_NEW},{STATE_IN_PROGRESS}^ORDERBYopened_at"
+        q = (f"correlation_id={MARKER}^stateIN{STATE_NEW},{STATE_IN_PROGRESS}"
+             f"^reopen_count=0^ORDERBYopened_at")
         return self.query("incident", q, self.INCIDENT_FIELDS, limit=limit)
 
     def group_sys_id(self, name: str) -> str:
