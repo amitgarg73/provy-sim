@@ -48,15 +48,22 @@ Time is spent in three places, and each one is bought by an agent decision:
 Every failure the contract can grade traces to a tagged step in the run. This is the table the
 whole design exists to produce.
 
-| Agent decision (tagged in the trace) | Journey consequence | Evidence in the record | Condition it breaks |
+| Agent decision (tagged in the trace) | Journey consequence | Evidence in the record | Target it breaks |
 |---|---|---|---|
-| routed to the wrong group | queues in that group, then reassigned | `reassignment_count` > 1, long time to first response | response target, handled-without-handoff |
-| shallow diagnosis, skipped the procedure | goes on hold awaiting caller detail it could have found | hold duration, later resolution | response and resolution targets |
+| routed to the wrong group | queues in that group, then reassigned | `reassignment_count` > 1 | **resolution**, handled-without-handoff |
+| shallow diagnosis, skipped the procedure | goes on hold awaiting caller detail it could have found | hold duration, later resolution | **resolution** |
 | weak fix (workaround, advice, no fault found) | resolution does not hold | `reopen_count` > 0, `close_code` | stays resolved, genuine fix |
-| could not fix it, escalated | second line picks it up | `reassignment_count` > 1 | handled without handoff |
+| *nothing the agent decides* | the ticket waits to be picked up | time to assignment | **response** |
 
-Read the other way: a breached response target now has a cause the product can name, because the
-ticket sat in the wrong queue and the trace says which agent put it there.
+**Corrected 28 July, after the first run falsified the original table.** It said a misroute breaks
+the RESPONSE target. It does not. The response SLA stops on `Assignment group is not empty`, which
+routing satisfies within seconds of pickup, so every wait after that point happens on a clock that
+has already stopped. Measured: a ticket that sat 461 seconds with the wrong team used **2%** of its
+response target.
+
+What a mistake made after assignment actually costs is resolution time. Response time is decided by
+how long the ticket waited to be picked up, and that is capacity, not a decision. Both facts are
+worth stating plainly rather than pretending every miss has an agent behind it.
 
 ## What is NOT being built
 
@@ -88,15 +95,37 @@ Consequences to accept:
 
 ## Timings
 
-Anchored to the compressed response targets (P1 15s, P2 1m, P3 4m, P4 8m), so a delay is measured
-against what the ticket actually promised rather than a number picked to look right.
+One compression factor, 240x, applied to the instance's own targets, so every ratio a real desk has
+survives. Both families are installed: response alone was compressed at first, which left the
+mistakes made after assignment with nothing they could breach.
+
+| Priority | Response | Resolution |
+|---|---|---|
+| P1 | 5s | 1 min |
+| P2 | 15s | 2 min |
+| P3 | 60s | 6 min |
+| P4 | 2 min | 12 min |
+
+Each wait is sized against the promise it can still threaten: the wait before pickup against
+response, everything after assignment against resolution.
 
 | Delay | Length | Effect |
 |---|---|---|
-| right group, queue | 0.15x the target | comfortably inside |
-| wrong group, queue before someone notices | 1.2-2.5x the target | breaches, and the reassignment says why |
-| on hold awaiting caller | 0.8-1.5x the target | breaches on a tight target, survives on a loose one |
-| working the ticket | seconds | unchanged |
+| waiting to be picked up | 0.05-0.35x the response target | inside, unless the desk is saturated |
+| right group, queue | 0.05-0.2x the resolution target | comfortably inside |
+| wrong group, before someone notices | 0.8-1.5x the resolution target | breaches, and the reassignment says why |
+| on hold awaiting caller | 0.5-1.1x the resolution target | breaches on a tight target, survives on a loose one |
 
-A P4 misroute may still come in under its 8-minute target while a P2 misroute blows its 1-minute one.
-That is correct: the same mistake costs more on a tighter promise.
+A P4 misroute may still come in under its 12-minute target while a P2 misroute blows its 2-minute
+one. That is correct: the same mistake costs more on a tighter promise.
+
+## Known wrong, measured on the 28 July runs
+
+- **P1 response is unusable at this compression.** 15 minutes becomes 5 seconds, and nothing is ever
+  picked up that fast, so every P1 breaches automatically (observed: 6240% of target). Needs a floor.
+- **The desk works one journey at a time.** The waits overlap but the REST and LLM calls do not, and
+  that serialised work is roughly 300s across a run. It is unattributed, and on a P1's 60-second
+  resolution target it alone blows the promise.
+- **Leftover backlog distorts the next run.** Tickets a previous run left unworked are picked up
+  oldest-first and carry their full age, so they breach on staleness rather than on anything the
+  current run did.
