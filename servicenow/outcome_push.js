@@ -90,6 +90,30 @@
     // the monitoring tool's.
     var success = madeSla && reopenCount === 0 && isGenuineFix(closeCode) && reassignCount <= 1;
 
+    // The contract's own signal names, one per condition (2026-07-28). Provy grades a
+    // condition by looking up the signal it was authored against, so the push has to speak
+    // the contract's vocabulary, not just this instance's field names. The raw fields below
+    // stay in the bag: they are what makes a verdict traceable back to the records it came
+    // from, and Provy reads them for the failure-anatomy comparisons.
+    //
+    // Condition text these satisfy, verbatim from the contract:
+    //   resolution_genuine       "resolved with a genuine fix on first attempt, not reopened
+    //                             or marked cannot-reproduce"
+    //   first_response_time_met  "first response is delivered within the agreed response time target"
+    //   resolution_persists      "stays resolved and is not reopened after closure"
+    //   self_resolved            "resolves the incident without escalation or handoff to another team"
+    //
+    // The contract's fifth condition, procedure_grounded, is deliberately NOT pushed. Whether a
+    // diagnosis followed a documented procedure is a judgement about the agent's reasoning, and
+    // this instance settles no such fact. Sending a value we cannot observe would be inventing
+    // the outcome, so it stays unreported and Provy shows it as uncovered.
+    var contractSignals = {
+        resolution_genuine:      isGenuineFix(closeCode) && reopenCount === 0,
+        first_response_time_met: madeSla,
+        resolution_persists:     reopenCount === 0,
+        self_resolved:           reassignCount <= 1
+    };
+
     // THE DATE THE AGENT DID THE WORK, not the date this push fires. Those are
     // different once a ticket sits through a reopen, and pushing "today" for work
     // done earlier is what put 233 phantom rows in the ledger. opened_at is used
@@ -104,6 +128,12 @@
         source: 'confirmed',
         occurred_at: new GlideDateTime().getDisplayValueInternal(),
         signals: {
+            // Contract vocabulary first — these are the four Provy actually grades.
+            resolution_genuine:      contractSignals.resolution_genuine,
+            first_response_time_met: contractSignals.first_response_time_met,
+            resolution_persists:     contractSignals.resolution_persists,
+            self_resolved:           contractSignals.self_resolved,
+            // Raw instance fields, kept so a verdict can be traced to its records.
             made_sla: madeSla,
             // Shown alongside so the graded verdict can be traced back to the SLA
             // records it came from, rather than being an unexplained boolean.
