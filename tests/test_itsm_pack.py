@@ -360,7 +360,7 @@ def test_confidence_is_lower_when_the_text_was_ambiguous():
 def test_contract_conditions_are_signal_mapped_and_gradeable():
     pack = get_pack("itsm")
     conditions = pack.contract()
-    assert len(conditions) == 4
+    assert len(conditions) == 5
     for c in conditions:
         assert c.signal and c.side in ("outcome", "trace", "both")
         assert c.op in ("eq", "in", "lte")
@@ -420,3 +420,41 @@ def test_a_queue_that_never_fills_still_fails(monkeypatch):
     monkeypatch.setattr("packs.itsm.pack._IDLE_TIMEOUT_S", 0)
     with pytest.raises(RuntimeError, match="no open incidents"):
         ItsmPack(client=FakeServiceNow(incidents=[])).generate_work_item(random.Random(1))
+
+
+# ── response vs resolution SLA (the split that fixed a live lie) ─────────────
+
+def test_contract_grades_response_and_resolution_separately():
+    """A ticket carries two SLA targets and they must be graded as two conditions.
+
+    Before this, both conditions read one roll-up boolean (`made_sla`, true only when NOTHING
+    breached), so a ticket answered in seconds and fixed three days late reported that it had missed
+    FIRST RESPONSE. Every such ticket had been reporting the wrong failure since the script shipped.
+    """
+    conditions = get_pack("itsm").contract()
+    signals = {c.signal for c in conditions}
+
+    assert "first_response_time_met" in signals
+    assert "resolution_time_met" in signals
+    # The roll-up must not be graded by anything. It cannot distinguish which target was missed.
+    assert "made_sla" not in signals
+
+
+def test_resolution_time_is_what_makes_journey_delay_gradeable():
+    """The journey model's delays land on the resolution clock, not the response clock.
+
+    Without a resolution condition every queue wait and caller hold produced no contract signal at
+    all: visible in ServiceNow, invisible to Provy, so attribution had nothing to attribute.
+    """
+    c5 = next(c for c in get_pack("itsm").contract() if c.signal == "resolution_time_met")
+    assert c5.side == "both"          # claimed up front, settled by the instance
+    assert meets(c5, True) is True
+    assert meets(c5, False) is False
+
+
+def test_the_agent_claims_both_targets_up_front():
+    """Estimated side must speak the same two signal names, or the pair cannot grade side by side."""
+    pack = get_pack("itsm")
+    for c in pack.contract():
+        if c.side == "both":
+            assert c.signal in ("first_response_time_met", "resolution_time_met", "reopen_count"), c.signal

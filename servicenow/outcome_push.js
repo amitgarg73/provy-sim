@@ -58,16 +58,34 @@
     // carrying the has_breached the platform actually calculates. Reading it there is
     // not a workaround: it is reading the verdict from where the platform keeps it,
     // instead of from a mirror the platform never updates.
+    // Counted PER KIND, which is the whole point. A ticket carries a response target and a
+    // resolution target, and rolling them into one boolean meant a ticket answered in seconds but
+    // fixed three days late reported that it MISSED FIRST RESPONSE. Every such ticket has been
+    // lying since this script shipped. contract_sla.target is 'response' or 'resolution' and is set
+    // by scripts/install_servicenow_lifecycle.py, so this reads the platform's own classification
+    // rather than guessing from a name.
     var slaTotal = 0, slaBreached = 0;
+    var respTotal = 0, respBreached = 0;
+    var resoTotal = 0, resoBreached = 0;
     var sla = new GlideRecord('task_sla');
     sla.addQuery('task', current.sys_id);
     sla.query();
     while (sla.next()) {
         slaTotal++;
-        if ((sla.has_breached + '') === 'true') slaBreached++;
+        var breached = (sla.has_breached + '') === 'true';
+        if (breached) slaBreached++;
+        var kind = (sla.sla.target + '').toLowerCase();
+        if (kind === 'response')        { respTotal++; if (breached) respBreached++; }
+        else if (kind === 'resolution') { resoTotal++; if (breached) resoBreached++; }
     }
-    // No target attached means nothing was committed to, so nothing was missed.
+    // Kept for traceability only: the roll-up across every attached target. NOT a contract signal.
+    // Grading anything on this is the bug described above.
     var madeSla = slaBreached === 0;
+    // A target that was never attached was never committed to, so there is no verdict to report.
+    // Omitted rather than asserted, on the same principle that keeps procedure_grounded out of the
+    // bag below: sending a value this instance cannot settle would be inventing the outcome.
+    var responseMet   = respTotal > 0 ? respBreached === 0 : null;
+    var resolutionMet = resoTotal > 0 ? resoBreached === 0 : null;
 
     // Setting the assignment group counts as a reassignment in ServiceNow, so the
     // agent's own routing always leaves 1. A handoff is anything beyond that.
@@ -88,7 +106,11 @@
     // The customer's own definition of a good outcome, which is what the contract
     // in Provy grades against. Computed here because it is the customer's call, not
     // the monitoring tool's.
-    var success = madeSla && reopenCount === 0 && isGenuineFix(closeCode) && reassignCount <= 1;
+    // Resolution time now counts. A ticket fixed long after its target is not a good outcome, and
+    // leaving it out was only defensible while the two SLAs were indistinguishable. This makes the
+    // demo's success rate lower and more honest.
+    var success = (responseMet !== false) && (resolutionMet !== false) &&
+                  reopenCount === 0 && isGenuineFix(closeCode) && reassignCount <= 1;
 
     // The contract's own signal names, one per condition (2026-07-28). Provy grades a
     // condition by looking up the signal it was authored against, so the push has to speak
@@ -100,6 +122,7 @@
     //   resolution_genuine       "resolved with a genuine fix on first attempt, not reopened
     //                             or marked cannot-reproduce"
     //   first_response_time_met  "first response is delivered within the agreed response time target"
+    //   resolution_time_met      "the incident is resolved within the agreed resolution time target"
     //   resolution_persists      "stays resolved and is not reopened after closure"
     //   self_resolved            "resolves the incident without escalation or handoff to another team"
     //
@@ -109,7 +132,8 @@
     // the outcome, so it stays unreported and Provy shows it as uncovered.
     var contractSignals = {
         resolution_genuine:      isGenuineFix(closeCode) && reopenCount === 0,
-        first_response_time_met: madeSla,
+        first_response_time_met: responseMet,
+        resolution_time_met:     resolutionMet,
         resolution_persists:     reopenCount === 0,
         self_resolved:           reassignCount <= 1
     };
@@ -128,13 +152,18 @@
         source: 'confirmed',
         occurred_at: new GlideDateTime().getDisplayValueInternal(),
         signals: {
-            // Contract vocabulary first — these are the four Provy actually grades.
+            // Contract vocabulary first — these are what Provy actually grades. The two
+            // time-based ones are attached below, and only when a target of that kind was
+            // actually committed to.
             resolution_genuine:      contractSignals.resolution_genuine,
-            first_response_time_met: contractSignals.first_response_time_met,
             resolution_persists:     contractSignals.resolution_persists,
             self_resolved:           contractSignals.self_resolved,
             // Raw instance fields, kept so a verdict can be traced to its records.
             made_sla: madeSla,
+            sla_response_targets:   respTotal,
+            sla_response_breached:  respBreached,
+            sla_resolution_targets: resoTotal,
+            sla_resolution_breached: resoBreached,
             // Shown alongside so the graded verdict can be traced back to the SLA
             // records it came from, rather than being an unexplained boolean.
             sla_targets: slaTotal,
@@ -148,6 +177,11 @@
             category: current.category + ''
         }
     };
+    // Attached only when a target of that kind was actually committed to. A ticket with no
+    // resolution SLA has no resolution verdict, and asserting one would be inventing it; Provy shows
+    // the condition as uncovered instead, which is the truthful reading.
+    if (responseMet !== null) payload.signals.first_response_time_met = responseMet;
+    if (resolutionMet !== null) payload.signals.resolution_time_met = resolutionMet;
     if (routingCorrect !== null) payload.signals.routing_correct = routingCorrect;
     if (categoryCorrect !== null) payload.signals.category_correct = categoryCorrect;
 

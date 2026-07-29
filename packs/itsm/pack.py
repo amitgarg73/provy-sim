@@ -18,7 +18,7 @@ The seven forecasts, all settled by fields ServiceNow maintains itself:
   predicted_priority         vs the priority the record ends up carrying
   recommended_group          vs whether the ticket had to be reassigned
   predicted_close_code       vs the close code on the closed record
-  predicted_sla_result       vs made_sla
+  predicted_sla_result       vs first_response_time_met + resolution_time_met
   predicted_reopen_risk      vs reopen_count
   agent_confidence           vs whether the run succeeded at all
 
@@ -124,10 +124,15 @@ class ItsmPack(BasePack):
                       "Checks the resolution before it is committed and records what it expects to happen.", "✅", 3),
         ]
 
-    # ── contract: the four conditions, all real out-of-the-box fields ───────
+    # ── contract: five conditions, all settled by real ServiceNow records ───
     def contract(self) -> list[Criterion]:
         return [
-            Criterion("c1", "Met the response commitment", "both", "made_sla", "eq", True),
+            # NOT made_sla. That field is a roll-up across every SLA attached to the ticket, so a
+            # ticket answered in seconds and fixed three days late graded as having MISSED first
+            # response. outcome_push.js now reads contract_sla.target and reports the two
+            # separately, which is what makes c5 below possible at all.
+            Criterion("c1", "Met the response commitment", "both",
+                      "first_response_time_met", "eq", True),
             Criterion("c2", "The resolution held", "both", "reopen_count", "eq", 0),
             Criterion("c3", "The resolution was a genuine fix", "outcome", "close_code", "in",
                       GENUINE_FIX_CODES),
@@ -139,6 +144,14 @@ class ItsmPack(BasePack):
             # where four cleanly resolved tickets all came back with 1.
             Criterion("c4", "Handled without being passed to another team", "outcome",
                       "reassignment_count", "lte", 1),
+            # The condition the journey model exists for. Every delay it generates (queued with the
+            # wrong team, waiting on the caller, a second attempt after a handoff) lands on the
+            # RESOLUTION clock, and until this condition existed none of it produced a contract
+            # signal: the delay was visible in ServiceNow and invisible to Provy, so attribution had
+            # nothing to attribute. ServiceNow already reports resolution time; what it cannot say is
+            # which agent step spent it.
+            Criterion("c5", "Resolved within the agreed time", "both",
+                      "resolution_time_met", "eq", True),
         ]
 
     def lever_manifest(self) -> LeverManifest:
@@ -155,7 +168,7 @@ class ItsmPack(BasePack):
             downstream_agent="resolver",
             correctness_signal="reopen_count",
             policy_signal="close_code",
-            sla_signal="made_sla",
+            sla_signal="first_response_time_met",
             drift_agent="resolver",
         )
 
@@ -617,7 +630,11 @@ class ItsmPack(BasePack):
         # The Estimated side of the contract: what the agent claims, in the
         # contract's own signal names, so Estimated and Real grade side by side.
         r.estimated_signals = {
-            "made_sla": d["predicted_sla_result"] == "met",
+            "first_response_time_met": d["predicted_sla_result"] == "met",
+            # The agent commits to finishing inside the resolution target too. Claiming it up front
+            # is the point: the Estimated side is what it BELIEVED, and the gap to the settled
+            # result is what the fleet is graded on.
+            "resolution_time_met": d["predicted_sla_result"] == "met",
             "reopen_count": 0 if d["reopen_risk"] == "low" else 1,
             "close_code": d["close_code"],
             # The agent routed it once and expects that to be the end of it.
@@ -626,7 +643,8 @@ class ItsmPack(BasePack):
         r.metadata = {
             "forecasts": forecasts,
             "estimated_success": all([
-                r.estimated_signals["made_sla"],
+                r.estimated_signals["first_response_time_met"],
+                r.estimated_signals["resolution_time_met"],
                 r.estimated_signals["reopen_count"] == 0,
                 d["close_code"] in GENUINE_FIX_CODES,
             ]),
