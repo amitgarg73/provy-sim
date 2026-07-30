@@ -666,6 +666,21 @@ class ItsmPack(BasePack):
             self.eval_pass("reviewer", "closure_check", eid,
                            "resolution and close notes are present and consistent", score=0.91),
         ]
+        # Stamp the Estimated signals onto the reviewer's closing message, exactly as
+        # BasePack.run_pipeline does for every other pack.
+        #
+        # This fleet overrides run_pipeline because it works real tickets in a real instance, and
+        # the override silently dropped this step. The consequence was invisible for weeks and only
+        # showed up in Provy: the contract grades `first_response_time_met` and `resolution_time_met`
+        # and NOTHING in the traces carried either name, so a failed run could never be traced back
+        # to the agent that caused it. Provy read 0 of 6 conditions able to name a cause on the one
+        # fleet used for demos (argus#446).
+        for t in r.traces:
+            if t.agent == self.lever_manifest().reviewer_agent and t.step_type == "agent_message":
+                t.payload_extra.update(r.estimated_signals)
+                t.payload_extra["confidence"] = d["confidence"]
+                break
+
         r.terminal_reason = "resolved"
         return r
 
