@@ -86,18 +86,40 @@ class BasePack:
         base = f"sim-{self.workflow}-{self.entity_id(item)}"
         return f"{base}-{self.run_nonce}" if self.run_nonce else base
 
+    def trace_aliases(self) -> dict[str, str]:
+        """contract signal name -> the field name THIS fleet's agents actually emit.
+
+        A real tenant's agents were instrumented before anyone wrote a contract, so what they
+        record is their own platform's vocabulary, not the contract's. Anything absent here is
+        emitted under the contract's own name, which is also realistic: some names do match.
+
+        Only the TRACE side is renamed. `estimated_signals` and `real_signals` keep the contract
+        vocabulary internally, so grading and the outcome push are untouched — the outcome push is
+        the tenant's own connector and legitimately speaks the contract's language."""
+        return {}
+
+    def stamp_estimated(self, result: RunResult, reviewer_agent: str,
+                        confidence: Any = None) -> None:
+        """Put the post-lever Estimated signals on the reviewer's closing message, under the names
+        this fleet's agents use, so the Estimated (trace) side of every 'both'/'trace' condition is
+        readable on a real trace payload.
+
+        ⛔ THE ONE PLACE THIS HAPPENS. It used to be an identical six-line loop in four modules
+        (here, CommitmentPack, itsm, stripe_support). Renaming in one of them would have left the
+        other three handing Provy the contract's own field names, which is the thing this removes."""
+        payload = {self.trace_aliases().get(k, k): v for k, v in result.estimated_signals.items()}
+        conf = result.confidence if confidence is None else confidence
+        for t in result.traces:
+            if t.agent == reviewer_agent and t.step_type == "agent_message":
+                t.payload_extra.update(payload)
+                t.payload_extra["confidence"] = conf
+                return
+
     def run_pipeline(self, item: Any, ground_truth: dict, ctx: RunContext) -> RunResult:
         result = self.build_clean_run(item, ground_truth, ctx)
         m = self.lever_manifest()
         L.apply(result, ground_truth, m, self.contract(), ctx.levers, ctx)
-        # Stamp the post-lever Estimated signals onto the reviewer's closing
-        # message so the Estimated (trace) side of every 'both'/'trace' condition
-        # is readable on a real trace payload, per the worked example in the spec.
-        for t in result.traces:
-            if t.agent == m.reviewer_agent and t.step_type == "agent_message":
-                t.payload_extra.update(result.estimated_signals)
-                t.payload_extra["confidence"] = result.confidence
-                break
+        self.stamp_estimated(result, m.reviewer_agent)
         return result
 
     # ── helpers packs can use when building the clean baseline ───────────────

@@ -49,6 +49,15 @@ class RevOpsPack(CommitmentPack):
         return {"commitment_unsettled": 90.0, "commitment_wrong_amount": 60.0,
                 "commitment_wrong_target": 80.0, "commitment_duplicate": 70.0}
 
+    def trace_aliases(self) -> dict[str, str]:
+        """The agent records the CRM ACK, which is exactly not the same as the write committing. `sla_met` genuinely matches.
+
+        Anything not listed is emitted under the contract's own name. Only the trace side is
+        renamed; grading and the outcome push keep the contract vocabulary."""
+        return {
+            "write_committed": "crm_write_ack",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="updater", retriever_agent="lookup", reviewer_agent="reviewer",

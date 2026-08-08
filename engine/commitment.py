@@ -202,13 +202,7 @@ class CommitmentPack(BasePack):
 
         L.apply(r, gt, m, self.contract(), ctx.levers, ctx, pack_injector=_settlement_injector)
 
-        # Stamp the Estimated signals on the reviewer's closing message so the Estimated side
-        # of every 'both' condition is readable on a real trace.
-        for t in r.traces:
-            if t.agent == m.reviewer_agent and t.step_type == "agent_message":
-                t.payload_extra.update(r.estimated_signals)
-                t.payload_extra["confidence"] = r.confidence
-                break
+        self.stamp_estimated(r, m.reviewer_agent)
         return r
 
     def _settle(self, r: RunResult, ref: str, amount: float, sor: MockSoR,

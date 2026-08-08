@@ -50,6 +50,15 @@ class SupportPack(BasePack):
     def failure_cost(self) -> dict:
         return {}
 
+    def trace_aliases(self) -> dict[str, str]:
+        """The helpdesk records a first-reply clock; "SLA" is the contract's word, not the agent's.
+
+        Anything not listed is emitted under the contract's own name. Only the trace side is
+        renamed; grading and the outcome push keep the contract vocabulary."""
+        return {
+            "sla_met": "first_reply_sla_ok",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="resolver",

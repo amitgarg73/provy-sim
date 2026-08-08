@@ -81,6 +81,15 @@ class StripeSupportPack(BasePack):
     def failure_cost(self) -> dict:
         return {"commitment_unsettled": 45.0, "commitment_wrong_amount": 20.0, "commitment_duplicate": 40.0}
 
+    def trace_aliases(self) -> dict[str, str]:
+        """The processor posts a refund; settlement is a later, separate fact. `sla_met` genuinely matches.
+
+        Anything not listed is emitted under the contract's own name. Only the trace side is
+        renamed; grading and the outcome push keep the contract vocabulary."""
+        return {
+            "refund_settled": "refund_posted",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="resolver", retriever_agent="verifier", reviewer_agent="reviewer",
@@ -185,13 +194,7 @@ class StripeSupportPack(BasePack):
         # real signals, so this pack is now a superset: commitment integrity plus everything.
         L.apply(r, gt, m, self.contract(), ctx.levers, ctx, pack_injector=_settlement_injector)
 
-        # Stamp the Estimated signals on the reviewer's closing message so the
-        # Estimated side of every 'both' condition is readable on a real trace.
-        for t in r.traces:
-            if t.agent == "reviewer" and t.step_type == "agent_message":
-                t.payload_extra.update(r.estimated_signals)
-                t.payload_extra["confidence"] = r.confidence
-                break
+        self.stamp_estimated(r, "reviewer")
         return r
 
     # ── the settlement feed ──────────────────────────────────────────────────

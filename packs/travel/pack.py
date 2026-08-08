@@ -55,6 +55,16 @@ class TravelPack(CommitmentPack):
         # difference plus rehandling; a double booking costs the second ticket.
         return {"commitment_unsettled": 450.0, "commitment_wrong_amount": 120.0, "commitment_duplicate": 400.0}
 
+    def trace_aliases(self) -> dict[str, str]:
+        """GDS vocabulary: a PNR is ticketed, and the agent records that, not "ticket_issued".
+
+        Anything not listed is emitted under the contract's own name. Only the trace side is
+        renamed; grading and the outcome push keep the contract vocabulary."""
+        return {
+            "ticket_issued": "pnr_ticketed",
+            "sla_met": "booking_sla_ok",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="booker", retriever_agent="searcher", reviewer_agent="reviewer",

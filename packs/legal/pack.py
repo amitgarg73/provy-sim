@@ -47,6 +47,16 @@ class LegalPack(CommitmentPack):
         return {"commitment_unsettled": 700.0, "commitment_wrong_target": 900.0,
                 "commitment_duplicate": 300.0}
 
+    def trace_aliases(self) -> dict[str, str]:
+        """E-sign and filing vocabulary from the tools the agents drive.
+
+        Anything not listed is emitted under the contract's own name. Only the trace side is
+        renamed; grading and the outcome push keep the contract vocabulary."""
+        return {
+            "execution_confirmed": "esign_complete",
+            "deadline_met": "filed_by_due_date",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="filer", retriever_agent="drafter", reviewer_agent="reviewer",

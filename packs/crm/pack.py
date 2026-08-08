@@ -49,6 +49,17 @@ class CRMPack(BasePack):
             "sla_breach": 100, "overt_error": 40, "skip_propagation": 120,
         }
 
+    def trace_aliases(self) -> dict[str, str]:
+        """CRM field names. `sla_met` genuinely matches.
+
+        Anything not listed is emitted under the contract's own name. Only the trace side is
+        renamed; grading and the outcome push keep the contract vocabulary."""
+        return {
+            "qualification_correct": "lead_score_valid",
+            "routed_correct": "owner_assigned_ok",
+            "duplicate_contact": "dedupe_hit",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="scorer",

@@ -54,6 +54,17 @@ class ClaimsPack(BasePack):
             "sla_breach": 150, "overt_error": 80, "skip_propagation": 200,
         }
 
+    def trace_aliases(self) -> dict[str, str]:
+        """Adjudication vocabulary predates the contract. `within_limit` genuinely matches.
+
+        Anything not listed is emitted under the contract's own name. Only the trace side is
+        renamed; grading and the outcome push keep the contract vocabulary."""
+        return {
+            "decision_correct": "adjudication_valid",
+            "duplicate_payout": "dup_pay_flag",
+            "sla_met": "cycle_time_ok",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="adjudicator",

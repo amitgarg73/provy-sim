@@ -48,6 +48,16 @@ class ClaimsPayoutPack(CommitmentPack):
         return {"commitment_unsettled": 1200.0, "commitment_wrong_amount": 800.0,
                 "commitment_wrong_target": 1500.0, "commitment_duplicate": 2000.0}
 
+    def trace_aliases(self) -> dict[str, str]:
+        """The agent knows it SENT a disbursement; whether it settled is the ledger's to say.
+
+        Anything not listed is emitted under the contract's own name. Only the trace side is
+        renamed; grading and the outcome push keep the contract vocabulary."""
+        return {
+            "payout_settled": "disbursement_sent",
+            "sla_met": "prompt_pay_ok",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="adjudicator", retriever_agent="verifier", reviewer_agent="reviewer",

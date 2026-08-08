@@ -675,11 +675,7 @@ class ItsmPack(BasePack):
         # and NOTHING in the traces carried either name, so a failed run could never be traced back
         # to the agent that caused it. Provy read 0 of 6 conditions able to name a cause on the one
         # fleet used for demos (argus#446).
-        for t in r.traces:
-            if t.agent == self.lever_manifest().reviewer_agent and t.step_type == "agent_message":
-                t.payload_extra.update(r.estimated_signals)
-                t.payload_extra["confidence"] = d["confidence"]
-                break
+        self.stamp_estimated(r, self.lever_manifest().reviewer_agent, d["confidence"])
 
         r.terminal_reason = "resolved"
         return r
