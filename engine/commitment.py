@@ -216,8 +216,15 @@ class CommitmentPack(BasePack):
             clean_out = {"settled": True, "amount_settled": st.amount_settled, "reason": st.reason}
             # Same fields on the clean path, carrying the GOOD values, so a detector reading this
             # is reading the value rather than the presence of the schema.
+            #
+            # ⛔ UNDER THE AGENTS' OWN NAMES, NOT THE CONTRACT'S. Emitting the contract's field names
+            # here is what kept identity manufactured end to end: the reviewer's summary was aliased
+            # but this feed put `ticket_issued` straight back on the trace, so Provy auto-bound every
+            # condition and the mapping step had nothing to solve. A real tenant's system of record
+            # reports in its own vocabulary; so does this one now.
+            _alias = self.trace_aliases()
             for _sig, _c in C.signal_index(self.contract()).items():
-                clean_out[_sig] = C.good_value(_c)
+                clean_out[_alias.get(_sig, _sig)] = C.good_value(_c)
             r.traces.append(TraceStep(
                 agent=promise_agent, step_type="tool_call", tool_name=self.settle_tool,
                 tool_input={"ref": ref},
@@ -240,16 +247,22 @@ class CommitmentPack(BasePack):
         # attribution is a real test (blind spot -> culprit None).
         cause, culprit = self._plant_cause(r, m, ctx)
 
-        # Report the CONTRACT'S OWN SIGNAL alongside the feed's native fields.
+        # Report the graded signal alongside the feed's native fields, UNDER THE AGENTS' OWN NAME.
         #
-        # Provy attributes a miss to a tool by matching the tool's output against the signal the
-        # contract grades, on an exact field name — a fuzzy match would be a guess dressed as
-        # evidence. Emitting only `settled` while the contract grades `refund_settled` left every
-        # commitment divergence unattributable, with the answer sitting in the payload under a
-        # different name. This is the instrumentation the product's whole claim depends on.
+        # Provy attributes a miss by matching a tool's output against the signal the contract grades.
+        # Emitting only `settled` while the contract grades `refund_settled` left every commitment
+        # divergence unattributable, so this field has to be here — that part was always right.
+        #
+        # ⛔ WHAT WAS WRONG WAS THE NAME. Writing the CONTRACT's name made attribution work without
+        # anyone ever confirming a mapping, which is not how a real tenant behaves and is why the
+        # confirm-then-resolve path had never run anywhere. Provy already resolves a confirmed alias
+        # (`traceSignal`, #531): `fetchFailedSignals` indexes each failing value under both the
+        # contract name and the confirmed one. So emitting the agents' name costs nothing ONCE THE
+        # MAPPING IS CONFIRMED, and before that it correctly reads as a blind spot rather than a
+        # cause nobody agreed to.
         settle_out = {"settled": st.settled, "amount_settled": st.amount_settled, "reason": st.reason}
         if c is not None:
-            settle_out[target_signal] = C.bad_value(c)
+            settle_out[self.trace_aliases().get(target_signal, target_signal)] = C.bad_value(c)
         r.traces.append(TraceStep(
             agent=promise_agent, step_type="tool_call", tool_name=self.settle_tool,
             tool_input={"ref": ref},

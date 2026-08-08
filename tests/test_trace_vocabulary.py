@@ -82,3 +82,33 @@ def test_every_pack_stamps_something(pack):
     if not run.estimated_signals:
         pytest.skip(f"{pack.workflow} has no estimated signals on this run")
     assert payload, f"{pack.workflow}: nothing stamped on the reviewer message"
+
+
+def test_no_aliased_signal_ever_reaches_a_trace(pack):
+    """⛔ THE WHOLE POINT, AND IT TOOK TWO PASSES TO GET RIGHT.
+
+    The first attempt aliased only the reviewer's stamped summary. The settlement feed in
+    `engine/commitment.py` — and a second copy inside the Stripe pack — went on writing the
+    CONTRACT's own field names onto the booker's tool call, so Provy auto-bound every condition and
+    the mapping step still had nothing to solve. Provy's contract page said "the same name your
+    contract uses, so nothing had to be recorded" on all five conditions.
+
+    A signal that has an alias must appear NOWHERE on a trace under its contract name, on either the
+    clean path or the failure path. Signals with no alias are untouched, which is deliberate: a real
+    tenant has some names that happen to match.
+    """
+    aliased = set(pack.trace_aliases())
+    if not aliased:
+        pytest.skip(f"{pack.workflow} emits the contract's names, which is a deliberate choice")
+
+    leaked: set[str] = set()
+    for seed in range(6):
+        rng = random.Random(seed)
+        item, gt = pack.generate_work_item(rng)
+        run = pack.run_pipeline(item, gt, make_ctx(seed=seed))
+        for t in run.traces:
+            keys = set((t.tool_output or {}).keys()) | set((t.payload_extra or {}).keys())
+            leaked |= keys & aliased
+    assert not leaked, (
+        f"{pack.workflow}: {sorted(leaked)} reached a trace under the contract's own name — "
+        "identity is being handed to Provy again")

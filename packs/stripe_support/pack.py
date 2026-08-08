@@ -197,6 +197,20 @@ class StripeSupportPack(BasePack):
         self.stamp_estimated(r, "reviewer")
         return r
 
+
+    def _settle_out(self, base: dict, **graded) -> dict:
+        """Settlement output with the graded signals renamed to this fleet's own vocabulary.
+
+        ⛔ ONE HELPER FOR BOTH PATHS. The clean and failure branches each built this dict by hand,
+        which is how they would drift: rename in one and a detector reads the schema on healthy runs
+        and the value on broken ones, or the reverse. Same names, same shape, either way.
+        """
+        alias = self.trace_aliases()
+        out = dict(base)
+        for sig, value in graded.items():
+            out[alias.get(sig, sig)] = value
+        return out
+
     # ── the settlement feed ──────────────────────────────────────────────────
     def _settle(self, r: RunResult, item: dict, amount: float, sor: MockStripe,
                 ctx: RunContext) -> InjectedFault | None:
@@ -209,8 +223,9 @@ class StripeSupportPack(BasePack):
                 # Same signal names on the clean path, so a healthy run looks identical in shape.
                 # A detector that only ever sees the signal on failures would be reading the schema,
                 # not the value.
-                tool_output={"settled": True, "amount_settled": st.amount_settled, "reason": st.reason,
-                             "refund_settled": True, "amount_correct": True, "no_duplicate": True},
+                tool_output=self._settle_out(
+                    {"settled": True, "amount_settled": st.amount_settled, "reason": st.reason},
+                    refund_settled=True, amount_correct=True, no_duplicate=True),
                 outcome="ok", entity_id=eid,
                 payload_extra={"narration": f"Settlement check: the refund cleared for ${st.amount_settled:.2f}. Promise kept."}))
             return None
@@ -224,21 +239,22 @@ class StripeSupportPack(BasePack):
         elif st.reason == "duplicate_charge":
             r.real_signals["no_duplicate"] = False
 
-        # The settlement feed reports the CONTRACT'S OWN SIGNAL NAMES alongside its native fields.
+        # The settlement feed reports the graded signals alongside its native fields, under the names
+        # THIS FLEET'S AGENTS USE.
         #
-        # This is the instrumentation that makes a divergence attributable. Provy can only trace a
-        # miss back to a tool when the tool's output carries the signal the contract grades: it
-        # matches on the exact field name, because a fuzzy match would be a guess dressed as
-        # evidence. Emitting `settled` when the contract grades `refund_settled` left every one of
-        # these runs unattributable — the answer was in the payload under a different name.
+        # The field has to be here at all: Provy can only trace a miss back to a tool when the tool's
+        # output carries the signal, and emitting only `settled` left every one of these runs
+        # unattributable. That part was always right.
         #
-        # Realistic, not a fixture: a settlement feed that knows it is answering "did the refund
-        # settle" should say so in the customer's vocabulary.
-        settle_out = {"settled": st.settled, "amount_settled": st.amount_settled,
-                      "duplicate": st.duplicate, "reason": st.reason,
-                      "refund_settled": st.settled,
-                      "amount_correct": st.reason != "wrong_amount",
-                      "no_duplicate": not st.duplicate}
+        # ⛔ WHAT WAS WRONG WAS USING THE CONTRACT'S NAME. It made attribution work without anyone
+        # confirming a mapping, which no real tenant gets for free, and is why the confirm-then-
+        # resolve path had never run. Provy resolves a confirmed alias already (#531).
+        settle_out = self._settle_out(
+            {"settled": st.settled, "amount_settled": st.amount_settled,
+             "duplicate": st.duplicate, "reason": st.reason},
+            refund_settled=st.settled,
+            amount_correct=st.reason != "wrong_amount",
+            no_duplicate=not st.duplicate)
         r.traces.append(TraceStep(
             agent="resolver", step_type="tool_call", tool_name="stripe.settlement",
             tool_input={"order_id": item["order_id"]},
