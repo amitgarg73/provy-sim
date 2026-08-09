@@ -9,6 +9,7 @@ outcome, every number in the demo would be self-graded again and nothing would
 look different from the outside, which is why it is asserted from several angles.
 """
 import collections
+import inspect
 import random
 import subprocess
 import sys
@@ -458,3 +459,38 @@ def test_the_agent_claims_both_targets_up_front():
     for c in pack.contract():
         if c.side == "both":
             assert c.signal in ("first_response_time_met", "resolution_time_met", "reopen_count"), c.signal
+
+
+def test_resolve_carries_the_sla_the_agent_could_read(monkeypatch):
+    """⛔ argus#544 — a tool output is EVIDENCE, an agent message is a CLAIM.
+
+    Every ITSM condition was outcome-side only, and the agents' readings lived on the reviewer's
+    agent_message. Provy's deterministic attribution scans TOOL OUTPUTS, so it could never see them
+    and 15 of 16 misses came back "nothing in the run accounts for these".
+
+    Making Provy read messages instead would have been the wrong fix: in a silent failure the claim
+    is good while reality is bad, so it would match nothing, and where it did match it would blame an
+    agent for correctly reporting bad news.
+
+    So the resolve response carries the SLA state ServiceNow shows AT THAT MOMENT — which a resolver
+    about to close a ticket can genuinely see.
+    """
+    src = inspect.getsource(ItsmPack._work_ticket)
+    assert '"first_response_time_met": elapsed["s"] <= response_target' in src
+    assert '"resolution_time_met": elapsed["s"] <= resolution_target' in src
+    # It has to ride on the resolve tool call, not only the reviewer's message.
+    assert 'extra_output={"close_code": d["close_code"], **sla}' in src
+
+
+def test_reopen_is_never_read_back_during_the_run():
+    """⛔ THE LIMIT OF THE FIX, AND IT MATTERS MORE THAN THE FIX.
+
+    A ticket reopens AFTER the run has ended. Surfacing `reopen_count` in a tool output would be
+    inventing evidence that could not have existed, which is the simulation marking its own homework
+    — the exact thing this pack was built to avoid. Those misses stay honest blind spots, and Provy
+    naming no cause for them is the right answer rather than a missing one.
+    """
+    src = inspect.getsource(ItsmPack._work_ticket)
+    i = src.index('sla = {')
+    block = src[i:src.index('resolve_patch,', i)]
+    assert 'reopen' not in block, 'reopen must never appear in a tool output during the run'

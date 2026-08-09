@@ -488,11 +488,23 @@ class ItsmPack(BasePack):
         rng = ctx.rng
         response_target, resolution_target = self._targets(item)
 
+        # ⛔ THE CLOCK, TRACKED DURING THE RUN AND NOT ONLY AFTER IT.
+        #
+        # The desk records `journey.elapsed_s` when the ticket finishes, which is too late to be
+        # something an agent could have READ. A real ITSM agent about to close a ticket can see how
+        # long it has been open, because ServiceNow shows it. Accumulating the waits as they are
+        # yielded gives the same number at the moment the agent would have had it.
+        elapsed = {"s": 0.0}
+
+        def wait(reason: str, seconds: float, cause=None) -> Wait:
+            elapsed["s"] += seconds
+            return Wait(reason, seconds, cause=cause)
+
         # 0. The ticket sits in the queue until the desk gets to it. This is the ONLY wait that can
         # touch the response target, whose clock stops the moment a group is assigned, and it is
         # not bought by any decision: it is how busy the desk was. The desk's own capacity supplies
         # most of it, so what is added here is just the ordinary moment before anyone picks up.
-        yield Wait("waiting_to_be_picked_up", rng.uniform(0.05, 0.35) * response_target, cause=None)
+        yield wait("waiting_to_be_picked_up", rng.uniform(0.05, 0.35) * response_target, cause=None)
 
         # 1. Triage: decide, then write it to the incident.
         r.traces.append(self.agent_step(
@@ -545,7 +557,7 @@ class ItsmPack(BasePack):
         # the group was set, so nothing here can breach it. What a misroute actually costs is time
         # to resolve, and that is the promise this has to be measured against.
         if d["landed_wrong"]:
-            yield Wait("queued_with_the_wrong_team", rng.uniform(0.8, 1.5) * resolution_target,
+            yield wait("queued_with_the_wrong_team", rng.uniform(0.8, 1.5) * resolution_target,
                        cause="router")
             # Somebody notices. The reassignment is a real second touch on the record, which is
             # what the handled-without-handoff condition reads.
@@ -566,7 +578,7 @@ class ItsmPack(BasePack):
                                f"Reassigned to {fixed_group}."},
                 eid, extra_output={"assignment_group_name": fixed_group}))
         else:
-            yield Wait("queued_with_the_right_team", rng.uniform(0.05, 0.2) * resolution_target,
+            yield wait("queued_with_the_right_team", rng.uniform(0.05, 0.2) * resolution_target,
                        cause=None)
 
         # 2b. A shallow diagnosis shows up as a ticket parked on the caller. The agent resolves
@@ -582,7 +594,7 @@ class ItsmPack(BasePack):
                 {"state": STATE_ON_HOLD,
                  "work_notes": "[AI resolution] Awaiting further detail from the caller."},
                 eid))
-            yield Wait("awaiting_the_caller", rng.uniform(0.5, 1.1) * resolution_target,
+            yield wait("awaiting_the_caller", rng.uniform(0.5, 1.1) * resolution_target,
                        cause="resolver")
             r.traces.append(self._sn_step(
                 ctx, A["resolver"], "servicenow.resume_incident", sys_id,
@@ -604,12 +616,40 @@ class ItsmPack(BasePack):
             "close_notes": close_notes,
             "work_notes": f"[AI resolution] {close_notes}",
         }
+        # ⛔ READ THE TICKET BEFORE CLOSING IT, AND CARRY WHAT THE READ SHOWS (argus#544).
+        #
+        # Every condition on this contract was outcome-side only, and the agents' readings lived on
+        # the reviewer's agent_message. Provy's deterministic attribution scans TOOL OUTPUTS, so it
+        # could never see them and 15 of 16 misses came back "nothing in the run accounts for these".
+        #
+        # A message is a CLAIM; a tool output is EVIDENCE. Making Provy read messages instead would
+        # have been the wrong fix: in a silent failure the claim is good while reality is bad, so it
+        # would match nothing, and where it did match it would blame an agent for correctly reporting
+        # bad news.
+        #
+        # ⛔ ONLY WHAT THE AGENT COULD ACTUALLY KNOW AT THIS MOMENT. The SLA clocks have run and
+        # ServiceNow shows them, so a resolver that checks before closing sees the breach. `reopen`
+        # is deliberately ABSENT: the ticket reopens after this run ends, and reading it back here
+        # would be inventing evidence that could not exist — the simulation marking its own homework.
+        # Those misses stay honest blind spots.
+        sla = {
+            "first_response_time_met": elapsed["s"] <= response_target,
+            "resolution_time_met": elapsed["s"] <= resolution_target,
+            "age_seconds": round(elapsed["s"], 1),
+            "response_target_seconds": round(response_target, 1),
+            "resolution_target_seconds": round(resolution_target, 1),
+        }
+        # ⛔ ON THE RESOLVE RESPONSE, NOT A SEPARATE READ. The first attempt added a
+        # `read_incident_sla` step through `_sn_step`, which performs a real WRITE — so a "read" was
+        # PATCHing the live instance with an empty body. Two tests caught it. ServiceNow returns the
+        # updated record on the resolve call anyway, and its SLA fields ride along on that, so this
+        # is both honest and one fewer round trip.
         r.traces.append(self._sn_step(ctx, A["resolver"], "servicenow.resolve_incident",
                                       sys_id, resolve_patch, eid,
                                       # The contract reads close_code, so the tool that
                                       # produced it has to carry that exact name or
                                       # attribution cannot find the source.
-                                      extra_output={"close_code": d["close_code"]}))
+                                      extra_output={"close_code": d["close_code"], **sla}))
 
         # 4. Closure check: the reviewer commits to the forecast set.
         forecasts = {
