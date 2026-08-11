@@ -53,3 +53,31 @@ def test_a_failure_is_carried_through_as_fail():
     em = ProvyEmitter(ingest_key="provy_test", is_simulated=False, capture=True)
     p = em.outcome_payload(_minimal_result(_rec(label="fail", value=0.0)))
     assert p["label"] == "fail"
+
+
+def test_which_packs_the_sim_owns_outcomes_for_is_mirrored_in_the_console():
+    """⛔ TWO REPOS, ONE FACT. The console decides which scenarios to OFFER from its own copy of this
+    flag (lib/packs.ts, ownsOutcome). If a pack stops owning its outcome here and the console is not
+    told, it will offer the un-reconciled baseline and the settle step on a fleet where neither can
+    work: nothing to withhold, nothing held back to deliver.
+
+    If this fails, update `ownsOutcome` in provy-sim-control/lib/packs.ts to match, and its
+    scenarios test which asserts the same list.
+    """
+    from packs import PACKS, get_pack
+    not_owned = sorted(n for n in PACKS if not getattr(get_pack(n), "owns_outcome", True))
+    assert not_owned == ["itsm"], (
+        f"outcome ownership changed: {not_owned}. Mirror it in provy-sim-control/lib/packs.ts."
+    )
+
+
+def test_every_pack_that_owns_its_outcome_can_build_a_payload_to_hand_over():
+    """The hand-over has to work for every pack, not just the one it was built against."""
+    from packs import PACKS, get_pack
+    em = ProvyEmitter(ingest_key="provy_test", is_simulated=False, capture=True)
+    for name in PACKS:
+        if not getattr(get_pack(name), "owns_outcome", True):
+            continue
+        p = em.outcome_payload(_minimal_result(_rec(f"{name}-1")))
+        assert p["entity_id"] == f"{name}-1", name
+        assert p["source"] == "confirmed", name
