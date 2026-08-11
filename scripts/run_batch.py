@@ -26,7 +26,7 @@ from engine.llm import LLM
 from engine.reconcile import backfill_server_judge, reconcile_pending
 from engine.runner import BatchRunner, chunk_sizes
 from engine.scoreboard import ProvyQuery, aggregate_injected, build_report, format_report
-from engine.control_client import post_injected
+from engine.control_client import post_injected, post_pending_outcomes
 from packs import PACKS, get_pack
 
 
@@ -175,7 +175,13 @@ def main() -> int:
     # push from ServiceNow landed on nothing: Provy answered 200 with
     # {"reconciled":0,"sessionId":null} and the ledger stayed empty. Reconciliation
     # needs both halves, and only the outcome half comes from outside.
-    if not pack_owns and outputs:
+    #
+    # ⛔ THE SAME HOLE OPENS ON ANY RUN THAT DOES NOT RECONCILE, NOT JUST ON ITSM. An un-reconciled
+    # batch skips flush() entirely, so nothing judged it and Provy held no prediction for those work
+    # items. They would have read as un-predicted rather than as predicted-and-unproven, and the
+    # outcomes handed to the console for later settlement would have landed on nothing — exactly the
+    # failure described above, reached by a different route. Judge whenever flush() did not.
+    if (not pack_owns or not args.reconcile) and outputs:
         sids = [o.result.session_id for o in outputs]
         print(f"final judge sweep ({len(sids)} sessions): "
               f"{backfill_server_judge(emitter.base, emitter.key, session_ids=sids)}")
@@ -192,6 +198,20 @@ def main() -> int:
         if len(sizes) > 1:
             print("final sweep:")
         flush(outputs, final=True)
+
+    # ⛔ AN UN-RECONCILED BATCH HANDS ITS GROUND TRUTH TO THE CONSOLE BEFORE THE RUNNER DIES.
+    # Without this the ledger goes with the runner and those work items can never settle: they sit in
+    # Provy as predictions nothing will ever answer. With it, the console can deliver them later, so
+    # the same items an operator is already looking at move from estimated to proven.
+    #
+    # Only when this run did not reconcile, and only for packs whose outcomes the sim owns — a fleet
+    # settled by its own system of record must never have outcomes posted by the simulation, and
+    # storing them for later posting is the same violation with a delay.
+    if not args.reconcile and pack_owns:
+        pending = ledger.pending_outcomes(args.pack)
+        if pending:
+            ok = post_pending_outcomes(args.pack, pending, emitter)
+            print(f"hand {len(pending)} outcomes to console for later settlement: {ok}")
 
     # Post the injected-truth summary to the console (best-effort, offline-safe) so its scoreboard
     # has the injected side: lever rates, per-entity attribution truth, and value at risk.

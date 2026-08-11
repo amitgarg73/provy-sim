@@ -173,10 +173,17 @@ class ProvyEmitter:
             },
         })
 
-    def outcome(self, result: RunResult, occurred_at: str | None = None) -> dict:
-        """Post the real outcome to the ONE reconciliation door. label/value
-        reconcile today; the signals bag is forward-compatible (Provy #341)."""
-        payload = {
+    def outcome_payload(self, result: RunResult, occurred_at: str | None = None) -> dict:
+        """Build the outcome body WITHOUT sending it.
+
+        ⛔ THE ONE PLACE AN OUTCOME IS CONSTRUCTED. Split out of outcome() so a batch that is not
+        reconciled now can hand its ground truth to the console and have it delivered later
+        (control_client.post_pending_outcomes). The console stores this verbatim and forwards it
+        unchanged; if it built a body of its own there would be two implementations of
+        /api/ingest/outcome in two languages, and the one this repo's tests never touch is the one
+        that would drift.
+        """
+        return {
             "entity_id": result.entity_id,
             "session_id": result.session_id,
             "label": "success" if result.outcome_label == "success" else "fail",
@@ -185,7 +192,11 @@ class ProvyEmitter:
             "occurred_at": occurred_at or datetime.now(timezone.utc).isoformat(),
             "signals": result.real_signals,
         }
-        return self._post("/api/ingest/outcome", payload)
+
+    def outcome(self, result: RunResult, occurred_at: str | None = None) -> dict:
+        """Post the real outcome to the ONE reconciliation door. label/value
+        reconcile today; the signals bag is forward-compatible (Provy #341)."""
+        return self._post("/api/ingest/outcome", self.outcome_payload(result, occurred_at))
 
     # ── convenience: emit a whole run except the outcome (that's EOD reconcile) ─
     def emit_run(self, result: RunResult) -> None:

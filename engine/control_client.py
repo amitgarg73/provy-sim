@@ -87,3 +87,59 @@ def post_injected(pack: str, injected: dict, runs: Optional[int] = None, timeout
         return True
     except Exception:
         return False
+
+
+def post_pending_outcomes(pack: str, records: list, emitter, timeout: float = 10.0) -> bool:
+    """Hand the console the ground truth for a batch this run did NOT reconcile.
+
+    ⛔ WHY THIS EXISTS. The ledger lives in data/groundtruth_<pack>.jsonl, which is gitignored and
+    never uploaded as an artifact, so it is written inside the Actions runner and destroyed with it.
+    A later run starts empty and cannot settle anything an earlier one produced. That is why the
+    "delayed outcome" scenario has always been blocked, and why a green un-reconciled batch could
+    never be followed by those same items settling.
+
+    ⛔ THE SIM BUILDS THE PAYLOAD, THE CONSOLE ONLY RELAYS IT. What is sent here is exactly what
+    emitter.outcome() would have posted. The console stores the bytes and forwards them unchanged, so
+    /api/ingest/outcome keeps ONE implementation, in this file, covered by this repo's tests. A second
+    one in TypeScript is the drift the SDK contract rule exists to prevent.
+
+    Best-effort: returns False on any failure and never raises. A run must not fail because the
+    console is unreachable.
+    """
+    base = os.environ.get("CONTROL_URL", "").strip().rstrip("/")
+    if not base:
+        return False
+    wf_id = _workflow_id_for(pack)
+    if not wf_id:
+        return False
+
+    payloads = []
+    for rec in records:
+        try:
+            # build_only: the emitter constructs the payload and posts nothing. The outcome must not
+            # reach Provy now — the entire point is that it arrives later.
+            payloads.append(emitter.outcome_payload(_result_for_payload(rec), occurred_at=None))
+        except Exception:
+            continue
+    if not payloads:
+        return False
+
+    headers = {"Content-Type": "application/json"}
+    token = os.environ.get("CONTROL_LEVERS_TOKEN", "").strip()
+    if token:
+        headers["x-control-token"] = token
+    body = json.dumps({"outcomes": payloads}, default=str).encode()
+    try:
+        req = urllib.request.Request(
+            f"{base}/api/pending-outcomes/{wf_id}", data=body, headers=headers, method="POST")
+        urllib.request.urlopen(req, timeout=timeout)
+        return True
+    except Exception:
+        return False
+
+
+def _result_for_payload(rec: dict):
+    """The ledger record as the emitter's outcome builder expects it. Same shape reconcile.py rebuilds
+    for a live post, so a stored outcome and a posted one can never describe different things."""
+    from engine.reconcile import _minimal_result
+    return _minimal_result(rec)
