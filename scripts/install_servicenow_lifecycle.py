@@ -28,6 +28,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from engine.targets import PREPROD_INGEST, is_production_target
 from engine.servicenow import (COMPRESSION, DEMO_RESOLUTION_TARGET_S,
                                DEMO_RESPONSE_TARGET_S, MARKER, STATE_RESOLVED,
                                ServiceNowError, client_from_env)
@@ -156,11 +157,8 @@ def upsert(sn, table: str, name: str, payload: dict, dry_run: bool) -> str:
     return f"created {table}: {name}"
 
 
-# Hosts that serve production Provy. This demo is pre-prod only, so a push aimed at
-# any of them is corrected rather than kept: real customer data lives there, and a
-# demo instance writing into it is not a mistake anybody would notice quickly.
-PROD_HOSTS = ("provy.ai", "provyai.vercel.app")
-PREPROD_INGEST = "https://provydev.vercel.app/api/ingest/outcome"
+# Which Provy a URL addresses lives in engine.targets. This script REWRITES the instance's
+# provy.ingest.url from that answer, so a wrong answer here silently redirects a live demo.
 
 
 def ensure_properties(sn, dry_run: bool) -> list[str]:
@@ -171,7 +169,7 @@ def ensure_properties(sn, dry_run: bool) -> list[str]:
             current = existing[0]["value"]
             # One exception to keeping what is already there. Everything else is left
             # alone, but an ingest URL pointing at production is corrected on sight.
-            if name == "provy.ingest.url" and any(h in current for h in PROD_HOSTS):
+            if name == "provy.ingest.url" and is_production_target(current):
                 out.append(f"CORRECTED sys_properties: {name} pointed at PRODUCTION ({current}). "
                            f"This demo is pre-prod only.")
                 if not dry_run:

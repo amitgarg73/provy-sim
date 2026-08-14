@@ -34,12 +34,12 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from engine.servicenow import ServiceNowError, client_from_env
+from engine.targets import is_production_target
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Hosts that must never end up in provy.ingest.url for a demo run. A demo pointed at production
-# writes real outcomes into the real ledger, which is exactly what happened on 2026-07-27.
-PROD_HOSTS = ("provy.ai", "provyai.vercel.app")
+# Which Provy a URL addresses lives in engine.targets, because the lifecycle installer acts on the
+# same question and rewrites a live ServiceNow property from its answer.
 
 DEFAULT_URL = "https://provydev.vercel.app/api/ingest/outcome"
 
@@ -104,7 +104,7 @@ def main() -> int:
 
     base = (args.provy_url or "https://provydev.vercel.app").rstrip("/")
     url = base if base.endswith("/api/ingest/outcome") else f"{base}/api/ingest/outcome"
-    if any(h in url for h in PROD_HOSTS) and not args.allow_prod:
+    if is_production_target(url) and not args.allow_prod:
         print(f"refusing to point the demo at production ({url}). Pass --allow-prod if you mean it.",
               file=sys.stderr)
         return 2

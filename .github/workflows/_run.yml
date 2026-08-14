@@ -49,6 +49,12 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      # ⛔ FIRST, BEFORE ANYTHING PRINTS THE ENV. GitHub masks secrets; it does not mask INPUTS,
+      # and the fleet's ingest key arrives as one because it is chosen per run at dispatch time. The
+      # runner echoes the env block of every step, so without this the key is readable in the log of
+      # a PUBLIC repository. It was, in six run-itsm jobs on 2026-08-14.
+      - name: Mask the ingest key
+        run: echo "::add-mask::${{ inputs.ingest_key }}"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
