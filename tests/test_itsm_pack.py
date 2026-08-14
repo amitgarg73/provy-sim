@@ -65,6 +65,18 @@ class FakeServiceNow:
     def group_sys_id(self, name):
         return f"grp-{name.lower().replace(' ', '-')}"
 
+    def still_waiting(self, sys_id):
+        """Answered from what this fake actually holds, not hardcoded True.
+
+        The real client re-reads the record before the desk works it (provy-sim#6). A fake that always
+        said yes would let the skip rot untested, which is the whole failure it exists to prevent: a
+        ticket another desk resolved being dragged back to In Progress and counted as a reopen.
+
+        Absent `state` reads as waiting, so the default fixtures keep their existing behaviour.
+        """
+        row = next((i for i in self.incidents if i["sys_id"] == sys_id), None)
+        return bool(row) and str(row.get("state", "1")) == "1"
+
     def update(self, table, sys_id, payload):
         self.updates.append({"table": table, "sys_id": sys_id, "payload": dict(payload)})
         row = next((i for i in self.incidents if i["sys_id"] == sys_id), {})
@@ -218,7 +230,11 @@ def test_incidents_are_scoped_to_this_demo():
         "q", q) and [] or []
     sn.open_demo_incidents(limit=5)
     assert f"correlation_id={MARKER}" in captured["q"]
-    assert "stateIN1,2" in captured["q"]
+    # NEW only. This used to be `stateIN1,2`, which also pulled tickets another desk already had in
+    # hand. Harmless with one desk, and the cause of the 14 Aug collision with eleven: they worked six
+    # incidents between them and left twenty-three untouched (provy-sim#6).
+    assert "state=1" in captured["q"]
+    assert "stateIN" not in captured["q"]
 
 
 def test_the_agent_never_gets_a_second_go_at_the_same_incident():
@@ -494,3 +510,34 @@ def test_reopen_is_never_read_back_during_the_run():
     i = src.index('sla = {')
     block = src[i:src.index('resolve_patch,', i)]
     assert 'reopen' not in block, 'reopen must never appear in a tool output during the run'
+
+
+def test_a_ticket_another_desk_already_resolved_is_skipped_not_reworked():
+    """The collision that made 14 Aug 2026 unreadable (provy-sim#6).
+
+    Eleven runs shared one queue. Each fetched a batch and worked it over the following minutes, by
+    which time other runs had resolved some of those tickets. Working one anyway dragged a RESOLVED
+    incident back to In Progress, and ServiceNow counts that as a reopen: INC0010192 changed state
+    twelve times, INC0010196 reached reopen_count 3, where every earlier run sits at 0 or 1.
+
+    That is not cosmetic. The ITSM contract binds `resolution_persists` to reopen_count with
+    threshold [0,1], so the collision fails a promise no agent broke.
+    """
+    incidents = [dict(_INCIDENTS[0]), dict(_INCIDENTS[1])]
+    incidents[0]["state"] = "6"  # another desk resolved it after this run queued it
+    pack = ItsmPack(client=FakeServiceNow(incidents))
+    item, _ = pack.generate_work_item(random.Random(1))
+
+    assert item["id"] == incidents[1]["number"], "took the resolved ticket instead of the waiting one"
+
+
+def test_a_fully_stale_batch_goes_back_for_more_rather_than_failing():
+    """Every ticket in the batch was taken by someone else. That is an empty queue in substance, and
+    a run with work available must not die on it."""
+    incidents = [dict(_INCIDENTS[0])]
+    incidents[0]["state"] = "7"
+    pack = ItsmPack(client=FakeServiceNow(incidents))
+
+    # Nothing waiting anywhere: the non-blocking path reports that plainly instead of handing back a
+    # ticket nobody should touch.
+    assert pack.try_generate_work_item() is None

@@ -232,10 +232,36 @@ class ServiceNowClient:
         attempt. A ticket that came back belongs to the second-line engineer, not to
         the agent: the agent gets one shot at each incident, which is also the only
         way "the resolution held" means anything.
+
+        ⛔ NEW ONLY, NOT IN PROGRESS (provy-sim#6). In Progress means a desk already has it. Including
+        it was harmless while one run worked the queue and actively harmful the moment two did: on
+        14 Aug 2026 eleven concurrent runs worked six incidents between them and left twenty-three
+        untouched, because they all reached for the same tickets and then re-fetched the ones each
+        other had just picked up. INC0010192 changed state twelve times for one ticket.
+
+        This narrows the overlap, it does not remove it: two runs can still read the same NEW ticket
+        in the same instant. Full isolation needs the dispatcher to stop running desks concurrently
+        against one queue, which is where it belongs, not here.
         """
-        q = (f"correlation_id={MARKER}^stateIN{STATE_NEW},{STATE_IN_PROGRESS}"
+        q = (f"correlation_id={MARKER}^state={STATE_NEW}"
              f"^reopen_count=0^ORDERBYopened_at")
         return self.query("incident", q, self.INCIDENT_FIELDS, limit=limit)
+
+    def still_waiting(self, sys_id: str) -> bool:
+        """Is this ticket still unworked, right now?
+
+        ⛔ A QUEUED TICKET GOES STALE. The desk fetches a batch and works it over the following
+        minutes, and a ticket another run resolved in the meantime is still sitting in the local
+        queue. Working it anyway drags a RESOLVED incident back to In Progress, which is what the
+        `6→2` transitions in the 14 Aug audit trail were, and ServiceNow counts that as a reopen.
+
+        That is not a cosmetic artefact. The ITSM contract binds `resolution_persists` to
+        `reopen_count` with threshold [0,1], so a collision pushes reopen_count to 2 or 3 and the
+        promise fails for something no agent did. Measured: INC0010194 reached 2 and INC0010196
+        reached 3, where every incident from every earlier run sits at 0 or 1.
+        """
+        rows = self.query("incident", f"sys_id={sys_id}", ["sys_id", "state"], limit=1)
+        return bool(rows) and str(rows[0].get("state", "")) == STATE_NEW
 
     def group_sys_id(self, name: str) -> str:
         cached = self._group_ids.get(name)

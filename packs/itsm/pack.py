@@ -181,23 +181,47 @@ class ItsmPack(BasePack):
 
     # ── work items come from ServiceNow, not from the generator ─────────────
     def generate_work_item(self, rng) -> tuple[dict, dict]:
-        if not self._fresh_queued():
-            # An empty queue is not necessarily an error. When incidents arrive during the run
-            # rather than all up front, the agent catches up with the backlog and waits, which is
-            # what a desk does between tickets. Only a queue that stays empty is a real problem.
-            batch = self._await_work()
-            self._fetched += len(batch)
-            if not batch:
-                raise RuntimeError(
-                    "no open incidents tagged '%s' arrived within %ds. Seed some first: "
-                    "python scripts/seed_itsm_incidents.py --count 20" % (MARKER, _IDLE_TIMEOUT_S)
-                )
-            self._queue.extend(batch)
-        return self._take_queued()
+        # Loops because a fetched batch can turn out to be entirely stale: every ticket in it was
+        # picked up by another desk between the fetch and now. That is an empty queue in substance,
+        # so it goes back for more rather than failing a run that has work available (provy-sim#6).
+        while True:
+            if not self._fresh_queued():
+                # An empty queue is not necessarily an error. When incidents arrive during the run
+                # rather than all up front, the agent catches up with the backlog and waits, which is
+                # what a desk does between tickets. Only a queue that stays empty is a real problem.
+                batch = self._await_work()
+                self._fetched += len(batch)
+                if not batch:
+                    raise RuntimeError(
+                        "no open incidents tagged '%s' arrived within %ds. Seed some first: "
+                        "python scripts/seed_itsm_incidents.py --count 20" % (MARKER, _IDLE_TIMEOUT_S)
+                    )
+                self._queue.extend(batch)
+            taken = self._take_queued()
+            if taken is not None:
+                return taken
 
-    def _take_queued(self) -> tuple[dict, dict]:
-        inc = self._queue.popleft()
-        self._issued.add(inc.get("sys_id"))
+    def _take_queued(self):
+        """The next ticket still worth working, or None when the queue holds no such ticket.
+
+        ⛔ CONFIRM EACH ONE IS STILL WAITING (provy-sim#6). This queue was fetched minutes ago and
+        another desk may have resolved a ticket since. Working it anyway drags a resolved incident
+        back to In Progress, ServiceNow counts that as a reopen, and the contract binds
+        `resolution_persists` to reopen_count, so the promise fails for something no agent did.
+
+        Skipping is done HERE rather than by the callers because they disagree about what an empty
+        queue means: one blocks and raises, the other returns immediately. Returning None lets each
+        keep its own answer instead of teaching this method both.
+        """
+        while self._queue:
+            inc = self._queue.popleft()
+            # Marked issued before the check, so a ticket that lost the race is not re-taken later.
+            self._issued.add(inc.get("sys_id"))
+            if self.client.still_waiting(inc["sys_id"]):
+                return self._as_item(inc)
+        return None
+
+    def _as_item(self, inc: dict) -> tuple[dict, dict]:
         item = {
             "id": inc["number"],
             "sys_id": inc["sys_id"],
