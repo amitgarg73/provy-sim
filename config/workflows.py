@@ -149,6 +149,47 @@ _LEGAL_RATES = {
     **_L1L2_RATES,
 }
 
+# Agentic AIOps (Edwin-shaped). Two rates are the pack's own injectors, both aimed at claims the
+# product makes and cannot check itself:
+#   change_blind      the change lookup came back empty on a change-caused fault and the RCA was
+#                     written anyway. Only fires on the change-caused half of the fault library, so
+#                     its effective rate across a batch is roughly half the number below.
+#   correlation_split one fault raised two insights, so the noise-reduction claim failed upward.
+#
+# silent_wrong leads the generic set because a wrong root cause is this product's signature failure,
+# and confidence_miscalibration is deliberately the highest overlay: the investigation panel shows a
+# probable cause with no confidence attached, so "sure and wrong" is invisible on their surface and
+# is the single most useful thing to demonstrate.
+#
+# silent_staleness is retargeted at metrics_agent. The default target is the retriever, which here is
+# the knowledge agent, but the stale read that actually misleads an RCA is a metric window that
+# already rolled, not an old runbook.
+# ⛔ THE TWO PACK RATES ARE CONDITIONAL, NOT BATCH RATES, so the number here is not the number you
+# get. change_blind is rolled only on runs where no generic lever already fired AND where the fault
+# is one a change actually caused (about half the library). Measured over 1000 runs across 40 seeds:
+# 0.22 here lands at 10.4% of a batch and a 38.6% fleet failure rate, which sits with support (34.9)
+# and claims (36.8) rather than above them. 0.60 gave 22.7% and pushed the fleet to 51.8% failing,
+# which reads as a broken fleet rather than a real one.
+#
+# ⛔ AND DO NOT TUNE THIS ON ONE BATCH. A single 25-run seed put change_blind at 36% when its true
+# rate was 22.7%. The sweep across seeds is the only honest reading.
+_EDWIN_RATES = {
+    "change_blind":              {"rate": 0.22},
+    "correlation_split":         {"rate": 0.12},
+    "silent_wrong":              {"rate": 0.06},
+    "silent_unsupported":        {"rate": 0.04},
+    "silent_staleness":          {"rate": 0.03, "target": "metrics_agent"},
+    "confidence_miscalibration": {"rate": 0.14},
+    "tool_fault":                {"rate": 0.04},
+    "quality_degrade":           {"rate": 0.04},
+    "policy_violation":          {"rate": 0.04},
+    "sla_breach":                {"rate": 0.04},
+    "overt_error":               {"rate": 0.02},
+    "skip_propagation":          {"rate": 0.02},
+    "silent_drift":              {"rate": 1.0, "params": {"onset": 20, "mode": "quality"}},
+    **_L1L2_RATES,
+}
+
 # ITSM is the odd one out and its rates mean something different. These are not
 # chaos levers that rewrite the outcome: the ITSM pack never writes a real signal,
 # because ServiceNow settles those. They are the AGENT'S OWN ERROR RATES, applied
@@ -170,6 +211,7 @@ WORKFLOWS = {
     "revops":  WorkflowConfig("revops",  "PROVY_KEY_REVOPS",  dict(_REVOPS_RATES)),
     "claims_payout": WorkflowConfig("claims_payout", "PROVY_KEY_CLAIMS_PAYOUT", dict(_CLAIMS_PAYOUT_RATES)),
     "legal":   WorkflowConfig("legal",   "PROVY_KEY_LEGAL",   dict(_LEGAL_RATES)),
+    "edwin":   WorkflowConfig("edwin",   "PROVY_KEY_EDWIN",   dict(_EDWIN_RATES)),
     "itsm":    WorkflowConfig("itsm",    "PROVY_KEY_ITSM",    dict(_ITSM_RATES)),
 }
 
