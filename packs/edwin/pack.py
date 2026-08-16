@@ -129,6 +129,25 @@ class EdwinPack(BasePack):
             "reopened_7d": "incident_recurred_7d",
         }
 
+    def signal_owners(self) -> dict[str, str]:
+        """Which agent's work decides each signal, and therefore who a failure is attributed to.
+
+        ⛔ WITHOUT THIS EVERY CONDITION BLAMES THE REVIEWER. Measured on this fleet before the map
+        existed: all six signals registered against `reviewer`, because the shared helper stamped
+        them all on its closing message. c4 exists to say the change agent never read the change
+        record, and bound that way it would have named the agent that only summarised it.
+
+        `sla_met` is deliberately unowned. Timeliness is a property of the whole investigation
+        rather than of any one step, so it falls to the reviewer, which is the honest answer."""
+        return {
+            "rca_correct": "rca_agent",
+            "reopened_7d": "rca_agent",          # a wrong cause is why it comes back
+            "change_data_used": "change_agent",
+            "correlation_held": "correlator",
+            "routed_correct": "orchestrator",    # the orchestrator picks the assignment group
+            "alerts_folded": "correlator",       # informational, but it is the correlator's number
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="rca_agent",          # the agent that names the cause

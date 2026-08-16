@@ -98,22 +98,69 @@ class BasePack:
         the tenant's own connector and legitimately speaks the contract's language."""
         return {}
 
+    def signal_owners(self) -> dict[str, str]:
+        """contract signal name -> the agent whose work DECIDES that signal.
+
+        ⛔ THIS DECIDES WHO GETS BLAMED, AND NOTHING ELSE DOES.
+
+        Provy binds a contract condition to an emitted signal and then names the agent that emitted
+        it: the ingest registry records `ag_outcome_signals.source_hint` per signal key, and
+        `bindingOf()` returns that agent as the condition's cause. So the agent a failure is
+        attributed to is decided by WHICH AGENT'S TRACE CARRIED THE FIELD, not by which agent
+        actually did the work.
+
+        Measured on the edwin fleet, 2026-08-16: all six contract signals registered against
+        `reviewer`, because every one of them was stamped on the reviewer's closing message. Binding
+        those conditions would have named the reviewer for a failure whose whole point was that the
+        change agent never read the change record. Graded correctly, blamed wrongly.
+
+        The general rule for any real fleet: a pipeline that reports all of its self-assessed
+        signals from one closing step can be graded perfectly and can never attribute a failure to
+        the agent that caused it.
+
+        Empty means the reviewer owns everything, which is what every pack did before this existed
+        and stays the default, so no pack changes behaviour until it opts in.
+        """
+        return {}
+
     def stamp_estimated(self, result: RunResult, reviewer_agent: str,
                         confidence: Any = None) -> None:
-        """Put the post-lever Estimated signals on the reviewer's closing message, under the names
-        this fleet's agents use, so the Estimated (trace) side of every 'both'/'trace' condition is
-        readable on a real trace payload.
+        """Put the post-lever Estimated signals on the trace of the agent that OWNS each one, under
+        the names this fleet's agents use, so the Estimated (trace) side of every 'both'/'trace'
+        condition is readable on a real trace payload.
+
+        Ownership comes from `signal_owners()`. Anything unowned falls to the reviewer, which is
+        where everything used to go, so a pack that declares no owners behaves exactly as before.
 
         ⛔ THE ONE PLACE THIS HAPPENS. It used to be an identical six-line loop in four modules
         (here, CommitmentPack, itsm, stripe_support). Renaming in one of them would have left the
-        other three handing Provy the contract's own field names, which is the thing this removes."""
-        payload = {self.trace_aliases().get(k, k): v for k, v in result.estimated_signals.items()}
+        other three handing Provy the contract's own field names, which is the thing this removes.
+        Ownership routing was added HERE for the same reason: a per-pack copy would drift, and the
+        drift would be invisible until an attribution named the wrong agent."""
+        owners = self.signal_owners()
+        aliases = self.trace_aliases()
         conf = result.confidence if confidence is None else confidence
+
+        # First agent_message per agent, matching the original first-match behaviour. An agent that
+        # speaks more than once (a chat agent) stamps on its opening turn rather than scattering.
+        first_msg: dict[str, TraceStep] = {}
         for t in result.traces:
-            if t.agent == reviewer_agent and t.step_type == "agent_message":
-                t.payload_extra.update(payload)
-                t.payload_extra["confidence"] = conf
-                return
+            if t.step_type == "agent_message":
+                first_msg.setdefault(t.agent, t)
+
+        reviewer_msg = first_msg.get(reviewer_agent)
+
+        for signal, value in result.estimated_signals.items():
+            # An owner that never spoke in this run (skipped by a lever) falls back to the reviewer
+            # rather than dropping the signal: a missing Estimated side reads as "never claimed",
+            # which is a different and wrong story.
+            target = first_msg.get(owners.get(signal, "")) or reviewer_msg
+            if target is None:
+                continue
+            target.payload_extra[aliases.get(signal, signal)] = value
+
+        if reviewer_msg is not None:
+            reviewer_msg.payload_extra["confidence"] = conf
 
     def run_pipeline(self, item: Any, ground_truth: dict, ctx: RunContext) -> RunResult:
         result = self.build_clean_run(item, ground_truth, ctx)

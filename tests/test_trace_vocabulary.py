@@ -14,17 +14,30 @@ import pytest
 from conftest import make_ctx
 
 
-def _reviewer_payload(pack, seed=5):
-    """Run one full pipeline and return the payload stamped on the reviewer's closing message."""
+def _run_and_payloads(pack, seed=5):
+    """Run one full pipeline. Returns (run, merged payload across every agent message, by-agent map).
+
+    ⛔ THIS USED TO READ THE REVIEWER'S MESSAGE ONLY, and that assumption is what `signal_owners()`
+    broke. Estimated signals are now stamped on the agent that OWNS each one, because the agent whose
+    trace carries the field is the agent Provy attributes the failure to. The vocabulary property
+    these tests exist for is about the whole trace, not about one step of it."""
     rng = random.Random(seed)
     item, gt = pack.generate_work_item(rng)
     ctx = make_ctx(seed=seed)
     run = pack.run_pipeline(item, gt, ctx)
-    reviewer = pack.lever_manifest().reviewer_agent
+    by_agent: dict[str, dict] = {}
+    merged: dict = {}
     for t in run.traces:
-        if t.agent == reviewer and t.step_type == "agent_message" and t.payload_extra:
-            return run, t.payload_extra
-    return run, {}
+        if t.step_type == "agent_message" and t.payload_extra:
+            by_agent.setdefault(t.agent, {}).update(t.payload_extra)
+            merged.update(t.payload_extra)
+    return run, merged, by_agent
+
+
+def _reviewer_payload(pack, seed=5):
+    """Back-compat shim for the tests that genuinely mean 'somewhere on the trace'."""
+    run, merged, _ = _run_and_payloads(pack, seed)
+    return run, merged
 
 
 def test_aliases_only_rename_signals_the_contract_actually_has(pack):
@@ -81,7 +94,53 @@ def test_every_pack_stamps_something(pack):
     run, payload = _reviewer_payload(pack)
     if not run.estimated_signals:
         pytest.skip(f"{pack.workflow} has no estimated signals on this run")
-    assert payload, f"{pack.workflow}: nothing stamped on the reviewer message"
+    assert payload, f"{pack.workflow}: nothing stamped on any agent message"
+
+
+def test_owned_signals_land_on_their_owner(pack):
+    """⛔ WHICH AGENT CARRIES THE FIELD IS WHICH AGENT GETS BLAMED.
+
+    Provy's ingest registry records a source agent per emitted signal key, and `bindingOf()` returns
+    that agent as the condition's cause. So a signal stamped on the wrong step produces a confident,
+    well-formed, WRONG attribution, which is worse than no attribution at all.
+
+    Measured on edwin before `signal_owners()` existed: all six contract signals registered against
+    the reviewer, so the condition that exists to catch the change agent would have named the agent
+    that merely summarised its work."""
+    owners = pack.signal_owners()
+    if not owners:
+        pytest.skip(f"{pack.workflow} declares no owners; everything falls to the reviewer by design")
+    aliases = pack.trace_aliases()
+    agents = {a.name for a in pack.agents()}
+    run, _, by_agent = _run_and_payloads(pack)
+
+    for signal, owner in owners.items():
+        assert owner in agents, f"{pack.workflow}: '{signal}' owned by '{owner}', which is not an agent"
+        if signal not in run.estimated_signals:
+            continue
+        emitted_as = aliases.get(signal, signal)
+        # The owner spoke on this run, so the field must be on ITS message and on no other.
+        if owner not in by_agent:
+            continue   # lever skipped the owner; the helper falls back to the reviewer on purpose
+        assert emitted_as in by_agent[owner], (
+            f"{pack.workflow}: '{emitted_as}' is owned by {owner} but is not on its trace")
+        strays = [a for a, p in by_agent.items() if a != owner and emitted_as in p]
+        assert not strays, (
+            f"{pack.workflow}: '{emitted_as}' also appears on {strays}, so attribution is ambiguous")
+
+
+def test_unowned_signals_still_reach_the_trace(pack):
+    """Ownership must not lose a signal. Anything unowned falls to the reviewer, as before."""
+    run, merged, _ = _run_and_payloads(pack)
+    aliases = pack.trace_aliases()
+    graded = {c.signal for c in pack.contract() if c.side in ('trace', 'both')}
+    for signal in graded:
+        if signal not in run.estimated_signals:
+            continue
+        emitted_as = aliases.get(signal, signal)
+        assert emitted_as in merged, (
+            f"{pack.workflow}: '{emitted_as}' reached no trace at all, so its Estimated side is "
+            "unreadable and the condition can never name a cause")
 
 
 def test_no_aliased_signal_ever_reaches_a_trace(pack):
