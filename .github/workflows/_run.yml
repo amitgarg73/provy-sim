@@ -99,25 +99,18 @@ jobs:
           PROVY_URL: ${{ inputs.provy_url }}
           VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          # The runner resolves the pack's key from PROVY_KEY_<PACK> (config/workflows.py). Only the
-          # selected pack's variable is set, from the caller's input.
+          # The pack's ingest key. config/workflows.py resolves it from PROVY_KEY_<PACK>, and the
+          # name is DERIVED from the pack below rather than enumerated here.
           #
-          # ⛔ A PACK MISSING FROM THIS LIST RUNS GREEN AND SENDS NOTHING. Its key resolves to empty,
-          # emit_enabled() correctly refuses, and the job prints "emit=OFF (dry run)" and exits 0.
-          # The Actions tick, the reconcile summary ("posted: 4") and the console's run record all
-          # look exactly like a real run. Happened to edwin on 2026-08-16: run-edwin.yml existed and
-          # the pack was registered in both repos, and this one line was still the difference between
-          # a fleet gaining four investigations and gaining none. ADD THE LINE WITH THE PACK.
-          PROVY_KEY_EDWIN:   ${{ inputs.pack == 'edwin'   && inputs.ingest_key || '' }}
-          PROVY_KEY_SUPPORT: ${{ inputs.pack == 'support' && inputs.ingest_key || '' }}
-          PROVY_KEY_STRIPE_SUPPORT: ${{ inputs.pack == 'stripe_support' && inputs.ingest_key || '' }}
-          PROVY_KEY_CLAIMS:  ${{ inputs.pack == 'claims'  && inputs.ingest_key || '' }}
-          PROVY_KEY_CRM:     ${{ inputs.pack == 'crm'     && inputs.ingest_key || '' }}
-          PROVY_KEY_TRAVEL:  ${{ inputs.pack == 'travel'  && inputs.ingest_key || '' }}
-          PROVY_KEY_REVOPS:  ${{ inputs.pack == 'revops'  && inputs.ingest_key || '' }}
-          PROVY_KEY_CLAIMS_PAYOUT: ${{ inputs.pack == 'claims_payout' && inputs.ingest_key || '' }}
-          PROVY_KEY_LEGAL:   ${{ inputs.pack == 'legal'   && inputs.ingest_key || '' }}
-          PROVY_KEY_ITSM:    ${{ inputs.pack == 'itsm'    && inputs.ingest_key || '' }}
+          # ⛔ THIS USED TO BE TEN HAND-WRITTEN CONDITIONALS, ONE PER PACK, AND A PACK MISSING FROM
+          # THE LIST RAN GREEN AND SENT NOTHING. Its key resolved to empty, emit_enabled() correctly
+          # refused, and the job printed "emit=OFF (dry run)" and exited 0 while the Actions tick,
+          # the reconcile summary ("posted: 4") and the console's run record all looked like a real
+          # run. Happened to edwin on 2026-08-16: the pack was registered in both repos and had its
+          # own run-edwin.yml, and one absent line was the whole difference between a fleet gaining
+          # four investigations and gaining none. The list is gone, so the omission is now
+          # unspellable (provy-sim#7).
+          PACK_INGEST_KEY: ${{ inputs.ingest_key }}
           # ITSM works real tickets in a real ServiceNow instance. No credentials,
           # no run: the pack has no offline mode on purpose.
           SERVICENOW_INSTANCE: ${{ secrets.SERVICENOW_INSTANCE }}
@@ -128,6 +121,17 @@ jobs:
           CONTROL_LEVERS_TOKEN: ${{ secrets.CONTROL_LEVERS_TOKEN }}
           CONTROL_WORKFLOW_ID: ${{ inputs.workflow_id }}
         run: |
+          # Derive PROVY_KEY_<PACK> from the pack name, so adding a pack needs no edit to this file.
+          # Exported into the step's own environment, which python inherits.
+          PACK_UPPER=$(echo "${{ inputs.pack }}" | tr '[:lower:]' '[:upper:]')
+          export "PROVY_KEY_${PACK_UPPER}=${PACK_INGEST_KEY}"
+          # Fail loudly rather than dry-running. A run that emits nothing is the failure this whole
+          # change exists to remove, and it must never again be reachable by silence.
+          if [ -z "${PACK_INGEST_KEY}" ]; then
+            echo "ABORT: no ingest key for pack '${{ inputs.pack }}'. The run would emit NOTHING."
+            exit 1
+          fi
+
           # ITSM only: tickets keep arriving while the agent works, so how long any one of them
           # waited depends on when it turned up and what else was in front of it. The arrivals run
           # in the background against the same instance; the agent picks up whatever is waiting and
