@@ -101,6 +101,14 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           # The runner resolves the pack's key from PROVY_KEY_<PACK> (config/workflows.py). Only the
           # selected pack's variable is set, from the caller's input.
+          #
+          # ⛔ A PACK MISSING FROM THIS LIST RUNS GREEN AND SENDS NOTHING. Its key resolves to empty,
+          # emit_enabled() correctly refuses, and the job prints "emit=OFF (dry run)" and exits 0.
+          # The Actions tick, the reconcile summary ("posted: 4") and the console's run record all
+          # look exactly like a real run. Happened to edwin on 2026-08-16: run-edwin.yml existed and
+          # the pack was registered in both repos, and this one line was still the difference between
+          # a fleet gaining four investigations and gaining none. ADD THE LINE WITH THE PACK.
+          PROVY_KEY_EDWIN:   ${{ inputs.pack == 'edwin'   && inputs.ingest_key || '' }}
           PROVY_KEY_SUPPORT: ${{ inputs.pack == 'support' && inputs.ingest_key || '' }}
           PROVY_KEY_STRIPE_SUPPORT: ${{ inputs.pack == 'stripe_support' && inputs.ingest_key || '' }}
           PROVY_KEY_CLAIMS:  ${{ inputs.pack == 'claims'  && inputs.ingest_key || '' }}
