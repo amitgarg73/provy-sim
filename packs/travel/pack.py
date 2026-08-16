@@ -71,6 +71,12 @@ class TravelPack(CommitmentPack):
             first_agent="intake", downstream_agent="booker",
             correctness_signal="ticket_issued", policy_signal="ticket_issued", sla_signal="sla_met",
             drift_agent="booker",
+        
+            # Conditions with no other lever aimed at them, and the agent that owns each.
+            # Without this they pass on every run and cannot be demonstrated.
+            other_signals={
+                "itinerary_correct": "intake",
+            },
         )
 
     # ── commitment-integrity injectors (the mock GDS/ticketing settlement) ───────

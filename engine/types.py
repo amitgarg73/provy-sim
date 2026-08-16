@@ -147,6 +147,15 @@ class LeverManifest:
     policy_signal: str           # e.g. 'policy_followed'
     sla_signal: str              # e.g. 'sla_met'
     secondary_bad_signal: Optional[str] = None   # extra signal silent_wrong also corrupts (e.g. reopened_7d)
+    # Contract signals with no slot above, mapped to the agent that owns each. The `condition_miss`
+    # lever breaks one of these at a time.
+    #
+    # ⛔ WITHOUT THIS, A CONDITION CAN NEVER FAIL AND SO CAN NEVER BE DEMONSTRATED. The four slots
+    # below cover four signals; a five- or six-condition contract orphans the rest, and an orphaned
+    # condition passes on every single run. Measured 16 Aug over 2700 dry runs: SEVEN conditions
+    # across five packs had a 0% failure rate, so a demo could show the contract but never show it
+    # being broken. Attribution needs the owning agent, so this is a map and not a list.
+    other_signals: dict = field(default_factory=dict)
     drift_agent: Optional[str] = None            # defaults to resolver_agent when None
     policy_agent: Optional[str] = None           # agent that owns policy_signal; defaults to resolver_agent
 

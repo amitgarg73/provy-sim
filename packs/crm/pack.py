@@ -73,6 +73,12 @@ class CRMPack(BasePack):
             sla_signal="sla_met",
             secondary_bad_signal="duplicate_contact",
             drift_agent="scorer",
+        
+            # Conditions with no other lever aimed at them, and the agent that owns each.
+            # Without this they pass on every run and cannot be demonstrated.
+            other_signals={
+                "enriched_correct": "enricher",
+            },
         )
 
     def generate_work_item(self, rng) -> tuple[dict, dict]:

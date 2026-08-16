@@ -62,6 +62,8 @@ _DEFAULT_RATES = {
     "silent_incomplete":         {"rate": 0.03},
     "silent_policy":             {"rate": 0.03},
     "silent_missed_action":      {"rate": 0.03},
+    # Reaches the contract conditions no other lever aims at (LeverManifest.other_signals).
+    "condition_miss":            {"rate": 0.04},
     "confidence_miscalibration": {"rate": 0.10},
     "tool_fault":                {"rate": 0.08},
     "quality_degrade":           {"rate": 0.08},
@@ -101,6 +103,7 @@ _MIXED_GENERIC = {
     "silent_wrong":              {"rate": 0.02},   # confidently wrong answer
     "confidence_miscalibration": {"rate": 0.02},   # sure and wrong / unsure and right
     "sla_breach":                {"rate": 0.01},
+    "condition_miss":            {"rate": 0.03},   # the conditions no slot reaches
     "overt_error":               {"rate": 0.01},   # a run that visibly breaks
 }
 
@@ -128,6 +131,11 @@ _REVOPS_RATES = {
     "wrong_discount":       {"rate": 0.03},
     "wrong_record":         {"rate": 0.02},
     "duplicate_opportunity": {"rate": 0.02},
+    # ⛔ THE GENERIC LEVERS BELONG HERE TOO. Without them this fleet's own SLA/deadline condition can
+    # never fail, so the contract shows a promise the demo can never break. stripe_support and travel
+    # already carried _MIXED_GENERIC; these three did not, and it showed up as three conditions with a
+    # 0% failure rate over 2700 dry runs (16 Aug).
+    **_MIXED_GENERIC,
     **_L1L2_RATES,
 }
 
@@ -137,6 +145,11 @@ _CLAIMS_PAYOUT_RATES = {
     "claims_leakage":    {"rate": 0.03},
     "stale_lienholder":  {"rate": 0.02},
     "duplicate_payment": {"rate": 0.02},
+    # ⛔ THE GENERIC LEVERS BELONG HERE TOO. Without them this fleet's own SLA/deadline condition can
+    # never fail, so the contract shows a promise the demo can never break. stripe_support and travel
+    # already carried _MIXED_GENERIC; these three did not, and it showed up as three conditions with a
+    # 0% failure rate over 2700 dry runs (16 Aug).
+    **_MIXED_GENERIC,
     **_L1L2_RATES,
 }
 
@@ -146,6 +159,11 @@ _LEGAL_RATES = {
     "deadline_lapsed":   {"rate": 0.03},
     "wrong_counterparty": {"rate": 0.02},
     "duplicate_filing":  {"rate": 0.02},
+    # ⛔ THE GENERIC LEVERS BELONG HERE TOO. Without them this fleet's own SLA/deadline condition can
+    # never fail, so the contract shows a promise the demo can never break. stripe_support and travel
+    # already carried _MIXED_GENERIC; these three did not, and it showed up as three conditions with a
+    # 0% failure rate over 2700 dry runs (16 Aug).
+    **_MIXED_GENERIC,
     **_L1L2_RATES,
 }
 

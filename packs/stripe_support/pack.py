@@ -96,6 +96,12 @@ class StripeSupportPack(BasePack):
             first_agent="classifier", downstream_agent="resolver",
             correctness_signal="refund_settled", policy_signal="refund_settled", sla_signal="sla_met",
             drift_agent="resolver",
+        
+            # Conditions with no other lever aimed at them, and the agent that owns each.
+            # Without this they pass on every run and cannot be demonstrated.
+            other_signals={
+                "category_correct": "classifier",
+            },
         )
 
     # ── generator with ground truth ──────────────────────────────────────────

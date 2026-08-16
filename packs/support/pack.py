@@ -71,6 +71,13 @@ class SupportPack(BasePack):
             sla_signal="sla_met",
             secondary_bad_signal="policy_followed",  # and quietly broke policy
             drift_agent="resolver",
+        
+            # Conditions with no other lever aimed at them, and the agent that owns each.
+            # Without this they pass on every run and cannot be demonstrated.
+            other_signals={
+                "escalated": "reviewer",
+                "category_correct": "classifier",
+            },
         )
 
     # ── generator with ground truth ──────────────────────────────────────────

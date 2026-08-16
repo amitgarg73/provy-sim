@@ -63,6 +63,12 @@ class LegalPack(CommitmentPack):
             first_agent="intake", downstream_agent="filer",
             correctness_signal="execution_confirmed", policy_signal="execution_confirmed",
             sla_signal="deadline_met", drift_agent="filer",
+        
+            # Conditions with no other lever aimed at them, and the agent that owns each.
+            # Without this they pass on every run and cannot be demonstrated.
+            other_signals={
+                "matter_correct": "intake",
+            },
         )
 
     def injectors(self) -> list[Injector]:

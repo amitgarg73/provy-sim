@@ -63,7 +63,7 @@ class LeverConfig:
 # maps to exactly one injected cause for 1:1 attribution scoring. The silent family is listed FIRST
 # so it wins ties — it's the focus of the harness. Calibration + drift are phase-B overlays.
 _PHASE_A = ["silent_wrong", "silent_staleness", "silent_unsupported", "silent_incomplete",
-            "silent_policy", "silent_missed_action",
+            "silent_policy", "silent_missed_action", "condition_miss",
             "skip_propagation", "overt_error", "tool_fault",
             "quality_degrade", "policy_violation", "sla_breach"]
 
@@ -340,6 +340,41 @@ def _silent_missed_action(result, gt, m, contract, s, ctx) -> Optional[InjectedF
                          {"signals": corrupted})
 
 
+def _condition_miss(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Break a contract condition that no other lever can reach.
+
+    ⛔ THE REASON THIS EXISTS. The manifest aims four levers at four signals. A contract with five or
+    six conditions leaves the rest unreachable, and an unreachable condition passes on every run, so
+    the fleet can show the promise but never show it broken. Measured 16 Aug over 2700 dry runs:
+    seven conditions across five packs had a 0% failure rate.
+
+    Side decides which reading goes bad, exactly as engine/contract.grade reads it. A 'trace'
+    condition is graded on the ESTIMATED side, so corrupting reality would leave it passing; a
+    'both'/'outcome' condition is graded on reality, and leaving the estimate good is what makes it a
+    genuine divergence rather than an openly failed run.
+    """
+    owners = dict(getattr(m, "other_signals", {}) or {})
+    if not owners:
+        return None
+    idx = C.signal_index(contract)
+    choices = [sig for sig in owners if sig in idx]
+    if not choices:
+        return None
+    sig = s.params.get("signal") or ctx.rng.choice(sorted(choices))
+    c = idx.get(sig)
+    if c is None:
+        return None
+    bad = C.bad_value(c)
+    if c.side == "trace":
+        result.estimated_signals[sig] = bad
+    else:
+        result.real_signals[sig] = bad
+    agent = s.target or owners.get(sig) or m.resolver_agent
+    result.confidence = max(result.confidence, 0.9)
+    result.metadata["condition_miss"] = sig
+    return InjectedFault("condition_miss", agent, "condition_miss", {"signal": sig, "side": c.side})
+
+
 def _confidence_miscalibration(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     """Report HIGH confidence on the runs it is wrong on, LOW on the right ones."""
     wrong = result.outcome_label == "fail"
@@ -455,6 +490,7 @@ _LEVER_FNS = {
     "silent_incomplete": _silent_incomplete,
     "silent_policy": _silent_policy,
     "silent_missed_action": _silent_missed_action,
+    "condition_miss": _condition_miss,
     "confidence_miscalibration": _confidence_miscalibration,
     "silent_drift": _silent_drift,
     "tool_latency": _tool_latency,

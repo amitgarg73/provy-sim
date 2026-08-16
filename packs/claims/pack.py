@@ -77,6 +77,12 @@ class ClaimsPack(BasePack):
             sla_signal="sla_met",
             secondary_bad_signal="duplicate_payout",
             drift_agent="adjudicator",
+        
+            # Conditions with no other lever aimed at them, and the agent that owns each.
+            # Without this they pass on every run and cannot be demonstrated.
+            other_signals={
+                "docs_present": "validator",
+            },
         )
 
     def generate_work_item(self, rng) -> tuple[dict, dict]:
