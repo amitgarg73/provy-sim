@@ -158,6 +158,15 @@ def test_console_copy_of_the_contract_has_not_drifted():
     roster = re.findall(r"agent_name: '(\w+)'", body.split("evalConfigs", 1)[0])
     assert roster == [a.name for a in EdwinPack().agents()], "console agent roster has drifted"
 
+    # ⛔ THE ALIASES ARE A FIFTH THING THAT MUST MATCH. The console seeds them as `traceSignal` at
+    # provision, and a drifted copy binds a condition to a field the runs never emit, which produces
+    # a confidently wrong claim rather than an absent one.
+    alias_block = body.split("traceAliases: {", 1)
+    if len(alias_block) > 1:
+        console_aliases = dict(re.findall(r"(\w+):\s*'([^']+)'", alias_block[1].split("}", 1)[0]))
+        assert console_aliases == EdwinPack().trace_aliases(), (
+            "the console's copy of the edwin trace aliases has drifted from this one")
+
 
 def test_change_caused_faults_are_a_real_share_of_the_library():
     """change_blind can only fire on the change-caused half. If the library drifted to mostly
