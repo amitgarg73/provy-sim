@@ -595,12 +595,31 @@ class ItsmPack(BasePack):
                 payload_extra={"reassigned_from": d["recommended_group"],
                                "reassigned_to": fixed_group,
                                "reason": "misroute" if d["misrouted"] else "misclassification"}))
+            # ⛔ THE HANDOFF REPORTS ITSELF (provy-sim#8).
+            #
+            # Only `resolve_incident` carried a contract-graded signal, so EVERY named cause on this
+            # fleet was `resolver -> servicenow.resolve_incident`, on all 32 divergences. The levers
+            # (misclassify, misroute, weak_fix, overconfidence) change WHY a ticket fails and cannot
+            # change WHO is named, because no other tool reported a gradeable fact. A simulator whose
+            # attribution has exactly one shape is not simulating anything.
+            #
+            # A reassignment IS the handoff that `self_resolved` grades, and unlike the routing
+            # decision it is observable AT THIS MOMENT: somebody has already noticed and moved it,
+            # and the record shows both groups. So this reports the fact it is responsible for, and a
+            # handoff failure now names the ROUTER instead of the resolver.
+            #
+            # ⛔ `assign_incident` deliberately does NOT get the same treatment. At assign time nobody
+            # knows the routing was wrong, so emitting it there would be the simulation inventing
+            # evidence the agent could not have had, which is the rule this pack already holds to.
             r.traces.append(self._sn_step(
                 ctx, A["router"], "servicenow.reassign_incident", sys_id,
                 {"assignment_group": self.client.group_sys_id(fixed_group), "assigned_to": "",
                  "work_notes": f"[service desk] Not owned by {d['recommended_group']}. "
                                f"Reassigned to {fixed_group}."},
-                eid, extra_output={"assignment_group_name": fixed_group}))
+                eid, extra_output={"assignment_group_name": fixed_group,
+                                   "self_resolved": False,
+                                   "reassigned_from": d["recommended_group"],
+                                   "reassigned_to": fixed_group}))
         else:
             yield wait("queued_with_the_right_team", rng.uniform(0.05, 0.2) * resolution_target,
                        cause=None)
