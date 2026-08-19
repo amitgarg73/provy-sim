@@ -235,8 +235,6 @@ WORKFLOWS = {
     "legal":   WorkflowConfig("legal",   "PROVY_KEY_LEGAL",   dict(_LEGAL_RATES)),
     "edwin":   WorkflowConfig("edwin",   "PROVY_KEY_EDWIN",   dict(_EDWIN_RATES)),
     "itsm":    WorkflowConfig("itsm",    "PROVY_KEY_ITSM",    dict(_ITSM_RATES)),
-    # No lever rates: every run is a named scenario, assigned in rotation by the pack.
-    "itsm_kb": WorkflowConfig("itsm_kb", "PROVY_KEY_ITSM_KB", {}),
 }
 
 

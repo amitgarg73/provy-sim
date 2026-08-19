@@ -9,7 +9,6 @@ from .claims_payout.pack import ClaimsPayoutPack
 from .legal.pack import LegalPack
 from .itsm.pack import ItsmPack
 from .edwin.pack import EdwinPack
-from .itsm_kb.pack import ItsmKbPack
 
 PACKS = {
     "support": SupportPack,
@@ -24,9 +23,6 @@ PACKS = {
     # The only fleet whose work items and outcomes come from a system this
     # simulation does not own.
     "itsm": ItsmPack,
-    # The ITSM desk with the knowledge lookup split out of the resolver, settling its own
-    # outcomes so knowledge attribution can be tested without touching the live PDI fleet.
-    "itsm_kb": ItsmKbPack,
 }
 
 
@@ -37,5 +33,5 @@ def get_pack(name: str):
 
 
 __all__ = ["SupportPack", "StripeSupportPack", "ClaimsPack", "CRMPack", "TravelPack",
-           "RevOpsPack", "ClaimsPayoutPack", "LegalPack", "EdwinPack", "ItsmPack", "ItsmKbPack",
+           "RevOpsPack", "ClaimsPayoutPack", "LegalPack", "EdwinPack", "ItsmPack",
            "PACKS", "get_pack"]
