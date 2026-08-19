@@ -345,9 +345,16 @@ def test_every_contract_condition_is_derivable_from_what_the_run_claims():
 
     The one exception is the honest one: procedure_grounded. ServiceNow settles no such fact, the
     push deliberately does not send it, and it grades unmeasurable on every run. That is why the
-    fleet reads 5 of 6 conditions covered rather than 6."""
+    ServiceNow-settled side reads 5 of 6 conditions covered rather than 6.
+
+    c7 is not an exception to it. It is settled by the TRACE, so the run claims the signal itself
+    rather than deriving it from instance fields, and it is checked here as strictly as the rest."""
     pack, _, r = run_one()
     for c in pack.contract():
+        if c.side == "trace":
+            assert c.signal in r.estimated_signals, (
+                f"condition {c.id} is graded off the trace and the run never claims {c.signal}")
+            continue
         if c.signal == "procedure_grounded":
             assert c.signal not in DERIVED_FROM, (
                 "procedure_grounded must stay underivable; sending a value nothing observes "
@@ -415,13 +422,27 @@ def test_confidence_is_lower_when_the_text_was_ambiguous():
 # ── contract ────────────────────────────────────────────────────────────────
 
 def test_contract_conditions_are_signal_mapped_and_gradeable():
+    """⛔ THE SIX SERVICENOW CONDITIONS STAY SETTLED BY SERVICENOW. That is the genuineness claim of
+    this fleet and adding the knowledge agent did not soften it: c1 to c6 are unchanged, character
+    for character, and outcome_push.js still settles all six.
+
+    c7 is the single permitted exception and this test is what keeps it single. Whether the cited
+    article exists and covers the symptom is a fact about the agent's own trace; ServiceNow stores
+    no field for it and never will, so declaring it 'outcome' to match the others is precisely what
+    left c5 unmeasurable forever. A SECOND trace-side condition would be the fleet starting to mark
+    its own homework, so it fails here."""
     pack = get_pack("itsm")
     conditions = pack.contract()
-    assert len(conditions) == 6
+    assert len(conditions) == 7
+    trace_side = [c.id for c in conditions if c.side == "trace"]
+    assert trace_side == ["c7"], (
+        f"only c7 may be graded off the agent's own trace, got {trace_side}")
     for c in conditions:
-        assert c.signal and c.side == "outcome", (
-            f"{c.id} must be settled by ServiceNow; a condition read off the agent's own trace "
-            f"would mean this fleet partly marks its own homework")
+        assert c.signal
+        if c.id != "c7":
+            assert c.side == "outcome", (
+                f"{c.id} must be settled by ServiceNow; a condition read off the agent's own trace "
+                f"would mean this fleet partly marks its own homework")
         assert c.op == "eq"
         assert meets(c, good_value(c)) is True, f"{c.id} good value must pass"
         assert meets(c, bad_value(c)) is False, f"{c.id} bad value must fail"

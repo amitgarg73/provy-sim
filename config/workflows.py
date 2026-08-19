@@ -218,6 +218,10 @@ _ITSM_RATES = {
     "misroute":      {"rate": 0.09},   # assigns a group that does not own that category
     "weak_fix":      {"rate": 0.14},   # workaround, advice, or "no fault found" instead of a fix
     "overconfidence": {"rate": 0.10},  # sure and wrong: high confidence on a weak resolution
+    # Cites an article that is not in the knowledge base at all. Separate from misclassify, which
+    # already produces a REAL article written for the wrong symptom: both fail c7, and the trace
+    # tells them apart, which is the reason the knowledge step is its own agent.
+    "bad_article":   {"rate": 0.07},
 }
 
 WORKFLOWS = {
@@ -231,6 +235,8 @@ WORKFLOWS = {
     "legal":   WorkflowConfig("legal",   "PROVY_KEY_LEGAL",   dict(_LEGAL_RATES)),
     "edwin":   WorkflowConfig("edwin",   "PROVY_KEY_EDWIN",   dict(_EDWIN_RATES)),
     "itsm":    WorkflowConfig("itsm",    "PROVY_KEY_ITSM",    dict(_ITSM_RATES)),
+    # No lever rates: every run is a named scenario, assigned in rotation by the pack.
+    "itsm_kb": WorkflowConfig("itsm_kb", "PROVY_KEY_ITSM_KB", {}),
 }
 
 

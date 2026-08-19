@@ -75,6 +75,19 @@ _APPROACH_CODE = {
 }
 
 
+# The knowledge base this desk searches, one article per category. Small on purpose: the point is
+# not to model a real KB, it is to put the article the fix followed INTO THE TRACE, so a reopen can
+# be told apart from a reopen whose article was wrong.
+KB_ARTICLE = {
+    "network":        "KB0010042",
+    "database":       "KB0010105",
+    "software":       "KB0010021",
+    "hardware":       "KB0010088",
+    "inquiry":        "KB0010067",
+    "password_reset": "KB0010067",
+}
+
+
 class WriteRejected(Exception):
     """The instance refused a write. Carries the error trace step that records it."""
 
@@ -118,10 +131,12 @@ class ItsmPack(BasePack):
                       "Reads the incident and decides what it is and how urgent it is.", "🗂️", 0),
             AgentSpec("router", "Routing",
                       "Decides which support group should own the incident.", "🧭", 1),
+            AgentSpec("knowledge", "Knowledge",
+                      "Searches the knowledge base and returns the article the fix should follow.", "📚", 2),
             AgentSpec("resolver", "Resolution",
-                      "Diagnoses the incident, applies a fix, and resolves the ticket.", "🛠️", 2),
+                      "Diagnoses the incident from the retrieved article, applies a fix, and resolves the ticket.", "🛠️", 3),
             AgentSpec("reviewer", "Closure Check",
-                      "Checks the resolution before it is committed and records what it expects to happen.", "✅", 3),
+                      "Checks the resolution before it is committed and records what it expects to happen.", "✅", 4),
         ]
 
     # ── contract: five conditions, all settled by real ServiceNow records ───
@@ -175,6 +190,14 @@ class ItsmPack(BasePack):
                       "resolution steps", "outcome", "procedure_grounded", "eq", True),
             Criterion("c6", "Incident is resolved within the agreed resolution time target",
                       "outcome", "resolution_time_met", "eq", True),
+            # ⛔ c7 IS SIDE 'trace' AND HAS TO BE. The six above are settled by ServiceNow and are
+            # unchanged, character for character, so outcome_push.js needs no change and the live
+            # fleet's confirmed contract still grades exactly as it did. But whether the article the
+            # fix followed actually exists and covers the symptom is a property of the agent's own
+            # trace, not of the incident record: ServiceNow stores no field for it and never will.
+            # Declaring it 'outcome' to match the others is what left c5 permanently unmeasurable.
+            Criterion("c7", "The procedure the fix followed is a real article that covers this "
+                      "symptom", "trace", "kb_article_valid", "eq", True),
         ]
 
     def signal_owners(self) -> dict[str, str]:
@@ -205,6 +228,11 @@ class ItsmPack(BasePack):
             "reopen_count":             "resolver",
             "close_code":               "resolver",
             "reassignment_count":       "router",
+            # Whether the RIGHT article was found is the knowledge agent's call. Whether the written
+            # fix followed it stays the resolver's (procedure_grounded, above). Splitting the two is
+            # the whole reason the knowledge step is a separate agent: without it a reopen caused by
+            # a bad article and a reopen caused by a resolver ignoring a good one are the same event.
+            "kb_article_valid":         "knowledge",
         }
 
     def lever_manifest(self) -> LeverManifest:
@@ -215,7 +243,7 @@ class ItsmPack(BasePack):
         # overconfidence), so the Sim Control console can still dial this fleet.
         return LeverManifest(
             resolver_agent="resolver",
-            retriever_agent="resolver",
+            retriever_agent="knowledge",
             reviewer_agent="reviewer",
             first_agent="triage",
             downstream_agent="resolver",
@@ -405,6 +433,20 @@ class ItsmPack(BasePack):
         # detail from the caller that a documented procedure would have told it to collect up front.
         shallow = rng.random() < self._rate(ctx, "shallow_diagnosis", 0.18) * (1.0 if unambiguous else 1.6)
 
+        # Which knowledge article the fix will follow, and whether it is the right one. A
+        # misclassified ticket searches the knowledge base for the WRONG CATEGORY and gets a real
+        # article written for a different symptom, which is not an extra fault: it is the first
+        # visible consequence of the triage error, and the article is the evidence of it.
+        bad_article = rng.random() < self._rate(ctx, "bad_article", 0.07)
+        if bad_article:
+            # Nothing in the knowledge base matches, and the agent cites an id anyway.
+            cited_article, article_valid = f"KB00{rng.randint(19000, 19999)}", False
+        else:
+            cited_article = KB_ARTICLE[predicted_category]
+            # Right article FOR WHAT IT THINKS THIS IS. If triage got the category wrong, the
+            # article is real and covers the wrong thing.
+            article_valid = not misclassified
+
         # Resolution approach. A weak approach is a real, visible thing in the
         # record: a workaround, advice to the caller, or nothing found.
         if rng.random() < weak_fix_rate:
@@ -447,6 +489,9 @@ class ItsmPack(BasePack):
             "misrouted": misrouted,
             "misclassified": misclassified,
             "shallow": shallow,
+            "cited_article": cited_article,
+            "article_valid": article_valid,
+            "bad_article": bad_article,
         }
 
     @staticmethod
@@ -677,6 +722,28 @@ class ItsmPack(BasePack):
             yield wait("queued_with_the_right_team", rng.uniform(0.05, 0.2) * resolution_target,
                        cause=None)
 
+        # 2c. Knowledge: search the knowledge base and return the article the fix will follow.
+        #
+        # ⛔ THIS IS A READ, NOT A WRITE. It touches no ServiceNow field, so it uses tool_step and
+        # not _sn_step: the desk consults its knowledge base and the instance never hears about it.
+        # The article id has to be IN THE TRACE or a reopen caused by a bad article is
+        # indistinguishable from a reopen caused by a resolver that ignored a good one.
+        r.traces.append(self.tool_step(
+            ctx, A["knowledge"], "kb_search",
+            tool_input={"query": item.get("short_description", ""), "category": d["category"]},
+            tool_output={"article_id": d["cited_article"],
+                         "exists_in_kb": d["cited_article"] in KB_ARTICLE.values(),
+                         "covers_category": d["category"] if d["article_valid"] else None,
+                         "match_score": round(rng.uniform(0.81, 0.96), 2) if d["article_valid"]
+                                        else round(rng.uniform(0.18, 0.44), 2)},
+            entity_id=eid))
+        r.traces.append(self.agent_step(
+            ctx, A["knowledge"], item,
+            decision=(f"cited {d['cited_article']}"
+                      + ("" if d["article_valid"] else ", which does not cover this symptom")),
+            entity_id=eid,
+            payload_extra={"article_id": d["cited_article"]}))
+
         # 2b. A shallow diagnosis shows up as a ticket parked on the caller. The agent resolves
         # without having established what it needed, so it has to go back and ask.
         if d["shallow"]:
@@ -775,6 +842,9 @@ class ItsmPack(BasePack):
             "close_code": d["close_code"],
             # The agent routed it once and expects that to be the end of it.
             "reassignment_count": 1,
+            # What the desk believes about the article it followed. It is the knowledge agent's
+            # claim, and stamp_estimated puts it on the knowledge agent's own message.
+            "kb_article_valid": d["article_valid"],
         }
         r.metadata = {
             "forecasts": forecasts,
