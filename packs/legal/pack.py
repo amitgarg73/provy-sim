@@ -57,6 +57,27 @@ class LegalPack(CommitmentPack):
             "deadline_met": "filed_by_due_date",
         }
 
+    def signal_owners(self) -> dict[str, str]:
+        """Which agent's work decides each signal, and therefore who a failure is attributed to.
+
+        ⛔ WITHOUT THIS EVERY CONDITION BLAMES THE REVIEWER. The shared helper stamps every
+        contract signal on the reviewer's closing message unless a pack says otherwise, so the
+        whole contract registers against one agent. Measured on the Servicely legal fleet before
+        this map existed: all three trace-side signals carried `source_hint: reviewer`, and 13
+        scenarios produced incidents on 2 of its 4 agents.
+
+        Filing and execution are the filer's. The counterparty comes off the prepared
+        document, so a wrong recipient is the drafter. The matter itself is what intake captured.
+
+        Timeliness signals are deliberately unowned: an SLA is a property of the whole run rather
+        than of any one step, so it falls to the reviewer, which is the honest answer."""
+        return {
+            "execution_confirmed":    "filer",
+            "no_duplicate_filing":    "filer",
+            "sent_to_correct_party":  "drafter",
+            "matter_correct":         "intake",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="filer", retriever_agent="drafter", reviewer_agent="reviewer",

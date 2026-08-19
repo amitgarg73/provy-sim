@@ -58,6 +58,26 @@ class RevOpsPack(CommitmentPack):
             "write_committed": "crm_write_ack",
         }
 
+    def signal_owners(self) -> dict[str, str]:
+        """Which agent's work decides each signal, and therefore who a failure is attributed to.
+
+        ⛔ WITHOUT THIS EVERY CONDITION BLAMES THE REVIEWER. The shared helper stamps every
+        contract signal on the reviewer's closing message unless a pack says otherwise, so the
+        whole contract registers against one agent. Measured on the Servicely legal fleet before
+        this map existed: all three trace-side signals carried `source_hint: reviewer`, and 13
+        scenarios produced incidents on 2 of its 4 agents.
+
+        The updater commits the write. Which record it lands on came out of the lookup.
+
+        Timeliness signals are deliberately unowned: an SLA is a property of the whole run rather
+        than of any one step, so it falls to the reviewer, which is the honest answer."""
+        return {
+            "write_committed":      "updater",
+            "amount_correct":       "updater",
+            "no_duplicate_record":  "updater",
+            "routed_correct":       "lookup",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="updater", retriever_agent="lookup", reviewer_agent="reviewer",

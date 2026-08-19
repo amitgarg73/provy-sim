@@ -60,6 +60,27 @@ class CRMPack(BasePack):
             "duplicate_contact": "dedupe_hit",
         }
 
+    def signal_owners(self) -> dict[str, str]:
+        """Which agent's work decides each signal, and therefore who a failure is attributed to.
+
+        ⛔ WITHOUT THIS EVERY CONDITION BLAMES THE REVIEWER. The shared helper stamps every
+        contract signal on the reviewer's closing message unless a pack says otherwise, so the
+        whole contract registers against one agent. Measured on the Servicely legal fleet before
+        this map existed: all three trace-side signals carried `source_hint: reviewer`, and 13
+        scenarios produced incidents on 2 of its 4 agents.
+
+        Each signal belongs to the step that produces it: the scorer qualifies, the router
+        routes, the enricher writes the contact and is therefore who duplicates one.
+
+        Timeliness signals are deliberately unowned: an SLA is a property of the whole run rather
+        than of any one step, so it falls to the reviewer, which is the honest answer."""
+        return {
+            "qualification_correct":  "scorer",
+            "routed_correct":         "router",
+            "enriched_correct":       "enricher",
+            "duplicate_contact":      "enricher",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="scorer",

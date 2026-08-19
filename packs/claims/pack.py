@@ -65,6 +65,27 @@ class ClaimsPack(BasePack):
             "sla_met": "cycle_time_ok",
         }
 
+    def signal_owners(self) -> dict[str, str]:
+        """Which agent's work decides each signal, and therefore who a failure is attributed to.
+
+        ⛔ WITHOUT THIS EVERY CONDITION BLAMES THE REVIEWER. The shared helper stamps every
+        contract signal on the reviewer's closing message unless a pack says otherwise, so the
+        whole contract registers against one agent. Measured on the Servicely legal fleet before
+        this map existed: all three trace-side signals carried `source_hint: reviewer`, and 13
+        scenarios produced incidents on 2 of its 4 agents.
+
+        The adjudicator decides the claim and the limit. Whether the documents were there at
+        all is the validator's check.
+
+        Timeliness signals are deliberately unowned: an SLA is a property of the whole run rather
+        than of any one step, so it falls to the reviewer, which is the honest answer."""
+        return {
+            "decision_correct":  "adjudicator",
+            "within_limit":      "adjudicator",
+            "duplicate_payout":  "adjudicator",
+            "docs_present":      "validator",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="adjudicator",

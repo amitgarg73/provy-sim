@@ -90,6 +90,27 @@ class StripeSupportPack(BasePack):
             "refund_settled": "refund_posted",
         }
 
+    def signal_owners(self) -> dict[str, str]:
+        """Which agent's work decides each signal, and therefore who a failure is attributed to.
+
+        ⛔ WITHOUT THIS EVERY CONDITION BLAMES THE REVIEWER. The shared helper stamps every
+        contract signal on the reviewer's closing message unless a pack says otherwise, so the
+        whole contract registers against one agent. Measured on the Servicely legal fleet before
+        this map existed: all three trace-side signals carried `source_hint: reviewer`, and 13
+        scenarios produced incidents on 2 of its 4 agents.
+
+        The resolver issues the refund. The amount owed was the verifier's to establish
+        and the category was the classifier's.
+
+        Timeliness signals are deliberately unowned: an SLA is a property of the whole run rather
+        than of any one step, so it falls to the reviewer, which is the honest answer."""
+        return {
+            "refund_settled":    "resolver",
+            "no_duplicate":      "resolver",
+            "amount_correct":    "verifier",
+            "category_correct":  "classifier",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         return LeverManifest(
             resolver_agent="resolver", retriever_agent="verifier", reviewer_agent="reviewer",

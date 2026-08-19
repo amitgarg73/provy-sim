@@ -154,6 +154,34 @@ class ItsmPack(BasePack):
                       "resolution_time_met", "eq", True),
         ]
 
+    def signal_owners(self) -> dict[str, str]:
+        """Which agent's work decides each signal, and therefore who a failure is attributed to.
+
+        ⛔ WITHOUT THIS EVERY CONDITION BLAMES THE REVIEWER. The shared helper stamps every
+        contract signal on the reviewer's closing message unless a pack says otherwise, so the
+        whole contract registers against one agent. Measured on the Servicely legal fleet before
+        this map existed: all three trace-side signals carried `source_hint: reviewer`, and 13
+        scenarios produced incidents on 2 of its 4 agents.
+
+        First response is triage's job; everything about the fix itself is the resolver's.
+
+        ⛔ COVERS BOTH NAME SETS. This pack's contract is defined twice and the two have drifted
+        (argus#638): packs.ts seeds the live fleet, pack.py drives the sim. Mapping the union costs
+        nothing, because an unmatched key is simply never looked up.
+
+        Timeliness signals are deliberately unowned: an SLA is a property of the whole run rather
+        than of any one step, so it falls to the reviewer, which is the honest answer."""
+        return {
+            "first_response_time_met":  "triage",
+            "resolution_genuine":       "resolver",
+            "resolution_persists":      "resolver",
+            "self_resolved":            "resolver",
+            "procedure_grounded":       "resolver",
+            "reopen_count":             "resolver",
+            "close_code":               "resolver",
+            "reassignment_count":       "router",
+        }
+
     def lever_manifest(self) -> LeverManifest:
         # Required by the DomainPack interface. This pack does NOT run the shared
         # lever engine: every outcome-shaping lever writes real_signals, and real
