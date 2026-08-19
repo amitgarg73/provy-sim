@@ -11,6 +11,7 @@ look different from the outside, which is why it is asserted from several angles
 import collections
 import inspect
 import random
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -24,6 +25,13 @@ from engine.servicenow import (GENUINE_FIX_CODES, MARKER, ServiceNowClient,
                                ServiceNowError)
 from packs import PACKS, get_pack
 from packs.itsm.pack import ItsmPack
+
+# The push script runs INSIDE ServiceNow, so it can only be read as text from here.
+_PUSH = Path(__file__).resolve().parent.parent / "servicenow" / "outcome_push.js"
+
+
+def push_source() -> str:
+    return _PUSH.read_text()
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -271,12 +279,17 @@ def test_seven_forecasts_ride_on_the_reviewer_trace_and_the_close():
 
 
 def test_a_cleanly_handled_ticket_still_counts_as_one_assignment():
-    """ServiceNow counts the agent's own routing as a reassignment, so the clean case
-    is 1 and the condition has to allow it. Asserted here because a threshold of 0
-    would silently fail every single ticket."""
-    c4 = next(c for c in get_pack("itsm").contract() if c.signal == "reassignment_count")
-    assert meets(c4, 1) is True, "the agent routing the ticket itself must not fail the condition"
-    assert meets(c4, 2) is False, "being passed to a second team must fail it"
+    """ServiceNow counts the agent's own routing as a reassignment, so the clean case is 1 and the
+    threshold has to allow it. A threshold of 0 would silently fail every single ticket.
+
+    ⛔ THIS THRESHOLD MOVED. It used to sit on a contract condition here (argus#638). The live
+    contract grades `self_resolved`, which servicenow/outcome_push.js DERIVES as
+    `reassignCount <= 1`, so the instance-side script is the only place the number now lives and
+    the only place worth asserting it."""
+    push = push_source()
+    assert "self_resolved:           reassignCount <= 1" in push, (
+        "outcome_push.js no longer derives self_resolved as reassignCount <= 1; a clean ticket "
+        "lands on 1, so any stricter threshold fails every ticket on the live instance")
     _, _, r = run_one()
     assert r.estimated_signals["reassignment_count"] == 1
 
@@ -313,11 +326,38 @@ def test_forecasts_are_falsifiable_values_not_prose():
     assert 0.0 < f["agent_confidence"] <= 1.0
 
 
-def test_estimated_signals_use_the_contract_names():
+# What outcome_push.js derives each contract condition from. ⛔ THE RUN DOES NOT SPEAK THE
+# CONTRACT'S VOCABULARY AND IS NOT SUPPOSED TO: the agent records ServiceNow's own field names, the
+# instance-side push derives the contract's names from them, and a human binds the two on the
+# mapping screen (the live fleet has resolution_genuine<-close_code and
+# resolution_persists<-reopen_count, both confirmed). This map is that derivation, written down.
+DERIVED_FROM = {
+    "resolution_genuine":      ("close_code", "reopen_count"),
+    "resolution_persists":     ("reopen_count",),
+    "self_resolved":           ("reassignment_count",),
+    "first_response_time_met": ("first_response_time_met",),
+    "resolution_time_met":     ("resolution_time_met",),
+}
+
+
+def test_every_contract_condition_is_derivable_from_what_the_run_claims():
+    """Each condition either reads a field the run records, or is derived from fields it records.
+
+    The one exception is the honest one: procedure_grounded. ServiceNow settles no such fact, the
+    push deliberately does not send it, and it grades unmeasurable on every run. That is why the
+    fleet reads 5 of 6 conditions covered rather than 6."""
     pack, _, r = run_one()
     for c in pack.contract():
-        assert c.signal in r.estimated_signals, (
-            f"condition {c.id} reads {c.signal}, which the run never claims")
+        if c.signal == "procedure_grounded":
+            assert c.signal not in DERIVED_FROM, (
+                "procedure_grounded must stay underivable; sending a value nothing observes "
+                "would be inventing the outcome")
+            continue
+        sources = DERIVED_FROM.get(c.signal)
+        assert sources, f"condition {c.id} reads {c.signal}, which nothing derives"
+        for field in sources:
+            assert field in r.estimated_signals, (
+                f"condition {c.id} needs {field}, which the run never claims")
 
 
 def test_the_close_code_the_agent_wrote_is_the_one_it_forecast():
@@ -377,29 +417,37 @@ def test_confidence_is_lower_when_the_text_was_ambiguous():
 def test_contract_conditions_are_signal_mapped_and_gradeable():
     pack = get_pack("itsm")
     conditions = pack.contract()
-    assert len(conditions) == 5
+    assert len(conditions) == 6
     for c in conditions:
-        assert c.signal and c.side in ("outcome", "trace", "both")
-        assert c.op in ("eq", "in", "lte")
+        assert c.signal and c.side == "outcome", (
+            f"{c.id} must be settled by ServiceNow; a condition read off the agent's own trace "
+            f"would mean this fleet partly marks its own homework")
+        assert c.op == "eq"
         assert meets(c, good_value(c)) is True, f"{c.id} good value must pass"
         assert meets(c, bad_value(c)) is False, f"{c.id} bad value must fail"
 
 
-def test_genuine_fix_close_codes_grade_and_the_rest_do_not():
-    c3 = next(c for c in get_pack("itsm").contract() if c.signal == "close_code")
-    for code in GENUINE_FIX_CODES:
-        assert meets(c3, code) is True, code
+def test_genuine_fix_close_codes_are_the_only_ones_that_count():
+    """⛔ WHICH CODES COUNT AS A FIX MOVED with the contract (argus#638): resolution_genuine is
+    derived by outcome_push.js, so GENUINE_FIX_CODES is the list and nothing else is."""
     for code in ["No resolution provided", "Duplicate", "Resolved by caller",
                  "User error", "Known error", "Resolved by request"]:
-        assert meets(c3, code) is False, code
+        assert code not in GENUINE_FIX_CODES, code
 
 
 def test_legacy_close_codes_do_not_count_as_a_fix():
     """The 40 pre-seeded incidents carry legacy values. They must not grade as fixes,
     and they are excluded from the report rather than counted against it."""
-    c3 = next(c for c in get_pack("itsm").contract() if c.signal == "close_code")
-    assert meets(c3, "Solved (Permanently)") is False
-    assert meets(c3, "Closed/Resolved by Caller") is False
+    assert "Solved (Permanently)" not in GENUINE_FIX_CODES
+    assert "Closed/Resolved by Caller" not in GENUINE_FIX_CODES
+
+
+def test_the_instance_script_and_this_repo_agree_on_a_genuine_fix():
+    """⛔ A THIRD COPY OF THE SAME LIST. outcome_push.js runs INSIDE ServiceNow, so nothing here
+    imports it and a drift between the two is invisible until the demo grades wrongly."""
+    block = push_source().split("var GENUINE = [", 1)[1].split("]", 1)[0]
+    assert re.findall(r"'([^']+)'", block) == GENUINE_FIX_CODES, (
+        "outcome_push.js and engine/servicenow.py disagree on which close codes are a genuine fix")
 
 
 # ── an idle queue is a wait, not a crash ────────────────────────────────────
@@ -463,18 +511,22 @@ def test_resolution_time_is_what_makes_journey_delay_gradeable():
     Without a resolution condition every queue wait and caller hold produced no contract signal at
     all: visible in ServiceNow, invisible to Provy, so attribution had nothing to attribute.
     """
-    c5 = next(c for c in get_pack("itsm").contract() if c.signal == "resolution_time_met")
-    assert c5.side == "both"          # claimed up front, settled by the instance
-    assert meets(c5, True) is True
-    assert meets(c5, False) is False
+    c6 = next(c for c in get_pack("itsm").contract() if c.signal == "resolution_time_met")
+    assert c6.side == "outcome"       # the instance settles it; the run only claims it up front
+    assert meets(c6, True) is True
+    assert meets(c6, False) is False
 
 
 def test_the_agent_claims_both_targets_up_front():
-    """Estimated side must speak the same two signal names, or the pair cannot grade side by side."""
-    pack = get_pack("itsm")
-    for c in pack.contract():
-        if c.side == "both":
-            assert c.signal in ("first_response_time_met", "resolution_time_met", "reopen_count"), c.signal
+    """The run must claim BOTH clocks, or the response and resolution targets cannot be told apart.
+
+    ⛔ THIS USED TO LOOP OVER `side == "both"` CONDITIONS. itsm now has none (every condition is
+    settled by ServiceNow, argus#638), so that loop would have passed while checking nothing. What
+    it was really about is the estimated side, which is where it now looks."""
+    _, _, r = run_one()
+    for signal in ("first_response_time_met", "resolution_time_met"):
+        assert signal in r.estimated_signals, (
+            f"the run never claims {signal}, so its target cannot be graded against the instance")
 
 
 def test_resolve_carries_the_sla_the_agent_could_read(monkeypatch):

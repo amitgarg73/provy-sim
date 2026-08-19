@@ -124,48 +124,9 @@ def test_every_fault_has_an_owning_group(fault, expected_group):
     assert expected_group and isinstance(expected_group, str)
 
 
-def test_console_copy_of_the_contract_has_not_drifted():
-    """⛔ THE CONTRACT LIVES IN TWO REPOS AND ONLY ONE OF THEM IS TESTED BY DEFAULT.
-
-    provy-sim runs the fleet; provy-sim-control PROVISIONS it, and it holds its own copy of the
-    contract, the agent roster and the eval names in lib/packs.ts. A fleet provisioned from a drifted
-    console copy grades against conditions the runner never emits, and the failure looks like a
-    Provy bug rather than a copy-paste one.
-
-    Skipped rather than failed when the console repo is not checked out beside this one, so the sim
-    stays testable on its own.
-    """
-    import os
-    import re
-
-    ts_path = os.path.expanduser("~/Claude Projects/provy-sim-control/lib/packs.ts")
-    if not os.path.exists(ts_path):
-        pytest.skip("provy-sim-control not checked out beside provy-sim")
-
-    ts = open(ts_path).read()
-    if "  edwin: {" not in ts:
-        pytest.fail("provy-sim-control/lib/packs.ts has no edwin pack; provisioning would reject it")
-
-    body = ts.split("  edwin: {", 1)[1]
-    contract_block = body.split("leverManifest", 1)[0]
-    rows = re.findall(
-        r"\{ id: '(c\d)', text: '([^']*)', side: '(\w+)', signal: '(\w+)', op: '(\w+)', "
-        r"threshold: (true|false)", contract_block)
-    console = [(i, t, s, sig, op, th == "true") for i, t, s, sig, op, th in rows]
-    mine = [(c.id, c.text, c.side, c.signal, c.op, c.threshold) for c in EdwinPack().contract()]
-    assert console == mine, "the console's copy of the edwin contract has drifted from this one"
-
-    roster = re.findall(r"agent_name: '(\w+)'", body.split("evalConfigs", 1)[0])
-    assert roster == [a.name for a in EdwinPack().agents()], "console agent roster has drifted"
-
-    # ⛔ THE ALIASES ARE A FIFTH THING THAT MUST MATCH. The console seeds them as `traceSignal` at
-    # provision, and a drifted copy binds a condition to a field the runs never emit, which produces
-    # a confidently wrong claim rather than an absent one.
-    alias_block = body.split("traceAliases: {", 1)
-    if len(alias_block) > 1:
-        console_aliases = dict(re.findall(r"(\w+):\s*'([^']+)'", alias_block[1].split("}", 1)[0]))
-        assert console_aliases == EdwinPack().trace_aliases(), (
-            "the console's copy of the edwin trace aliases has drifted from this one")
+# The console-parity check that used to live here (contract, agent roster, trace aliases)
+# now runs for ALL TEN packs in tests/test_console_contract_parity.py. It was edwin-only for
+# weeks, and edwin was the only pack that never drifted (argus#638).
 
 
 def test_change_caused_faults_are_a_real_share_of_the_library():

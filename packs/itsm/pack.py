@@ -126,32 +126,55 @@ class ItsmPack(BasePack):
 
     # ── contract: five conditions, all settled by real ServiceNow records ───
     def contract(self) -> list[Criterion]:
+        """The six conditions grading on the live ServiceNow PDI, character for character.
+
+        ⛔ THIS IS A COPY OF A CONTRACT THAT LIVES SOMEWHERE ELSE. provy-sim-control's
+        lib/packs.ts is what `provisionFleet` and "Install contract" actually seed, so IT is
+        authoritative and this follows it. tests/test_console_contract_parity.py fails if the two
+        ever separate again. Change the live contract, change both.
+
+        ⛔ EVERY CONDITION IS side 'outcome'. ServiceNow settles all six; nothing here is read off
+        the agent's own trace, which is the entire genuineness claim of this pack.
+
+        These are NOT the raw ServiceNow fields. This pack graded on close_code, reopen_count and
+        reassignment_count for a week (argus#638) because it was written before
+        servicenow/outcome_push.js learned to DERIVE the contract's own vocabulary from those
+        fields. The thresholds did not vanish with the drift, they moved to where the derivation
+        happens and are asserted there:
+
+            resolution_genuine   = isGenuineFix(close_code) and reopen_count == 0
+            resolution_persists  = reopen_count == 0
+            self_resolved        = reassignment_count <= 1
+
+        ⛔ reassignment_count <= 1, NOT == 0, and it is not a fudge. ServiceNow increments the
+        counter on every assignment_group change including the agent's own routing, so a perfectly
+        handled ticket always lands on 1. Verified on the live instance, where four cleanly
+        resolved tickets all came back with 1.
+
+        ⛔ NOT made_sla. That field is a roll-up across every SLA attached to the ticket, so a
+        ticket answered in seconds and fixed three days late graded as having MISSED first
+        response. outcome_push.js reads contract_sla.target and reports the response and the
+        resolution clocks separately, which is what makes c2 and c6 separable at all.
+
+        c5 is the honest hole. ServiceNow does not report procedure_grounded, so it grades
+        unmeasurable on every run and the fleet reads 5 of 6 conditions covered. outcome_push.js
+        deliberately does not push it. The condition is real and nothing settles it yet; that is
+        the number, not a gap to paper over.
+        """
         return [
-            # NOT made_sla. That field is a roll-up across every SLA attached to the ticket, so a
-            # ticket answered in seconds and fixed three days late graded as having MISSED first
-            # response. outcome_push.js now reads contract_sla.target and reports the two
-            # separately, which is what makes c5 below possible at all.
-            Criterion("c1", "Met the response commitment", "both",
-                      "first_response_time_met", "eq", True),
-            Criterion("c2", "The resolution held", "both", "reopen_count", "eq", 0),
-            Criterion("c3", "The resolution was a genuine fix", "outcome", "close_code", "in",
-                      GENUINE_FIX_CODES),
-            # Threshold 1, not 0, and this is not a fudge. ServiceNow increments
-            # reassignment_count on every assignment_group change, including the
-            # agent's own routing, so a perfectly handled ticket always lands on 1.
-            # Anything above that is what the condition is actually about: the
-            # ticket was passed on to somebody else. Verified on the live instance,
-            # where four cleanly resolved tickets all came back with 1.
-            Criterion("c4", "Handled without being passed to another team", "outcome",
-                      "reassignment_count", "lte", 1),
-            # The condition the journey model exists for. Every delay it generates (queued with the
-            # wrong team, waiting on the caller, a second attempt after a handoff) lands on the
-            # RESOLUTION clock, and until this condition existed none of it produced a contract
-            # signal: the delay was visible in ServiceNow and invisible to Provy, so attribution had
-            # nothing to attribute. ServiceNow already reports resolution time; what it cannot say is
-            # which agent step spent it.
-            Criterion("c5", "Resolved within the agreed time", "both",
-                      "resolution_time_met", "eq", True),
+            Criterion("c1", "Incident is resolved with a genuine fix on first attempt, not "
+                      "reopened or marked cannot-reproduce", "outcome",
+                      "resolution_genuine", "eq", True),
+            Criterion("c2", "First response is delivered within the agreed response time target",
+                      "outcome", "first_response_time_met", "eq", True),
+            Criterion("c3", "Incident stays resolved and is not reopened after closure", "outcome",
+                      "resolution_persists", "eq", True),
+            Criterion("c4", "Agent resolves the incident without escalation or handoff to another "
+                      "team", "outcome", "self_resolved", "eq", True),
+            Criterion("c5", "Diagnosis is grounded in a documented procedure and follows clear "
+                      "resolution steps", "outcome", "procedure_grounded", "eq", True),
+            Criterion("c6", "Incident is resolved within the agreed resolution time target",
+                      "outcome", "resolution_time_met", "eq", True),
         ]
 
     def signal_owners(self) -> dict[str, str]:
@@ -165,9 +188,11 @@ class ItsmPack(BasePack):
 
         First response is triage's job; everything about the fix itself is the resolver's.
 
-        ⛔ COVERS BOTH NAME SETS. This pack's contract is defined twice and the two have drifted
-        (argus#638): packs.ts seeds the live fleet, pack.py drives the sim. Mapping the union costs
-        nothing, because an unmatched key is simply never looked up.
+        ⛔ COVERS BOTH VOCABULARIES, AND MUST. The contract's own names (resolution_genuine,
+        resolution_persists, self_resolved) are what ServiceNow settles; the raw field names
+        (close_code, reopen_count, reassignment_count) are what the TRACES carry, and the live
+        contract binds the first to the second. Attribution looks up whichever name the emitted
+        signal actually used, so both sets need an owner. An unmatched key is never looked up.
 
         Timeliness signals are deliberately unowned: an SLA is a property of the whole run rather
         than of any one step, so it falls to the reviewer, which is the honest answer."""
