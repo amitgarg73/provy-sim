@@ -866,6 +866,17 @@ class ItsmPack(BasePack):
                            score=0.9 if d["unambiguous"] else 0.72),
             self.eval_pass("router", "routing_confidence", eid,
                            f"{d['recommended_group']} owns {d['category']} incidents", score=0.88),
+            # ⛔ AN AGENT WITH NO CHECK CAN NEVER BE BLAMED BY THE QUALITY LAYER. Adding the agent to
+            # the roster is not enough: `ag_eval_configs` on an ALREADY-LIVE fleet is built from eval
+            # results as they ARRIVE, and packs.ts only seeds it at provision time, which never runs
+            # again for an existing fleet. Without this the knowledge agent shows on the pipeline
+            # strip with no checks against it, which is the same hole the support pack's retriever
+            # has: three agents of four can fail a check and the fourth never can.
+            self.eval_pass("knowledge", "retrieval_relevance", eid,
+                           f"{d['cited_article']} covers {d['category']} incidents"
+                           if d["article_valid"] else
+                           f"{d['cited_article']} does not cover this symptom",
+                           score=0.9 if d["article_valid"] else 0.3),
             self.eval_pass("resolver", "resolution_completeness", eid,
                            f"resolution recorded with close code '{d['close_code']}'",
                            score=0.9 if d["approach"] in ("root_cause_fix", "change_applied") else 0.74),
