@@ -154,6 +154,27 @@ _TEAMEIGHT_RATES = {
     "draft_rewritten":     {"rate": 0.05},
     **_MIXED_GENERIC,
     "condition_miss":      {"rate": 0.10},
+    # ⛔ RAISED FROM THE SHARED 0.01. c8 ("went out within the window") is reachable only through
+    # sla_breach, and at 0.01 it failed 4 times in 500 runs. Adding draft_rewritten shifted the RNG
+    # stream and those 4 became 0, which test_every_condition_can_fail caught: a condition on screen
+    # that can never break is decorative. A follow-up window is also genuinely easy to miss, so 0.04
+    # is the more realistic number as well as the demonstrable one.
+    "sla_breach":          {"rate": 0.04},
+    **_L1L2_RATES,
+}
+
+_CLAUDE_CODE_RATES = {
+    "change_never_committed": {"rate": 0.05},
+    "wrong_files_touched":    {"rate": 0.03},
+    "committed_red":          {"rate": 0.04},
+    "conflicting_commit":     {"rate": 0.02},
+    # ⛔ THE HEADLINE, AND DELIBERATELY THE HIGHEST. Claimed the task done having run no check at
+    # all. It is not a tool error, so no reliability metric sees it, and the commit is on the branch
+    # so completion looks fine. Measured on prod while the Agent Journey spec was written: the
+    # trading fleet had 6,201 spans and NO validation step type at all, so for real fleets this is
+    # not an edge case, it is the normal state.
+    "no_check_before_claim":  {"rate": 0.12},
+    **_MIXED_GENERIC,
     **_L1L2_RATES,
 }
 
@@ -254,6 +275,7 @@ WORKFLOWS = {
     "edwin":   WorkflowConfig("edwin",   "PROVY_KEY_EDWIN",   dict(_EDWIN_RATES)),
     "itsm":    WorkflowConfig("itsm",    "PROVY_KEY_ITSM",    dict(_ITSM_RATES)),
     "teameight": WorkflowConfig("teameight", "PROVY_KEY_TEAMEIGHT", dict(_TEAMEIGHT_RATES)),
+    "claude_code": WorkflowConfig("claude_code", "PROVY_KEY_CLAUDE_CODE", dict(_CLAUDE_CODE_RATES)),
 }
 
 

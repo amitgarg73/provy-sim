@@ -10,6 +10,7 @@ from .legal.pack import LegalPack
 from .itsm.pack import ItsmPack
 from .edwin.pack import EdwinPack
 from .teameight.pack import TeameightPack
+from .claude_code.pack import ClaudeCodePack
 
 PACKS = {
     "support": SupportPack,
@@ -22,6 +23,7 @@ PACKS = {
     "legal": LegalPack,
     "edwin": EdwinPack,
     "teameight": TeameightPack,
+    "claude_code": ClaudeCodePack,
     # The only fleet whose work items and outcomes come from a system this
     # simulation does not own.
     "itsm": ItsmPack,
@@ -36,5 +38,5 @@ def get_pack(name: str):
 
 __all__ = ["SupportPack", "StripeSupportPack", "ClaimsPack", "CRMPack", "TravelPack",
            "RevOpsPack", "ClaimsPayoutPack", "LegalPack", "EdwinPack", "ItsmPack",
-           "TeameightPack",
+           "TeameightPack", "ClaudeCodePack",
            "PACKS", "get_pack"]
