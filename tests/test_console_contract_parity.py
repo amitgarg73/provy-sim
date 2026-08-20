@@ -45,7 +45,15 @@ def _console_block(name: str) -> str:
     key = f"  {name}: {{"
     if key not in ts:
         pytest.fail(f"provy-sim-control/lib/packs.ts has no {name} pack; provisioning would reject it")
-    return ts.split(key, 1)[1]
+    rest = ts.split(key, 1)[1]
+    # ⛔ BOUND THE BLOCK AT THE NEXT PACK, NOT AT THE END OF THE FILE. This used to return everything
+    # after the key, which is harmless for a pack that declares every section and silently wrong for
+    # one that does not: itsm has no `traceAliases`, so the alias check walked on into whatever pack
+    # came next and compared itsm against ITS aliases. It passed for months only because itsm was the
+    # last entry in PACKS. Adding a pack after it turned a real drift check into a false failure, and
+    # the same shape would have hidden a real drift just as easily.
+    nxt = re.search(r"^\};$|^  \w+: \{$", rest, re.M)
+    return rest[: nxt.start()] if nxt else rest
 
 
 def _console_contract(block: str) -> list[tuple]:

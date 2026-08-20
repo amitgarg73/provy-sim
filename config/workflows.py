@@ -139,6 +139,24 @@ _REVOPS_RATES = {
     **_L1L2_RATES,
 }
 
+_TEAMEIGHT_RATES = {
+    "followup_never_sent": {"rate": 0.06},
+    "wrong_ae_notified":   {"rate": 0.03},
+    "crm_write_dropped":   {"rate": 0.03},
+    "duplicate_followup":  {"rate": 0.02},
+    # ⛔ condition_miss inside _MIXED_GENERIC is the ONLY thing that reaches c3, c5 and c6, and c6
+    # (the AE rewrote the draft before sending) is the condition this fleet exists to show. It is
+    # lifted above the shared 0.03 so the rewritten-draft story appears inside a 20-25 session run
+    # rather than needing a hundred. Everything else stays at the shared rate.
+    # The AE rewrote the draft before sending. A pack-local lever, not a settlement shape: the send
+    # succeeded and only the human's behaviour differed. Off in the default mix at a realistic 5%;
+    # the "Draft rewritten before sending" scenario drives it up.
+    "draft_rewritten":     {"rate": 0.05},
+    **_MIXED_GENERIC,
+    "condition_miss":      {"rate": 0.10},
+    **_L1L2_RATES,
+}
+
 _CLAIMS_PAYOUT_RATES = {
     "not_disbursed":     {"rate": 0.06},
     "prompt_pay_lapsed": {"rate": 0.03},
@@ -235,6 +253,7 @@ WORKFLOWS = {
     "legal":   WorkflowConfig("legal",   "PROVY_KEY_LEGAL",   dict(_LEGAL_RATES)),
     "edwin":   WorkflowConfig("edwin",   "PROVY_KEY_EDWIN",   dict(_EDWIN_RATES)),
     "itsm":    WorkflowConfig("itsm",    "PROVY_KEY_ITSM",    dict(_ITSM_RATES)),
+    "teameight": WorkflowConfig("teameight", "PROVY_KEY_TEAMEIGHT", dict(_TEAMEIGHT_RATES)),
 }
 
 
