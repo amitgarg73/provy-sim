@@ -62,10 +62,17 @@ class LeverConfig:
 # (a skip turns the run "skipped"; a policy break fails the estimate too) and every diverged run
 # maps to exactly one injected cause for 1:1 attribution scoring. The silent family is listed FIRST
 # so it wins ties — it's the focus of the harness. Calibration + drift are phase-B overlays.
+# ⛔ ORDER IS NOT COSMETIC: the first lever to fire claims the run (see `apply`), so anything
+# added at the front steals share from everything after it. New mechanisms appended.
 _PHASE_A = ["silent_wrong", "silent_staleness", "silent_unsupported", "silent_incomplete",
             "silent_policy", "silent_missed_action", "condition_miss",
             "skip_propagation", "overt_error", "tool_fault",
-            "quality_degrade", "policy_violation", "sla_breach"]
+            "quality_degrade", "policy_violation", "sla_breach",
+            # Evidence-derived, appended so they do not steal share from the existing mix until a
+            # fleet dials them on. Every one is off at rate 0 unless the lever config names it.
+            "ok_but_empty", "escalation_refused", "fabricated_policy", "overliteral_constraint",
+            "reversed_on_appeal", "retry_loop", "agent_paralysis", "correlation_as_cause",
+            "context_truncated", "parametric_override"]
 
 
 # ── Trace helpers ────────────────────────────────────────────────────────────
@@ -471,6 +478,227 @@ def _llm_tokens(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     return InjectedFault("llm_tokens", agent, "llm_token_budget", {"tokens": tokens})
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EVIDENCE-DERIVED LEVERS (21 Aug 2026)
+#
+# ⛔ WHY THESE EXIST. The original `silent_*` family is SIX NAMES FOR ONE MECHANISM: five of them
+# call `_corrupt_correctness` and seven force `confidence = 0.9`. They differ only in which trace
+# field gets a decorative note. So "silent failure" in a Provy demo meant "the simulator wrote a bad
+# value into real_signals and a good one into estimated_signals" — a definition by construction, not
+# a mechanism any practitioner would recognise.
+#
+# ⛔ AND THE SIM WAS A MIRROR, NOT A TEST. `_TOOL_SHAPES` is errored / empty / fallback / stale.
+# Provy's verifiable detector set (`web/lib/attribution-methods.ts`) is errored / empty_output /
+# fallback / stale / reported_negative. FOUR OF FIVE, NAME FOR NAME. The simulator produced exactly
+# the faults Provy already knew how to find, so "Provy named the cause" was close to tautological.
+#
+# Each lever below is taken from a documented production failure, cited in
+# docs/failure-research/00-evidence.md, and each leaves a DIFFERENT trace signature. Several are
+# deliberately outside Provy's current detector set — a simulator that can only produce detectable
+# faults can never show a blind spot, and refusing to name a cause is the product's whole argument.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _ok_but_empty(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """200 OK with nothing in it. The tool answers successfully and the body is empty or missing the
+    field that was asked for; the agent treats the failed retrieval as a success and reasons on
+    nothing. Openlayer calls this the most damaging failure type in practice.
+
+    ⛔ NOT `tool_fault:empty`. That one sets outcome='error' and Provy's `empty_output` detector
+    picks it up. This sets outcome='ok', carries an HTTP 200 and a well-formed envelope whose
+    payload is hollow, so a status-based detector reads it as a healthy call."""
+    agent = s.target or m.retriever_agent
+    step = _ensure_tool_call(result, agent)
+    step.tool_output = {"status": 200, "ok": True, "results": [], "count": 0}
+    step.outcome = "ok"
+    step.error = None
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["ok_but_empty"] = True
+    return InjectedFault("ok_but_empty", agent, "ok_but_empty",
+                         {"status": 200, "signals": corrupted})
+
+
+def _escalation_refused(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """The work item needed a human and the agent kept it. The single most-cited complaint in
+    consumer AI support: people type 'agent' / 'human' / 'representative' over and over to get out.
+    The agent records a clean close, so deflection metrics improve while the person is stuck.
+
+    The trace carries the ATTEMPTS, which is the evidence a real tenant would have and the thing
+    no run-time check looks at."""
+    agent = s.target or m.resolver_agent
+    attempts = int(s.params.get("attempts", 3))
+    step = TraceStep(agent=agent, step_type="decision", entity_id=result.entity_id,
+                     agent_reasoning="handled in-channel; no escalation required")
+    step.payload_extra = {"handoff_requested": attempts, "escalated": False,
+                          "deflected": True}
+    result.traces.append(step)
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["escalation_refused"] = True
+    result.metadata["handoff_requested"] = attempts
+    return InjectedFault("escalation_refused", agent, "escalation_refused",
+                         {"handoff_requested": attempts, "signals": corrupted})
+
+
+def _fabricated_policy(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """A rule that does not exist, stated confidently. Distinct from staleness: there the source
+    existed and was old. Here retrieval returned NOTHING relevant and the agent asserted a specific
+    policy anyway, with a citation to a document id that was never retrieved."""
+    agent = s.target or m.resolver_agent
+    ret = _ensure_tool_call(result, m.retriever_agent)
+    ret.tool_output = {"status": 200, "ok": True, "results": [], "count": 0}
+    ret.outcome = "ok"
+    msg = _agent_message(result, agent)
+    cited = s.params.get("cite", "POL-4471-B")
+    if msg is not None:
+        msg.payload_extra["cited_policy"] = cited
+        msg.payload_extra["confidence"] = "HIGH"
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["fabricated_policy"] = cited
+    return InjectedFault("fabricated_policy", agent, "fabricated_policy",
+                         {"cited": cited, "retrieved": 0, "signals": corrupted})
+
+
+def _overliteral_constraint(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Obedience as a failure mode. The largest explanation cluster in the empirical study of failed
+    agent PRs was agents applying an instruction TOO literally, dominated by the harness boilerplate
+    'DO NOT MODIFY: tests, configuration files'. The agent honours the constraint and ships a wrong
+    result. Nothing in the run looks like an error — it looks like compliance."""
+    agent = s.target or m.resolver_agent
+    rule = s.params.get("rule", "DO NOT MODIFY: tests, configuration files")
+    msg = _agent_message(result, agent)
+    if msg is not None:
+        msg.payload_extra["honoured_constraint"] = rule
+        msg.payload_extra["confidence"] = "HIGH"
+    step = TraceStep(agent=agent, step_type="decision", entity_id=result.entity_id,
+                     agent_reasoning=f"constraint in force, leaving it untouched: {rule}")
+    result.traces.append(step)
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["overliteral_constraint"] = rule
+    return InjectedFault("overliteral_constraint", agent, "overliteral_constraint",
+                         {"rule": rule, "signals": corrupted})
+
+
+def _reversed_on_appeal(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """The decision was final, defensible and complete — and a later review overturned it. Reported
+    at an 82% overturn rate on appeal for Medicare Advantage prior-authorisation denials.
+
+    ⛔ THIS IS THE SETTLEMENT-LAG LEVER AND THE ONLY HONEST ONE. Nothing in the run is wrong at the
+    time it runs. The estimated side is right, the trace is clean, every check passes, and the real
+    signal flips only when reconciliation arrives. A run-time supervisor cannot catch this even in
+    principle, which is the entire argument for reconciling against a settled outcome."""
+    agent = s.target or m.reviewer_agent
+    idx = C.signal_index(contract)
+    corrupted = []
+    for sig in (m.correctness_signal, m.secondary_bad_signal):
+        c = idx.get(sig) if sig else None
+        if c is not None and c.side != "trace":
+            result.real_signals[sig] = C.bad_value(c)
+            corrupted.append(sig)
+    result.metadata["reversed_on_appeal"] = True
+    result.metadata["reversal_days"] = int(s.params.get("days", 21))
+    return InjectedFault("reversed_on_appeal", agent, "reversed_on_appeal",
+                         {"days": result.metadata["reversal_days"], "signals": corrupted})
+
+
+def _retry_loop(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """The same call, over and over, on semantically identical input, with no recognition that it
+    already failed. Burns the token budget and pushes earlier reasoning out of context."""
+    agent = s.target or m.retriever_agent
+    n = int(s.params.get("repeats", 7))
+    base = _find_step(result, agent, "tool_call") or _ensure_tool_call(result, agent)
+    for i in range(n):
+        result.traces.append(TraceStep(
+            agent=agent, step_type="tool_call", tool_name=base.tool_name or "retrieve",
+            tool_input=dict(base.tool_input or {}), tool_output={"status": 200, "results": []},
+            outcome="ok", entity_id=result.entity_id, latency_ms=900,
+            tokens_input=1400, tokens_output=120))
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["retry_loop"] = n
+    return InjectedFault("retry_loop", agent, "retry_loop", {"repeats": n, "signals": corrupted})
+
+
+def _agent_paralysis(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Contradictory signals and no action that satisfies them, so the agent does nothing. No tool
+    call, no output, NO ERROR. Only absence.
+
+    ⛔ THE HARDEST OF THE SET AND THE POINT OF INCLUDING IT: it emits nothing to detect. Anything
+    reading spans for a defect finds a short, clean, cheap run."""
+    agent = s.target or m.resolver_agent
+    result.traces = [t for t in result.traces if t.agent != agent]
+    result.traces.append(TraceStep(agent=agent, step_type="agent_message",
+                                   entity_id=result.entity_id, latency_ms=40,
+                                   agent_reasoning=""))
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["agent_paralysis"] = True
+    return InjectedFault("agent_paralysis", agent, "agent_paralysis", {"signals": corrupted})
+
+
+def _correlation_as_cause(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """A cause that merely co-occurred, named as the cause. AIOps tooling is a pattern-matching
+    engine, not a reasoning engine: it is good at surfacing what changed near the failure and cannot
+    tell you which change caused it. The agent picks the nearest correlated change and commits."""
+    agent = s.target or m.resolver_agent
+    picked = s.params.get("picked", "deploy_a41f")
+    step = _ensure_tool_call(result, m.retriever_agent)
+    step.tool_output = {**(step.tool_output or {}), "status": 200,
+                        "candidates": [picked, "config_change_9d2", "scale_event_77"],
+                        "ranked_by": "temporal_proximity"}
+    step.outcome = "ok"
+    msg = _agent_message(result, agent)
+    if msg is not None:
+        msg.payload_extra["named_cause"] = picked
+        msg.payload_extra["basis"] = "temporal_proximity"
+        msg.payload_extra["confidence"] = "HIGH"
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["correlation_as_cause"] = picked
+    return InjectedFault("correlation_as_cause", agent, "correlation_as_cause",
+                         {"picked": picked, "signals": corrupted})
+
+
+def _context_truncated(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """A long run pushes an earlier constraint out of the window, and the agent contradicts a fact
+    it established itself earlier in the same run. The contradiction is IN THE TRACE, and nothing
+    reads across steps to notice it."""
+    agent = s.target or m.resolver_agent
+    fact = s.params.get("fact", "customer is on the legacy plan")
+    result.traces.insert(0, TraceStep(
+        agent=m.first_agent, step_type="agent_message", entity_id=result.entity_id,
+        agent_reasoning=f"established: {fact}"))
+    msg = _agent_message(result, agent)
+    if msg is not None:
+        msg.payload_extra["assumed"] = f"not true: {fact}"
+        msg.payload_extra["context_tokens"] = int(s.params.get("tokens", 148000))
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["context_truncated"] = True
+    return InjectedFault("context_truncated", agent, "context_truncated",
+                         {"dropped_fact": fact, "signals": corrupted})
+
+
+def _parametric_override(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """Retrieval returned the RIGHT document and the agent answered from its training prior instead.
+    Arize calls this parametric bias.
+
+    ⛔ EVIDENTIALLY THIS IS THE OPPOSITE OF STALENESS and the two are constantly confused. Here the
+    tool did its job perfectly. Blaming the retriever would be wrong, and the correct answer is
+    sitting in the trace next to the wrong one."""
+    agent = s.target or m.resolver_agent
+    truth = s.params.get("retrieved", "current rate is 4.10%")
+    step = _ensure_tool_call(result, m.retriever_agent)
+    step.tool_output = {"status": 200, "ok": True, "count": 1,
+                        "results": [{"text": truth, "match_score": 0.94,
+                                     "as_of": ctx.now.date().isoformat()}]}
+    step.outcome = "ok"
+    msg = _agent_message(result, agent)
+    if msg is not None:
+        msg.payload_extra["answered_from"] = "prior"
+        msg.payload_extra["confidence"] = "HIGH"
+    corrupted = _corrupt_correctness(result, contract, m)
+    result.metadata["parametric_override"] = True
+    return InjectedFault("parametric_override", agent, "parametric_override",
+                         {"retrieved_was_correct": True, "signals": corrupted})
+
+
 def EvalResultDefault(agent, entity_id, reason):
     from .types import EvalResult
     return EvalResult(agent=agent, eval_name="reasoning_quality", score=0.3,
@@ -493,6 +721,17 @@ _LEVER_FNS = {
     "condition_miss": _condition_miss,
     "confidence_miscalibration": _confidence_miscalibration,
     "silent_drift": _silent_drift,
+    # evidence-derived, 21 Aug 2026 — see docs/failure-research/00-evidence.md
+    "ok_but_empty": _ok_but_empty,
+    "escalation_refused": _escalation_refused,
+    "fabricated_policy": _fabricated_policy,
+    "overliteral_constraint": _overliteral_constraint,
+    "reversed_on_appeal": _reversed_on_appeal,
+    "retry_loop": _retry_loop,
+    "agent_paralysis": _agent_paralysis,
+    "correlation_as_cause": _correlation_as_cause,
+    "context_truncated": _context_truncated,
+    "parametric_override": _parametric_override,
     "tool_latency": _tool_latency,
     "tool_errors": _tool_errors,
     "llm_cost": _llm_cost,
