@@ -152,6 +152,13 @@ _TEAMEIGHT_RATES = {
     # succeeded and only the human's behaviour differed. Off in the default mix at a realistic 5%;
     # the "Draft rewritten before sending" scenario drives it up.
     "draft_rewritten":     {"rate": 0.05},
+    # ⛔ THIS FLEET COULD NOT PRODUCE A BROKEN PIPELINE AT ALL, and that made two of Provy's
+    # structural checks decorative on it: pipeline_completion and decision_made can only fail when
+    # an agent does not run, and nothing here ever stopped one. Measured 25 Aug over 40 emitted runs:
+    # 0 failures on both, while tool_success_rate failed 2. A follow-up pipeline absolutely can stall
+    # upstream (no transcript, no CRM record) and block everything downstream, so its absence was a
+    # gap in the simulation, not a property of the domain.
+    "skip_propagation":    {"rate": 0.04},
     **_MIXED_GENERIC,
     "condition_miss":      {"rate": 0.10},
     # ⛔ RAISED FROM THE SHARED 0.01. c8 ("went out within the window") is reachable only through

@@ -51,7 +51,7 @@ class BatchRunner:
         )
         result = self.pack.run_pipeline(item, gt, ctx)
         if self.emitter is not None:
-            self.emitter.emit_run(result)   # traces + evals + close (NOT the outcome)
+            self.emitter.emit_run(result, self.pack.agents())   # traces + evals + close (NOT the outcome)
         record = build_record(self.pack.workflow, result, self.index)
         if self.ledger is not None:
             self.ledger.append(record)

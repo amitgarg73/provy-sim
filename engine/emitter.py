@@ -199,12 +199,25 @@ class ProvyEmitter:
         return self._post("/api/ingest/outcome", self.outcome_payload(result, occurred_at))
 
     # ── convenience: emit a whole run except the outcome (that's EOD reconcile) ─
-    def emit_run(self, result: RunResult) -> None:
+    def emit_run(self, result: RunResult, agents: list | None = None) -> None:
         # We use OUR OWN session id throughout (id-agnostic ingest, #165): Provy stores it as external_id
         # and resolves every later call by it. No need to capture Provy's internal uuid.
+        #
+        # ⛔ STRUCTURAL CHECKS ARE DERIVED HERE, AT THE ONE SEAM BOTH RUN PATHS SHARE. runner.run_one
+        # and desk._finish both end at emit_run; deriving them in either caller alone would give the
+        # desk fleets no structural grading and nothing would report the difference.
+        #
+        # ⛔ WITHOUT A ROSTER, pipeline_completion CANNOT FAIL. Its denominator is the agents that
+        # SHOULD have run; falling back to the agents that DID run makes a skipped agent invisible,
+        # which is the failure it exists to catch. So it is computed only when a roster is passed,
+        # and the caller that has one always passes it.
         self.open_session(result)
         for step in result.traces:
             self.trace(result, step)
-        for ev in result.evals:
+        evals = list(result.evals)
+        if agents:
+            from engine.structural import structural_evals
+            evals.extend(structural_evals(result, agents))
+        for ev in evals:
             self.eval(result, ev)
         self.close_session(result)

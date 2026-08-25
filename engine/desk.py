@@ -162,7 +162,7 @@ class Desk:
             "delayed_by_agent": [w.reason for w in held] or None,
         }
         if r.emitter is not None:
-            r.emitter.emit_run(result)
+            r.emitter.emit_run(result, self.pack.agents())
         record = build_record(self.pack.workflow, result, r.index)
         if r.ledger is not None:
             r.ledger.append(record)
