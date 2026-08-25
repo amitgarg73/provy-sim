@@ -25,6 +25,7 @@ engine/                 shared machinery (domain-free)
   groundtruth.py        append-only JSONL ledger of injected truth
   scoreboard.py         injected-truth aggregation + Provy-side comparison skeleton
   runner.py             BatchRunner: generate -> run -> emit -> record
+  structural.py         layer-3 checks derived from the run itself (see below)
   reconcile.py          EOD: post the day's real outcomes + judge backfill
 packs/
   support/  claims/  crm/    one DomainPack each (generator + agents + contract + manifest)
@@ -36,6 +37,45 @@ tests/                  pytest for the pure logic
 
 Each pack is a **workflow (fleet)** with its own ingest key. The trust number is
 per fleet; there is no cross-fleet aggregate.
+
+## Structural (layer 3) checks
+
+Packs emit output-quality results (layer 4). `engine/structural.py` adds the deterministic layer-3
+set, derived from the traces the run already produced, so a lever that breaks a run breaks the check
+with no extra wiring:
+
+| check | scope | fails when |
+|---|---|---|
+| `pipeline_completion` | session | an agent in the roster produced no real step |
+| `tool_success_rate` | agent | more than 20% of that agent's tool calls errored |
+| `decision_made` | agent | the deciding agent recorded no decision |
+| `exit_quality` | session | the run ended on a terminal the engine sets when it breaks |
+
+⛔ **PROVY DOES NOT COMPUTE THESE.** It has no server-side rule evaluator: a layer-3 result is graded
+only if the fleet SENDS it. Provy seeds a structural catalogue per fleet, so before this existed
+every sim tenant carried a catalogue that was enabled and permanently ungraded.
+
+⛔ **THEY ARE DERIVED AT `emit_run`, THE ONE SEAM BOTH RUN PATHS SHARE.** `runner.run_one` and
+`desk._finish` both end there. Deriving them in either caller alone leaves the other fleet ungraded
+with nothing reporting the difference.
+
+⛔ **A SKIP IS A STEP.** `skip_propagation` removes an agent's real traces and appends a *skip* step
+for it and everyone downstream, so "has at least one trace" is true even in a fully broken pipeline.
+`pipeline_completion` therefore counts only steps that are not skips. It passed 60 of 60 runs before
+this was found, and the unit test could not have caught it: the fixture used absent steps, a shape
+the simulator never produces.
+
+⛔ **NO WHITELIST OF GOOD TERMINAL REASONS.** The tenant owns its nouns: support says `resolved`,
+teameight says `followed_up`, trading says `intraday_entries_placed`. `exit_quality` fails only on
+the closed set of terminals the engine itself sets when it breaks a run. A whitelist failed 25 of 25
+real teameight runs before this was inverted.
+
+⛔ **A CHECK THAT CANNOT RUN WRITES NO ROW.** An agent that called no tool gets no
+`tool_success_rate`. A fabricated pass is how a blind spot comes to look like health.
+
+⛔ **A FLEET WITH NO PIPELINE-BREAKING LEVER CANNOT FAIL TWO OF THESE.** `skip_propagation` was absent
+from teameight, making `pipeline_completion` and `decision_made` decorative there: 0 failures over 40
+emitted runs. When adding a pack, check its lever set can actually reach every check on it.
 
 ## The nine levers
 
