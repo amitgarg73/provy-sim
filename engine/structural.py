@@ -73,6 +73,26 @@ def _r(agent: str, name: str, score: float, passed: bool, reasoning: str, entity
     )
 
 
+def drop_evals_for_agents_that_did_not_run(result: "RunResult") -> list[EvalResult]:
+    """
+    Evals whose agent actually did work, plus every session-scoped one.
+
+    ⛔ A PACK BUILDS ITS EVAL LIST FROM THE CLEAN RUN, AND A LEVER THAT REMOVES AN AGENT'S TRACES
+    DOES NOT REMOVE ITS EVALS. Measured on a real teameight session: seven agents whose only step was
+    a skip each carried a PASSING 0.9 quality eval. The session then scored 0.9 overall, which is
+    what made argus#677 invisible — Provy's own break detector is gated on session quality, so a
+    fully broken pipeline looked like a good one.
+
+    ⛔ THIS IS THE SAME RULE THE STRUCTURAL CHECKS FOLLOW: a check that cannot run writes NO ROW. A
+    fabricated pass for an agent that never executed is how a blind spot comes to look like health,
+    and it is worse here because the sim is supposed to be generating ground truth.
+
+    Session-scoped evals are kept: they describe the run, not an agent.
+    """
+    worked = {s.agent for s in result.traces if s.agent and _actually_ran(s)}
+    return [e for e in result.evals if e.agent in worked or e.agent in ("session", "", None)]
+
+
 def structural_evals(result: "RunResult", agents: list["AgentSpec"]) -> list[EvalResult]:
     """Every structural check this run supports. Order is stable for reproducible fixtures."""
     out: list[EvalResult] = []

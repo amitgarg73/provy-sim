@@ -214,9 +214,12 @@ class ProvyEmitter:
         self.open_session(result)
         for step in result.traces:
             self.trace(result, step)
-        evals = list(result.evals)
+        # ⛔ AN EVAL FOR AN AGENT THAT DID NOT RUN IS A FABRICATED PASS, and it is what made a total
+        # pipeline break read as a 0.9-quality session (argus#677). Dropped here, at the same seam
+        # the structural checks are derived, so every pack gets it.
+        from engine.structural import drop_evals_for_agents_that_did_not_run, structural_evals
+        evals = drop_evals_for_agents_that_did_not_run(result)
         if agents:
-            from engine.structural import structural_evals
             evals.extend(structural_evals(result, agents))
         for ev in evals:
             self.eval(result, ev)

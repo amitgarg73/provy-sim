@@ -186,3 +186,36 @@ class TestASkipIsNotARun:
     def test_an_agent_that_skipped_then_really_ran_still_counts(self):
         traces = [TraceStep(agent="a", step_type="skip", outcome="skipped"), step("a")]
         assert by_name(structural_evals(run(traces), A("a")), "pipeline_completion")[0].passed
+
+
+class TestEvalsForAgentsThatDidNotRun:
+    """
+    ⛔ THE ROOT OF argus#677. A pack builds its eval list from the CLEAN run; a lever that removes an
+    agent's traces does not remove its evals. On a real teameight session seven skipped agents each
+    carried a PASSING 0.9 quality eval, the session scored 0.9, and Provy's break detector (gated on
+    session quality) stayed silent on a totally broken pipeline.
+    """
+    from engine.structural import drop_evals_for_agents_that_did_not_run as drop
+
+    def _run(self):
+        from engine.types import EvalResult
+        r = run([step("a"), TraceStep(agent="b", step_type="skip", outcome="skipped")])
+        r.evals = [
+            EvalResult(agent="a", eval_name="q_a", score=0.9, passed=True),
+            EvalResult(agent="b", eval_name="q_b", score=0.9, passed=True),
+            EvalResult(agent="session", eval_name="q_s", score=0.9, passed=True),
+        ]
+        return r
+
+    def test_drops_the_eval_for_the_skipped_agent(self):
+        kept = {e.eval_name for e in TestEvalsForAgentsThatDidNotRun.drop(self._run())}
+        assert "q_b" not in kept
+
+    def test_keeps_the_eval_for_the_agent_that_worked(self):
+        kept = {e.eval_name for e in TestEvalsForAgentsThatDidNotRun.drop(self._run())}
+        assert "q_a" in kept
+
+    # ⛔ SESSION-SCOPED EVALS DESCRIBE THE RUN, NOT AN AGENT, so they survive a broken pipeline.
+    def test_keeps_session_scoped_evals(self):
+        kept = {e.eval_name for e in TestEvalsForAgentsThatDidNotRun.drop(self._run())}
+        assert "q_s" in kept
