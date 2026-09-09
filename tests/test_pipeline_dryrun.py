@@ -3,10 +3,12 @@ payloads and send NOTHING (PROVY_EMIT unset), and ground truth is recorded."""
 import json
 import os
 
-from engine.emitter import ProvyEmitter
+from engine.emitter import ProductionTargetRefused, ProvyEmitter
 from engine.groundtruth import GroundTruthLedger
 from engine.levers import LeverConfig
 from engine.reconcile import reconcile_pending
+import pytest
+
 from engine.runner import BatchRunner
 from packs import get_pack
 
@@ -14,10 +16,34 @@ from packs import get_pack
 def test_emitter_is_noop_without_emit(monkeypatch):
     monkeypatch.delenv("PROVY_EMIT", raising=False)
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
-    em = ProvyEmitter(ingest_key="provy_fake", base_url="https://provyai.vercel.app")
+    # Pre-prod host on purpose. This test is about PROVY_EMIT being unset, not about the
+    # production guard; it used provyai.vercel.app only incidentally, and that host is now refused.
+    em = ProvyEmitter(ingest_key="provy_fake", base_url="https://provydev.vercel.app")
     assert em.enabled is False
-    assert em.base == "https://provyai.vercel.app"
+    assert em.base == "https://provydev.vercel.app"
     assert em.key == "provy_fake"
+
+
+def test_emitter_refuses_production_hosts(monkeypatch):
+    """⛔ The simulator never writes to production, and the guard lives where the writing happens.
+
+    Setting PROVY_URL to a production host used to be enough to put simulated work in the real
+    ledger (2026-07-27). www.provy.ai is included because it is a real production alias that the
+    host list missed until 2026-09-09.
+    """
+    monkeypatch.delenv("PROVY_ALLOW_PROD", raising=False)
+    for host in ("https://provy.ai", "https://www.provy.ai", "https://provyai.vercel.app"):
+        with pytest.raises(ProductionTargetRefused):
+            ProvyEmitter(ingest_key="provy_fake", base_url=host)
+
+    # Disabled emission is not a defence: a disabled emitter is one PROVY_EMIT away from writing.
+    monkeypatch.delenv("PROVY_EMIT", raising=False)
+    with pytest.raises(ProductionTargetRefused):
+        ProvyEmitter(ingest_key="provy_fake", base_url="https://provy.ai")
+
+    # The escape hatch exists, and it has to be typed on purpose.
+    monkeypatch.setenv("PROVY_ALLOW_PROD", "1")
+    assert ProvyEmitter(ingest_key="provy_fake", base_url="https://provy.ai").base == "https://provy.ai"
 
 
 def test_dry_run_builds_all_payloads(tmp_path, monkeypatch):

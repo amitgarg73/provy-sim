@@ -25,6 +25,13 @@ from typing import Any, Optional
 
 from .types import RunResult
 
+from engine.targets import is_production_target
+
+
+class ProductionTargetRefused(RuntimeError):
+    """Raised when a simulator run is pointed at a production Provy host."""
+
+
 DEFAULT_BASE_URL = "https://provydev.vercel.app"
 
 
@@ -62,6 +69,20 @@ class ProvyEmitter:
                  is_simulated: bool = False, capture: bool = True):
         self.key = ingest_key if ingest_key is not None else os.environ.get("PROVY_KEY", "")
         self.base = (base_url or os.environ.get("PROVY_URL") or DEFAULT_BASE_URL).rstrip("/")
+
+        # ⛔ THE SIMULATOR NEVER WRITES TO PRODUCTION. Until 2026-09-09 the only production guards
+        # lived in wire_itsm_fleet.py and install_servicenow_lifecycle.py, which are SETUP scripts.
+        # This class is the hot path: it is what actually posts sessions, traces and evals. Setting
+        # PROVY_URL to a production host was enough to write simulated work into the real ledger,
+        # which is what happened on 2026-07-27. The check belongs where the writing happens.
+        #
+        # PROVY_ALLOW_PROD=1 is the deliberate escape hatch, matching --allow-prod on the setup
+        # scripts. It has to be typed on purpose; nothing defaults to it.
+        if is_production_target(self.base) and os.environ.get("PROVY_ALLOW_PROD") != "1":
+            raise ProductionTargetRefused(
+                f"refusing to emit simulated work to production ({self.base}). "
+                f"Point PROVY_URL at {DEFAULT_BASE_URL}, or set PROVY_ALLOW_PROD=1 if you truly mean it."
+            )
         self.is_simulated = is_simulated
         self.capture = capture
         self.sent: list[dict] = []       # {path, method, payload} for every call built

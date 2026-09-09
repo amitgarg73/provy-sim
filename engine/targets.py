@@ -15,7 +15,16 @@ from urllib.parse import urlparse
 
 # Hosts that serve production Provy. A demo pointed at one of these writes real outcomes into the
 # real ledger, which is what happened on 2026-07-27.
-PROD_HOSTS = frozenset({"provy.ai", "provyai.vercel.app"})
+# ⛔ EVERY PRODUCTION ALIAS, NOT JUST THE TWO OBVIOUS ONES. `www.provy.ai` was missing until
+# 2026-09-09 and is a live production alias, so a demo pointed at it was NOT refused. Read the real
+# list with `vercel inspect provy.ai` and add any new alias here the day it is created.
+PROD_HOSTS = frozenset({
+    "provy.ai",
+    "www.provy.ai",
+    "provyai.vercel.app",
+    "provy-amit-garg-s-projects.vercel.app",
+    "provy-git-main-amit-garg-s-projects.vercel.app",
+})
 
 # Where a demo belongs. `dev.provy.ai` is the same deployment under the custom domain.
 PREPROD_INGEST = "https://provydev.vercel.app/api/ingest/outcome"
