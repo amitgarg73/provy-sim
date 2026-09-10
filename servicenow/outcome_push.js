@@ -150,7 +150,16 @@
         business_date: businessDate,
         label: success ? 'success' : 'fail',
         source: 'confirmed',
-        occurred_at: new GlideDateTime().getDisplayValueInternal(),
+        // ⛔ UTC, WITH THE MARKER ON IT. This was getDisplayValueInternal(), which returns the
+        // INSTANCE's local time in internal format and carries no timezone. Provy stores it in a
+        // timestamptz column, reads the missing offset as UTC, and every settled outcome lands
+        // seven hours before the run that produced it (measured 9 Sep 2026: occurred_at 16:10:58
+        // against a reconciled_at of 23:10:58, identical seconds, exactly the PDT offset). A
+        // settlement dated before its own work item makes the ledger's time axis nonsense.
+        //
+        // getValue() is the UTC one. The trailing 'Z' is added so the receiver cannot repeat the
+        // same assumption from the other side, and 'T' makes it ISO 8601 rather than nearly so.
+        occurred_at: new GlideDateTime().getValue().replace(' ', 'T') + 'Z',
         signals: {
             // Contract vocabulary first — these are what Provy actually grades. The two
             // time-based ones are attached below, and only when a target of that kind was

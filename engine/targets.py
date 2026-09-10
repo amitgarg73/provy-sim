@@ -27,7 +27,10 @@ PROD_HOSTS = frozenset({
 })
 
 # Where a demo belongs. `dev.provy.ai` is the same deployment under the custom domain.
-PREPROD_INGEST = "https://provydev.vercel.app/api/ingest/outcome"
+# ⛔ THE CUSTOM DOMAIN. provydev.vercel.app is behind Vercel deployment protection, so a push from
+# ServiceNow to it is answered with an SSO redirect and the outcome never lands. dev.provy.ai is the
+# same deployment, exempt from that protection because custom domains are.
+PREPROD_INGEST = "https://dev.provy.ai/api/ingest/outcome"
 
 
 def target_host(url: str) -> str:

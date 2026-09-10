@@ -32,7 +32,12 @@ class ProductionTargetRefused(RuntimeError):
     """Raised when a simulator run is pointed at a production Provy host."""
 
 
-DEFAULT_BASE_URL = "https://provydev.vercel.app"
+# ⛔ THE CUSTOM DOMAIN, NOT THE VERCEL ONE. provydev.vercel.app sits behind Vercel deployment
+# protection, so every emit to it returns the SSO redirect instead of the API unless
+# VERCEL_PROTECTION_BYPASS happens to be set. Nobody sets it by hand, which is how a batch can run to
+# completion and land nothing. dev.provy.ai is the same pre-prod deployment under a custom domain,
+# and custom domains are exempt from that protection.
+DEFAULT_BASE_URL = "https://dev.provy.ai"
 
 
 def emit_enabled(url: str, key: str) -> bool:
@@ -83,6 +88,7 @@ class ProvyEmitter:
                 f"refusing to emit simulated work to production ({self.base}). "
                 f"Point PROVY_URL at {DEFAULT_BASE_URL}, or set PROVY_ALLOW_PROD=1 if you truly mean it."
             )
+        self._env_verified = False
         self.is_simulated = is_simulated
         self.capture = capture
         self.sent: list[dict] = []       # {path, method, payload} for every call built
@@ -92,11 +98,42 @@ class ProvyEmitter:
         return emit_enabled(self.base, self.key)
 
     # ── low-level ────────────────────────────────────────────────────────────
+    def _verify_environment(self) -> None:
+        """Ask the deployment what it is, once, before anything is written.
+
+        ⛔ A HOSTNAME ALLOWLIST CANNOT SEE THROUGH AN ALIAS. dev.provy.ai is pre-prod by convention,
+        not by construction: it carries no branch pin, and on 2026-09-09 a production deploy claimed
+        it, so the dev hostname served the production database for about forty minutes. The name
+        looked fine the whole time. This asks the deployment instead, which is the only thing that
+        actually knows.
+
+        Refuses when it cannot tell. An unreachable probe means the write is likely to fail anyway,
+        so failing closed costs almost nothing and guessing costs the production ledger.
+        """
+        if self._env_verified:
+            return
+        url = f"{self.base}/api/health/env"
+        try:
+            req = urllib.request.Request(url, headers=request_headers(self.key))
+            with urllib.request.urlopen(req, timeout=20) as r:
+                env = (json.loads(r.read().decode()) or {}).get("environment", "")
+        except Exception as e:                                  # noqa: BLE001
+            raise ProductionTargetRefused(
+                f"cannot confirm {self.base} is pre-prod ({e}). Refusing to emit rather than guess."
+            ) from e
+        if env != "preprod" and os.environ.get("PROVY_ALLOW_PROD") != "1":
+            raise ProductionTargetRefused(
+                f"{self.base} reports environment={env!r}, not 'preprod'. Refusing to emit simulated "
+                f"work. If a deploy has claimed the hostname, repair the alias before running again."
+            )
+        self._env_verified = True
+
     def _post(self, path: str, payload: dict) -> dict:
         if self.capture:
             self.sent.append({"path": path, "method": "POST", "payload": payload})
         if not self.enabled:
             return {"skipped": True}
+        self._verify_environment()
         try:
             req = urllib.request.Request(
                 f"{self.base}{path}",
