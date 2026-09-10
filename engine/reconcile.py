@@ -55,12 +55,27 @@ def reconcile_pending(ledger: GroundTruthLedger, emitter: ProvyEmitter,
     pending = ledger.pending_outcomes(workflow)
     remaining = list(pending)
     posted = 0
+    # ⛔ THE SESSION IDS THAT SETTLED, NOT THE DICTS THEY CAME IN (argus#812).
+    #
+    # `pending_outcomes` re-parses the file and hands back FRESH dicts, and `_rewrite` used to
+    # re-parse it AGAIN. So `rec["reconciled"] = True` was set on objects nothing ever wrote, the
+    # ledger was rewritten from disk with every row still pending, and the call returned
+    # `posted: N` over it. Measured 10 Sep 2026: 674 rows across all 13 packs, not one of them ever
+    # marked reconciled, and every re-run re-posting every outcome the pack had ever produced.
+    settled: set[str] = set()
     errors: list[str] = []
     for attempt in range(retries + 1):
         still: list[dict] = []
         for rec in remaining:
             r = _minimal_result(rec)
-            occurred = (rec.get("outcome_post", {}) or {}).get("occurred_at")
+            # ⛔ FALL BACK TO WHEN THE WORK RAN, NEVER TO NOW (argus#812). `occurred_at` is null on
+            # every one of the 674 ledger rows written to date, and the emitter defaults a null to
+            # the wall clock. In a same-day batch those are minutes apart and it never showed; on a
+            # backfill it dates a fortnight-old work item as today, which is the one thing every
+            # customer surface is supposed to be protected from. `ts` is when the run finished, so
+            # it is right in both cases.
+            post = rec.get("outcome_post", {}) or {}
+            occurred = post.get("occurred_at") or rec.get("ts")
             resp = emitter.outcome(r, occurred_at=occurred)
             if isinstance(resp, dict) and resp.get("error"):
                 errors.append(f"{r.entity_id}: {resp['error']}")
@@ -68,6 +83,7 @@ def reconcile_pending(ledger: GroundTruthLedger, emitter: ProvyEmitter,
             elif (not emitter.enabled) or (isinstance(resp, dict) and resp.get("skipped")) or _matched(resp):
                 # Dry run (nothing sent) counts as posted; otherwise it must have reconciled.
                 rec["reconciled"] = True
+                settled.add(rec["session_id"])
                 posted += 1
             else:
                 still.append(rec)  # prediction not visible yet — retry after a wait
@@ -76,8 +92,8 @@ def reconcile_pending(ledger: GroundTruthLedger, emitter: ProvyEmitter,
             break
         if attempt < retries:
             time.sleep(backoff)
-    if mark and posted:
-        _rewrite(ledger)
+    if mark and settled:
+        _rewrite(ledger, settled)
     out = {"pending": len(pending), "posted": posted, "unmatched": len(remaining),
            "errors": len(errors), "emit_enabled": emitter.enabled}
     if errors:
@@ -85,10 +101,17 @@ def reconcile_pending(ledger: GroundTruthLedger, emitter: ProvyEmitter,
     return out
 
 
-def _rewrite(ledger: GroundTruthLedger) -> None:
-    """Rewrite the JSONL with reconciled flags flipped. Small-scale ledger; a
-    full rewrite is fine here and keeps the file the single source of truth."""
+def _rewrite(ledger: GroundTruthLedger, settled: set[str]) -> None:
+    """Rewrite the JSONL with reconciled flags flipped on the sessions that settled.
+
+    ⛔ THE FLAGS ARE APPLIED HERE, AGAINST A FRESH READ, AND THAT IS DELIBERATE. Marking the caller's
+    own dicts and writing those back would lose any row the batch appended while this was posting,
+    which is exactly what `--reconcile-every` does. Reading again and marking by session id keeps
+    both: late rows survive and the settled ones are recorded."""
     rows = ledger.read()
+    for rec in rows:
+        if rec.get("session_id") in settled:
+            rec["reconciled"] = True
     tmp = ledger.path + ".tmp"
     with open(tmp, "w") as f:
         for rec in rows:
