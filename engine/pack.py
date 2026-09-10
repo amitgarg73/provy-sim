@@ -159,6 +159,27 @@ class BasePack:
                 continue
             target.payload_extra[aliases.get(signal, signal)] = value
 
+            # ⛔ AND THE SAME VALUE AS A FORWARD CLAIM, IN THE RESERVED KEY (argus#747).
+            #
+            # The line above writes an ordinary payload key, which is a READING. Provy's signal walk
+            # keeps the LAST value for each key, so a later step reporting the settled result
+            # overwrites the estimate and the "claim" it reads back is the settled answer wearing
+            # the estimating agent's name. That is argus#751, measured at 248 of 248 rows on prod.
+            #
+            # `provy_claim` is a separate key nothing else writes, which the ingest lifts into
+            # `ag_traces.claim`. Same value, carried as an ACT rather than a reading, anchored to
+            # the span that made it. Agent, step type and span id come free from the trace.
+            #
+            # ⛔ THE SIMULATOR HAS ITS OWN EMITTER AND DOES NOT USE provy-sdk, so the SDK gaining
+            # `claim=` in 0.6.0 did nothing here. Measured 9 Sep 2026: 220 traces on the ITSM fleet,
+            # zero claims, so every reconciliation fell to Provy's forecast.
+            target.payload_extra.setdefault("provy_claim", []).append({
+                "signal": aliases.get(signal, signal),
+                "value": value,
+                "confidence": conf,
+                "entity_id": result.entity_id,
+            })
+
         if reviewer_msg is not None:
             reviewer_msg.payload_extra["confidence"] = conf
 
