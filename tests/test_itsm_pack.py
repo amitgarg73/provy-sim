@@ -343,22 +343,20 @@ DERIVED_FROM = {
 def test_every_contract_condition_is_derivable_from_what_the_run_claims():
     """Each condition either reads a field the run records, or is derived from fields it records.
 
-    The one exception is the honest one: procedure_grounded. ServiceNow settles no such fact, the
-    push deliberately does not send it, and it grades unmeasurable on every run. That is why the
-    ServiceNow-settled side reads 5 of 6 conditions covered rather than 6.
+    ⛔ THERE IS NO EXCEPTION ANY MORE, AND THE ONE THAT USED TO BE HERE WAS THE BUG (argus#810).
+    `procedure_grounded` was declared outcome-side, which asserts ServiceNow settles it. ServiceNow
+    carries no such field, the push deliberately does not send it, and so the condition graded
+    unmeasurable on every ticket and read on screen as a plain failing one. Whether the fix followed
+    a documented procedure is a property of the resolver's own work, so c5 now reads
+    `procedure_followed` on the TRACE side, exactly as c7 reads the knowledge agent's own call.
 
-    c7 is not an exception to it. It is settled by the TRACE, so the run claims the signal itself
-    rather than deriving it from instance fields, and it is checked here as strictly as the rest."""
+    Every trace-side condition is checked as strictly as the settled ones: the run must claim the
+    signal itself, on every ticket, or the condition is unmeasurable on the ones it skips."""
     pack, _, r = run_one()
     for c in pack.contract():
         if c.side == "trace":
             assert c.signal in r.estimated_signals, (
                 f"condition {c.id} is graded off the trace and the run never claims {c.signal}")
-            continue
-        if c.signal == "procedure_grounded":
-            assert c.signal not in DERIVED_FROM, (
-                "procedure_grounded must stay underivable; sending a value nothing observes "
-                "would be inventing the outcome")
             continue
         sources = DERIVED_FROM.get(c.signal)
         assert sources, f"condition {c.id} reads {c.signal}, which nothing derives"
@@ -426,20 +424,26 @@ def test_contract_conditions_are_signal_mapped_and_gradeable():
     this fleet and adding the knowledge agent did not soften it: c1 to c6 are unchanged, character
     for character, and outcome_push.js still settles all six.
 
-    c7 is the single permitted exception and this test is what keeps it single. Whether the cited
-    article exists and covers the symptom is a fact about the agent's own trace; ServiceNow stores
-    no field for it and never will, so declaring it 'outcome' to match the others is precisely what
-    left c5 unmeasurable forever. A SECOND trace-side condition would be the fleet starting to mark
-    its own homework, so it fails here."""
+    ⛔ EXACTLY TWO CONDITIONS MAY BE READ OFF THE AGENTS' OWN TRACE, AND THIS TEST IS WHAT KEEPS IT
+    TWO. Both are facts ServiceNow stores no field for and never will: whether the cited article
+    covers the symptom (c7, the knowledge agent's call) and whether the fix followed a documented
+    procedure (c5, the resolver's). Declaring either one 'outcome' to match the others is precisely
+    what left c5 unmeasurable from 28 July to 10 September (argus#810), reading on screen as a
+    failing condition while nothing on earth could ever have settled it.
+
+    ⛔ THE RATCHET WENT 1 -> 2 DELIBERATELY AND MAY NOT DRIFT FURTHER. Every condition a fleet reads
+    off its own trace is one the fleet marks its own homework on, and this pack's genuineness claim
+    is that ServiceNow settles the ones that matter. A THIRD fails here, and the fix for a third is
+    to find the field that settles it, not to widen this list."""
     pack = get_pack("itsm")
     conditions = pack.contract()
     assert len(conditions) == 7
     trace_side = [c.id for c in conditions if c.side == "trace"]
-    assert trace_side == ["c7"], (
-        f"only c7 may be graded off the agent's own trace, got {trace_side}")
+    assert trace_side == ["c5", "c7"], (
+        f"only c5 and c7 may be graded off the agents' own trace, got {trace_side}")
     for c in conditions:
         assert c.signal
-        if c.id != "c7":
+        if c.id not in ("c5", "c7"):
             assert c.side == "outcome", (
                 f"{c.id} must be settled by ServiceNow; a condition read off the agent's own trace "
                 f"would mean this fleet partly marks its own homework")

@@ -171,10 +171,16 @@ class ItsmPack(BasePack):
         response. outcome_push.js reads contract_sla.target and reports the response and the
         resolution clocks separately, which is what makes c2 and c6 separable at all.
 
-        c5 is the honest hole. ServiceNow does not report procedure_grounded, so it grades
-        unmeasurable on every run and the fleet reads 5 of 6 conditions covered. outcome_push.js
-        deliberately does not push it. The condition is real and nothing settles it yet; that is
-        the number, not a gap to paper over.
+        ⛔ c5 WAS THE HONEST HOLE AND IT WAS NOT HONEST, IT WAS WRONG (argus#810). It read
+        `procedure_grounded` on the OUTCOME side, which asserts ServiceNow settles it. ServiceNow
+        carries no such field and never will, and outcome_push.js says so out loud and deliberately
+        does not push it. So the condition graded unmeasurable on every ticket from 28 July and read
+        on screen as a plain failing condition next to six real ones.
+
+        Whether the fix followed a documented procedure is a property of the resolver's own work,
+        exactly as c7 is a property of the knowledge agent's, so c5 is side 'trace' and reads
+        `procedure_followed`, the name the resolver actually writes. Nothing about the six
+        ServiceNow-settled conditions changes, so outcome_push.js needs no change.
         """
         return [
             Criterion("c1", "Incident is resolved with a genuine fix on first attempt, not "
@@ -187,7 +193,7 @@ class ItsmPack(BasePack):
             Criterion("c4", "Agent resolves the incident without escalation or handoff to another "
                       "team", "outcome", "self_resolved", "eq", True),
             Criterion("c5", "Diagnosis is grounded in a documented procedure and follows clear "
-                      "resolution steps", "outcome", "procedure_grounded", "eq", True),
+                      "resolution steps", "trace", "procedure_followed", "eq", True),
             Criterion("c6", "Incident is resolved within the agreed resolution time target",
                       "outcome", "resolution_time_met", "eq", True),
             # ⛔ c7 IS SIDE 'trace' AND HAS TO BE. The six above are settled by ServiceNow and are
@@ -224,12 +230,12 @@ class ItsmPack(BasePack):
             "resolution_genuine":       "resolver",
             "resolution_persists":      "resolver",
             "self_resolved":            "resolver",
-            "procedure_grounded":       "resolver",
+            "procedure_followed":       "resolver",
             "reopen_count":             "resolver",
             "close_code":               "resolver",
             "reassignment_count":       "router",
             # Whether the RIGHT article was found is the knowledge agent's call. Whether the written
-            # fix followed it stays the resolver's (procedure_grounded, above). Splitting the two is
+            # fix followed it stays the resolver's (procedure_followed, above). Splitting the two is
             # the whole reason the knowledge step is a separate agent: without it a reopen caused by
             # a bad article and a reopen caused by a resolver ignoring a good one are the same event.
             "kb_article_valid":         "knowledge",
@@ -845,6 +851,13 @@ class ItsmPack(BasePack):
             # What the desk believes about the article it followed. It is the knowledge agent's
             # claim, and stamp_estimated puts it on the knowledge agent's own message.
             "kb_article_valid": d["article_valid"],
+            # ⛔ ON EVERY TICKET, WHICH IS WHAT MAKES c5 GRADE AT ALL (argus#810). This used to be
+            # written by hand on the shallow branch only, and only as False, so the key was in the
+            # signal registry and absent from the bag on every clean ticket. A condition that grades
+            # on some work items and reads unmeasurable on the rest is worse than one that never
+            # grades: the coverage number moves and nothing on the screen says why. Owned by the
+            # resolver, so stamp_estimated puts it on the resolver's own message as a claim.
+            "procedure_followed": not d["shallow"],
         }
         r.metadata = {
             "forecasts": forecasts,
