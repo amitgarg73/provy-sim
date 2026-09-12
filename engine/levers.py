@@ -254,6 +254,40 @@ def _corrupt_correctness(result, contract, m) -> list[str]:
     return corrupted
 
 
+def _corrupt_named(result, contract, signal: Optional[str]) -> list[str]:
+    """Flip ONE named signal on the Real side only, leaving the claim good."""
+    if not signal:
+        return []
+    c = C.signal_index(contract).get(signal)
+    if c is None or c.side == "trace":
+        return []
+    result.real_signals[signal] = C.bad_value(c)
+    return [signal]
+
+
+def _settles_on(m, s, *roles: str) -> Optional[str]:
+    """The signal this lever breaks, in preference order of manifest ROLES.
+
+    ⛔ WHY THIS EXISTS (#825). Every evidence lever called `_corrupt_correctness`, so in `support`
+    eight distinct mechanisms all failed `reopened_7d` and nothing else. A contract cannot tell them
+    apart, attribution has nothing to separate, and a demo built on them is one story told eight
+    times. Measured on all 11 runnable packs; `claims_payout` had 16 levers and 2 distinct outcomes.
+
+    A lever names the role it breaks. The pack maps the role to its own signal, so this stays
+    domain-free. `settles_on` in the lever params overrides for a one-off. Falling back to
+    correctness is deliberate: a pack with no signal for the role still injects a real failure
+    instead of quietly doing nothing, which would be the worse bug.
+    """
+    override = s.params.get("settles_on")
+    if override:
+        return override
+    for role in roles:
+        sig = getattr(m, role, None)
+        if sig:
+            return sig
+    return m.correctness_signal
+
+
 def _silent_staleness(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     """Acting on stale information. The retriever serves believable but stale data (an old
     as_of, no error), the answer is built on it, and reality diverges. Estimated stays good;
@@ -533,7 +567,8 @@ def _escalation_refused(result, gt, m, contract, s, ctx) -> Optional[InjectedFau
     step.payload_extra = {"handoff_requested": attempts, "escalated": False,
                           "deflected": True}
     result.traces.append(step)
-    corrupted = _corrupt_correctness(result, contract, m)
+    # The condition this breaks is the handoff, not the reopen. See _settles_on (#825).
+    corrupted = _corrupt_named(result, contract, _settles_on(m, s, "escalation_signal"))
     result.metadata["escalation_refused"] = True
     result.metadata["handoff_requested"] = attempts
     return InjectedFault("escalation_refused", agent, "escalation_refused",
@@ -553,7 +588,8 @@ def _fabricated_policy(result, gt, m, contract, s, ctx) -> Optional[InjectedFaul
     if msg is not None:
         msg.payload_extra["cited_policy"] = cited
         msg.payload_extra["confidence"] = "HIGH"
-    corrupted = _corrupt_correctness(result, contract, m)
+    # Inventing a rule is a policy failure, so it fails the policy condition (#825).
+    corrupted = _corrupt_named(result, contract, _settles_on(m, s, "policy_signal"))
     result.metadata["fabricated_policy"] = cited
     return InjectedFault("fabricated_policy", agent, "fabricated_policy",
                          {"cited": cited, "retrieved": 0, "signals": corrupted})
@@ -613,7 +649,8 @@ def _retry_loop(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
             tool_input=dict(base.tool_input or {}), tool_output={"status": 200, "results": []},
             outcome="ok", entity_id=result.entity_id, latency_ms=900,
             tokens_input=1400, tokens_output=120))
-    corrupted = _corrupt_correctness(result, contract, m)
+    # Burning the clock on identical calls shows up as time, not correctness (#825).
+    corrupted = _corrupt_named(result, contract, _settles_on(m, s, "sla_signal"))
     result.metadata["retry_loop"] = n
     return InjectedFault("retry_loop", agent, "retry_loop", {"repeats": n, "signals": corrupted})
 

@@ -1,0 +1,295 @@
+{
+ "claims": {
+  "<none>": [
+   "condition_miss",
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "decision_correct": [
+   "correlation_as_cause",
+   "escalation_refused",
+   "ok_but_empty",
+   "overliteral_constraint",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_staleness",
+   "silent_unsupported",
+   "skip_propagation"
+  ],
+  "decision_correct/duplicate_payout": [
+   "reversed_on_appeal",
+   "silent_wrong"
+  ],
+  "sla_met": [
+   "retry_loop"
+  ],
+  "within_limit": [
+   "fabricated_policy",
+   "policy_violation",
+   "silent_policy"
+  ]
+ },
+ "claims_payout": {
+  "<none>": [
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "payout_settled": [
+   "correlation_as_cause",
+   "escalation_refused",
+   "fabricated_policy",
+   "ok_but_empty",
+   "policy_violation",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_policy",
+   "silent_staleness",
+   "silent_unsupported",
+   "silent_wrong",
+   "skip_propagation"
+  ],
+  "sla_met": [
+   "retry_loop"
+  ]
+ },
+ "claude_code": {
+  "<none>": [
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "change_committed": [
+   "correlation_as_cause",
+   "ok_but_empty",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_staleness",
+   "silent_unsupported",
+   "silent_wrong",
+   "skip_propagation"
+  ],
+  "not_reverted": [
+   "sla_breach"
+  ],
+  "validation_ran": [
+   "condition_miss",
+   "fabricated_policy",
+   "policy_violation",
+   "silent_policy"
+  ]
+ },
+ "crm": {
+  "<none>": [
+   "condition_miss",
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "duplicate_contact/qualification_correct": [
+   "silent_wrong"
+  ],
+  "qualification_correct": [
+   "agent_paralysis",
+   "correlation_as_cause",
+   "ok_but_empty",
+   "parametric_override",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_staleness",
+   "silent_unsupported",
+   "skip_propagation"
+  ],
+  "routed_correct": [
+   "fabricated_policy",
+   "policy_violation",
+   "silent_policy"
+  ]
+ },
+ "edwin": {
+  "<none>": [
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "rca_correct": [
+   "agent_paralysis",
+   "escalation_refused",
+   "ok_but_empty",
+   "overliteral_constraint",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_staleness",
+   "silent_unsupported",
+   "skip_propagation"
+  ],
+  "rca_correct/reopened_7d": [
+   "silent_wrong"
+  ],
+  "routed_correct": [
+   "fabricated_policy",
+   "silent_policy"
+  ],
+  "sla_met": [
+   "sla_breach"
+  ]
+ },
+ "legal": {
+  "<none>": [
+   "overt_error",
+   "tool_fault"
+  ],
+  "deadline_met": [
+   "sla_breach"
+  ],
+  "execution_confirmed": [
+   "escalation_refused",
+   "overliteral_constraint",
+   "policy_violation",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_policy",
+   "silent_staleness",
+   "silent_unsupported",
+   "silent_wrong",
+   "skip_propagation"
+  ],
+  "matter_correct": [
+   "condition_miss"
+  ]
+ },
+ "revops": {
+  "<none>": [
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "sla_met": [
+   "sla_breach"
+  ],
+  "write_committed": [
+   "context_truncated",
+   "escalation_refused",
+   "fabricated_policy",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_policy",
+   "silent_staleness",
+   "silent_unsupported",
+   "silent_wrong",
+   "skip_propagation"
+  ]
+ },
+ "stripe_support": {
+  "<none>": [
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "category_correct": [
+   "condition_miss"
+  ],
+  "refund_settled": [
+   "escalation_refused",
+   "fabricated_policy",
+   "ok_but_empty",
+   "policy_violation",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_policy",
+   "silent_staleness",
+   "silent_unsupported",
+   "silent_wrong",
+   "skip_propagation"
+  ]
+ },
+ "support": {
+  "<none>": [
+   "overt_error",
+   "quality_degrade"
+  ],
+  "category_correct": [
+   "condition_miss"
+  ],
+  "handoff_honored": [
+   "escalation_refused"
+  ],
+  "policy_followed": [
+   "fabricated_policy",
+   "policy_violation",
+   "silent_policy"
+  ],
+  "policy_followed/reopened_7d": [
+   "silent_wrong",
+   "skip_propagation"
+  ],
+  "reopened_7d": [
+   "ok_but_empty",
+   "parametric_override",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_staleness",
+   "silent_unsupported"
+  ],
+  "sla_met": [
+   "sla_breach"
+  ]
+ },
+ "teameight": {
+  "<none>": [
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "crm_write_landed": [
+   "fabricated_policy",
+   "policy_violation",
+   "silent_policy"
+  ],
+  "followup_sent": [
+   "agent_paralysis",
+   "correlation_as_cause",
+   "escalation_refused",
+   "ok_but_empty",
+   "reversed_on_appeal",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_staleness",
+   "silent_unsupported",
+   "silent_wrong",
+   "skip_propagation"
+  ],
+  "sent_as_drafted": [
+   "condition_miss"
+  ]
+ },
+ "travel": {
+  "<none>": [
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "itinerary_correct": [
+   "condition_miss"
+  ],
+  "sla_met": [
+   "retry_loop",
+   "sla_breach"
+  ],
+  "ticket_issued": [
+   "agent_paralysis",
+   "context_truncated",
+   "escalation_refused",
+   "ok_but_empty",
+   "policy_violation",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_policy",
+   "silent_staleness",
+   "silent_unsupported",
+   "silent_wrong",
+   "skip_propagation"
+  ]
+ }
+}

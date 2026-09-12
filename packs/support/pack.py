@@ -43,6 +43,12 @@ class SupportPack(BasePack):
             Criterion("c3", "Resolved within SLA", "outcome", "sla_met", "eq", True),
             Criterion("c4", "No reopen within 7 days", "outcome", "reopened_7d", "eq", False),
             Criterion("c5", "Correct category", "both", "category_correct", "eq", True),
+            # ⛔ c1 CANNOT EXPRESS THE MOST-CITED COMPLAINT, WHICH IS WHY c6 EXISTS (#825).
+            # "Resolved without escalation" is the deflection metric the industry games: when the bot
+            # refuses a handoff, no escalation happens, so c1 PASSES. The failure and the success look
+            # identical to it. c6 grades the other direction, whether a handoff the customer asked for
+            # was honoured, and it is the condition `escalation_refused` breaks.
+            Criterion("c6", "Handed off when the customer asked", "outcome", "handoff_honored", "eq", True),
         ]
 
     # No dollar figures for support: the contract's conditions are pass/fail with no monetary value,
@@ -75,6 +81,7 @@ class SupportPack(BasePack):
         than of any one step, so it falls to the reviewer, which is the honest answer."""
         return {
             "escalated":         "resolver",
+            "handoff_honored":   "reviewer",
             "policy_followed":   "resolver",
             "reopened_7d":       "resolver",
             "category_correct":  "classifier",
@@ -95,6 +102,7 @@ class SupportPack(BasePack):
         
             # Conditions with no other lever aimed at them, and the agent that owns each.
             # Without this they pass on every run and cannot be demonstrated.
+            escalation_signal="handoff_honored",   # the condition a refused handoff breaks (#825)
             other_signals={
                 "escalated": "reviewer",
                 "category_correct": "classifier",

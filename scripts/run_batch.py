@@ -12,6 +12,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import time
@@ -22,6 +23,7 @@ from config.workflows import get_workflow
 from engine.desk import Desk, supports_journey
 from engine.emitter import ProvyEmitter
 from engine.groundtruth import GroundTruthLedger
+from engine.levers import LeverConfig
 from engine.llm import LLM
 from engine.reconcile import backfill_server_judge, reconcile_pending
 from engine.runner import BatchRunner, chunk_sizes
@@ -52,6 +54,11 @@ def main() -> int:
                          "works it. Without this the whole batch finishes in seconds and no "
                          "response SLA can breach, which leaves made_sla true on every ticket "
                          "and the SLA condition grading nothing.")
+    ap.add_argument("--levers", default=None, metavar="JSON",
+                    help="lever rates as JSON, or @path to a JSON file. REPLACES the workflow's "
+                         "configured rates rather than merging, so the command states the whole "
+                         "mix and a measurement cannot silently inherit a console setting. Use it "
+                         "when the run has to be reproducible from its own arguments.")
     ap.add_argument("--scoreboard", action="store_true", help="print the scoreboard")
     ap.add_argument("--show", type=int, default=2, help="print N run summaries")
     args = ap.parse_args()
@@ -80,7 +87,17 @@ def main() -> int:
           f"emit={'ON' if emitter.enabled else 'OFF (dry run)'} "
           f"llm={'groq' if not llm.offline else 'offline-stub'}")
 
-    runner = BatchRunner(pack, wf.lever_config(), emitter=emitter, ledger=ledger,
+    if args.levers:
+        raw = args.levers
+        if raw.startswith("@"):
+            raw = open(os.path.expanduser(raw[1:])).read()
+        levers = LeverConfig(json.loads(raw))
+        named = sorted(n for n, s in levers.settings.items() if s.rate > 0)
+        print(f"levers: OVERRIDDEN from --levers ({len(named)} on: {', '.join(named)})")
+    else:
+        levers = wf.lever_config()
+
+    runner = BatchRunner(pack, levers, emitter=emitter, ledger=ledger,
                          llm=llm, seed=args.seed, start_index=args.start_index)
 
     def flush(chunk, final: bool):

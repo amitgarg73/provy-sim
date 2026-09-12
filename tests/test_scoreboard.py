@@ -13,7 +13,7 @@ def _rec(entity, faults, real_signals, outcome, diverged=False):
 def test_aggregate_lever_rates():
     contract = get_pack("support").contract()
     good = {"escalated": False, "policy_followed": True, "sla_met": True,
-            "reopened_7d": False, "category_correct": True}
+            "reopened_7d": False, "category_correct": True, "handoff_honored": True}
     bad = dict(good, reopened_7d=True, policy_followed=False)
     records = []
     # 10 records: 3 have silent_wrong (and diverge/fail), 7 clean
@@ -34,7 +34,7 @@ def test_aggregate_lever_rates():
 def test_attribution_truth_only_for_diverged_silent_faults():
     contract = get_pack("support").contract()
     good = {"escalated": False, "policy_followed": True, "sla_met": True,
-            "reopened_7d": False, "category_correct": True}
+            "reopened_7d": False, "category_correct": True, "handoff_honored": True}
     bad = dict(good, reopened_7d=True)
     records = [
         _rec("E0", [], good, "success"),  # clean -> no truth row
@@ -54,7 +54,7 @@ def test_attribution_truth_only_for_diverged_silent_faults():
 def test_value_at_risk_from_costs():
     contract = get_pack("support").contract()
     good = {"escalated": False, "policy_followed": True, "sla_met": True,
-            "reopened_7d": False, "category_correct": True}
+            "reopened_7d": False, "category_correct": True, "handoff_honored": True}
     bad = dict(good, reopened_7d=True)
     records = [
         _rec("S1", [{"lever": "silent_policy", "agent": "reviewer"}], dict(good, policy_followed=False), "fail", diverged=True),
@@ -75,10 +75,10 @@ def test_value_at_risk_from_costs():
 def test_injected_met_rate_math():
     contract = get_pack("support").contract()
     good = {"escalated": False, "policy_followed": True, "sla_met": True,
-            "reopened_7d": False, "category_correct": True}
+            "reopened_7d": False, "category_correct": True, "handoff_honored": True}
     bad = dict(good, reopened_7d=True, policy_followed=False)
-    # 4 outcome/both conditions are measurable (c1,c2,c3,c4,c5 -> c1..c5 minus none;
-    # c2/c5 both, c1/c3/c4 outcome => 5 measurable). 1 bad record fails 2 of them.
+    # Every condition here is outcome or both, so all of them are measurable. Derived below rather
+    # than written down: this assertion broke when c6 was added because the count was in a comment.
     records = [_rec("A", [], good, "success"), _rec("B", [], bad, "fail")]
     agg = aggregate_injected(records, contract)
     measurable = [c for c in contract if c.side in ("outcome", "both")]
@@ -91,7 +91,7 @@ def test_injected_met_rate_math():
 def test_build_report_pending_without_provy():
     contract = get_pack("support").contract()
     good = {"escalated": False, "policy_followed": True, "sla_met": True,
-            "reopened_7d": False, "category_correct": True}
+            "reopened_7d": False, "category_correct": True, "handoff_honored": True}
     records = [_rec("A", [{"lever": "silent_wrong", "agent": "resolver"}],
                     dict(good, reopened_7d=True), "fail", diverged=True)]
     report = build_report(records, contract)   # no Supabase creds -> detected side None

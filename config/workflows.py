@@ -270,8 +270,44 @@ _ITSM_RATES = {
     "bad_article":   {"rate": 0.07},
 }
 
+# Tier-1 support. ⛔ ITS OWN MIX, NOT _DEFAULT_RATES, FOR TWO REASONS (#825).
+#
+# 1. The evidence-derived levers are at rate 0 in the default set, on purpose, so that dialling them
+#    on cannot move a live fleet's numbers overnight. Support needs them ON: `escalation_refused` is
+#    the single most-cited complaint in consumer AI support and its condition (c6) can never fail
+#    without it, which means the contract shows a promise the fleet can never be seen to break.
+# 2. The default mix runs a ~35% fleet failure rate, tuned to cross demo thresholds within days.
+#    That is not a believable tier-1 desk, and a report built on it reads as fabricated. These rates
+#    are lower and spread across all six conditions rather than piling onto the reopen.
+#
+# ⛔ DO NOT FOLD THESE BACK INTO _DEFAULT_RATES. claims and crm share that dict, and itsm is a LIVE
+# demo fleet with its own; changing the shared default moves all of them at once.
+_SUPPORT_RATES = {
+    **_DEFAULT_RATES,
+    "silent_wrong":              {"rate": 0.035},
+    "silent_staleness":          {"rate": 0.015},
+    "silent_unsupported":        {"rate": 0.012},
+    "silent_incomplete":         {"rate": 0.010},
+    "silent_policy":             {"rate": 0.012},
+    "silent_missed_action":      {"rate": 0.010},
+    # ⛔ THE ONLY LEVER AIMED AT c5, AND IT SPLITS ACROSS other_signals, so it needs enough share to
+    # reach each one. At 0.015 category_correct never failed in 500 runs and the guard caught it.
+    "condition_miss":            {"rate": 0.035},
+    "policy_violation":          {"rate": 0.012},
+    "sla_breach":                {"rate": 0.022},
+    "overt_error":               {"rate": 0.010},
+    "skip_propagation":          {"rate": 0.006},
+    "quality_degrade":           {"rate": 0.020},
+    # The evidence levers, each aimed at the condition its mechanism actually breaks.
+    "escalation_refused":        {"rate": 0.030},
+    "fabricated_policy":         {"rate": 0.022},
+    "ok_but_empty":              {"rate": 0.018},
+    "reversed_on_appeal":        {"rate": 0.014},
+    "retry_loop":                {"rate": 0.012},
+}
+
 WORKFLOWS = {
-    "support": WorkflowConfig("support", "PROVY_KEY_SUPPORT", dict(_DEFAULT_RATES)),
+    "support": WorkflowConfig("support", "PROVY_KEY_SUPPORT", dict(_SUPPORT_RATES)),
     "stripe_support": WorkflowConfig("stripe_support", "PROVY_KEY_STRIPE_SUPPORT", dict(_STRIPE_RATES)),
     "claims":  WorkflowConfig("claims",  "PROVY_KEY_CLAIMS",  dict(_DEFAULT_RATES)),
     "crm":     WorkflowConfig("crm",     "PROVY_KEY_CRM",     dict(_DEFAULT_RATES)),

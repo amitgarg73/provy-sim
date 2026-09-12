@@ -156,6 +156,12 @@ class LeverManifest:
     # across five packs had a 0% failure rate, so a demo could show the contract but never show it
     # being broken. Attribution needs the owning agent, so this is a map and not a list.
     other_signals: dict = field(default_factory=dict)
+    # ⛔ THE CONDITION A MECHANISM ACTUALLY BREAKS (#825). Every evidence lever used to corrupt
+    # `correctness_signal`, so eight different mechanisms failed one condition and a contract could
+    # not tell them apart. A lever now asks for the ROLE it breaks and the pack maps that role to its
+    # own signal. Unset means the pack cannot express that failure, and the lever falls back to
+    # correctness rather than silently injecting nothing.
+    escalation_signal: Optional[str] = None   # fails when a needed handoff never happened
     drift_agent: Optional[str] = None            # defaults to resolver_agent when None
     policy_agent: Optional[str] = None           # agent that owns policy_signal; defaults to resolver_agent
 
