@@ -12,6 +12,7 @@ rather than a per-run rate.
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 
 from engine.levers import LeverConfig
@@ -322,7 +323,27 @@ WORKFLOWS = {
 }
 
 
+# ⛔ RETIRED 16 Sep 2026: STILL RUNNABLE, NO LONGER OFFERED.
+#
+# Both were built for a named prospect and neither is in the demo-video domain set (Support, Refund,
+# Travel, Claims, Legal). They stay in WORKFLOWS on purpose: a fleet already provisioned on one of
+# them still has rows in Provy and a schedule in sim-control, and refusing to run it would not retire
+# the pack, it would strand the fleet. Retirement means "not offered for a new fleet", which is
+# enforced in the console's PACK_LIST. Here it is a warning, so a scheduled run says what it is.
+#
+# ⛔ AND teameight TAKES A CAPABILITY WITH IT: `draft_rewritten` is the only lever anywhere that
+# models a human silently redoing the agent's work, so `human_rework` now has no live mechanism.
+# Mirrored in provy-sim-control/lib/packs.ts, and the two must not disagree.
+RETIRED_WORKFLOWS = frozenset({"edwin", "teameight"})
+
+
 def get_workflow(name: str) -> WorkflowConfig:
     if name not in WORKFLOWS:
         raise KeyError(f"unknown workflow '{name}'. Known: {', '.join(WORKFLOWS)}")
+    if name in RETIRED_WORKFLOWS:
+        print(
+            f"warning: pack '{name}' is retired. It still runs for fleets already on it, "
+            f"and is not offered for new ones.",
+            file=sys.stderr,
+        )
     return WORKFLOWS[name]
