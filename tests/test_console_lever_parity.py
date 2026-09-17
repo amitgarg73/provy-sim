@@ -16,6 +16,7 @@ The contract has this guard already (test_console_contract_parity.py). Levers di
 Skipped rather than failed when the console repo is not checked out beside this one.
 """
 import os
+import subprocess
 import re
 
 import pytest
@@ -48,6 +49,45 @@ def _names_read_by(pack: str) -> set:
                         "packs", pack, "pack.py")
     read = set(_RATE_CALL.findall(open(path).read())) if os.path.exists(path) else set()
     return read | set(WORKFLOWS[pack].lever_rates) if pack in WORKFLOWS else read
+
+
+def _console_reachable_on(pack: str) -> set:
+    """The levers `defaultLeverConfig(pack)` actually returns, via the console's own TypeScript.
+
+    ⛔ PARSING THE TS WOULD BE A FOURTH COPY OF THE RULES. `defaultLeverConfig` branches on itsm, on
+    the commitment-integrity packs and on support, and reimplementing that branching here to check it
+    is the bug this test exists to catch, written twice. So the console answers for itself.
+    """
+    out = subprocess.run(
+        ["npx", "tsx", "-e",
+         "import{defaultLeverConfig}from'./lib/levers';"
+         f"console.log(Object.keys(defaultLeverConfig('{pack}')).join(' '))"],
+        cwd=CONSOLE, capture_output=True, text=True, timeout=180,
+    )
+    if out.returncode != 0:
+        pytest.skip(f"could not run the console's own lever config: {out.stderr[-200:]}")
+    return set(out.stdout.split())
+
+
+@pytest.mark.parametrize("pack", sorted(PACKS))
+def test_every_lever_a_pack_reads_is_reachable_on_that_pack(pack):
+    """⛔ DECLARED IS NOT REACHABLE, AND THE OLD TEST ONLY CHECKED DECLARED.
+
+    `LEVER_NAMES` is the console's vocabulary; `defaultLeverConfig(pack)` is what the lever editor
+    renders, what `packCapabilities` reads, and what decides whether a scenario or journey aimed at a
+    lever is offered or refused. A name can sit in the vocabulary and be reachable on nothing.
+
+    It did. All five of support's evidence levers — escalation_refused, fabricated_policy,
+    ok_but_empty, reversed_on_appeal, retry_loop — were in LEVER_NAMES, so the test below passed,
+    while support's own block never listed them. The pack has read them the whole time; the console
+    could not dial one, and a scenario aimed at one was refused as "this pack has no mechanism for
+    it" when it has had one all along.
+    """
+    missing = sorted(_names_read_by(pack) - _console_reachable_on(pack))
+    assert not missing, (
+        f"{pack} reads levers the console cannot reach on {pack}, so they cannot be dialled there "
+        f"and any scenario or journey aimed at them is refused: {missing}"
+    )
 
 
 @pytest.mark.parametrize("pack", sorted(PACKS))
