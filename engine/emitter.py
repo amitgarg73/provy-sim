@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -26,6 +27,16 @@ from typing import Any, Optional
 from .types import RunResult
 
 from engine.targets import is_production_target
+
+
+def _agent_base(agent: str) -> str:
+    """`research_GILD` -> `research`.
+
+    Mirrors `agentBase()` in the product. Fan-out per work item is the SAME logical step, so the
+    per-entity children must not each be treated as a separate pipeline stage: that is exactly what
+    made production's 729 `research -> research_<TICKER>` edges look cross-agent when they were not.
+    """
+    return agent.split("_", 1)[0] if "_" in agent else agent
 
 
 class ProductionTargetRefused(RuntimeError):
@@ -89,6 +100,14 @@ class ProvyEmitter:
                 f"Point PROVY_URL at {DEFAULT_BASE_URL}, or set PROVY_ALLOW_PROD=1 if you truly mean it."
             )
         self._env_verified = False
+        # ⛔ SPAN IDENTITY AND INPUT EDGES, PER SESSION (argus#1009). The emitter sent no span_id at
+        # all, so every simulated span was undedupable AND the fleet could express no relationship
+        # between steps. Measured before this: 5,731 pre-prod spans, zero edges between two agents —
+        # the simulator could not produce the very shape the product's victim attribution needs.
+        #
+        # Keyed by session so a long run cannot leak one session's spans into the next one's inputs.
+        self._last_span: dict[str, dict[str, str]] = {}   # session_id -> agent -> newest span id
+        self._agent_order: dict[str, list[str]] = {}      # session_id -> agents in first-seen order
         self.is_simulated = is_simulated
         self.capture = capture
         self.sent: list[dict] = []       # {path, method, payload} for every call built
@@ -167,12 +186,37 @@ class ProvyEmitter:
         })
 
     def trace(self, result: RunResult, step) -> dict:
+        span_id = uuid.uuid4().hex[:16]
         payload: dict[str, Any] = {
             "session_id": result.session_id,
             "agent": step.agent,
             "step_type": step.step_type,
             "outcome": step.outcome,
+            "span_id": span_id,
         }
+
+        # ⛔ THE INPUT EDGE IS CLAIMED ONLY WHERE THE SIMULATOR ACTUALLY KNOWS IT.
+        #
+        # Every pack here is a linear pipeline — intake feeds validator feeds adjudicator feeds
+        # reviewer — declared by the pack itself, so "this step read the previous agent's output" is
+        # a fact about the simulation, not a guess from wall-clock order. That distinction is the
+        # whole point of the field: Provy has twice had to remove logic that inferred involvement
+        # from position, and a simulator that fakes the edge would train the attribution code on a
+        # relationship no real fleet reports.
+        #
+        # The FIRST agent in a session declares nothing rather than [], because "nothing upstream
+        # exists yet" is not the same claim as "I read nothing".
+        order = self._agent_order.setdefault(result.session_id, [])
+        base = _agent_base(step.agent)
+        if base not in order:
+            order.append(base)
+        seen = self._last_span.setdefault(result.session_id, {})
+        idx = order.index(base)
+        if idx > 0:
+            upstream = seen.get(order[idx - 1])
+            if upstream:
+                payload["input_span_ids"] = [upstream]
+        seen[base] = span_id
         if step.tool_name is not None:      payload["tool_name"] = step.tool_name
         if step.latency_ms:                 payload["latency_ms"] = step.latency_ms
         if step.tokens_input:               payload["tokens_input"] = step.tokens_input
