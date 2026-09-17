@@ -186,6 +186,16 @@ _CLAUDE_CODE_RATES = {
     **_L1L2_RATES,
 }
 
+_IAM_RATES = {
+    # The five ways an access change is accepted and still does not mean what it says.
+    "credential_still_live":  {"rate": 0.07},   # the headline: disabled, and a token still works
+    "session_not_terminated": {"rate": 0.04},
+    "group_left_behind":      {"rate": 0.035},
+    "wrong_principal":        {"rate": 0.02},
+    "reprovisioned_by_sync":  {"rate": 0.015},
+    **_MIXED_GENERIC,
+}
+
 _CLAIMS_PAYOUT_RATES = {
     "not_disbursed":     {"rate": 0.06},
     "prompt_pay_lapsed": {"rate": 0.03},
@@ -315,6 +325,7 @@ WORKFLOWS = {
     "travel":  WorkflowConfig("travel",  "PROVY_KEY_TRAVEL",  dict(_TRAVEL_RATES)),
     "revops":  WorkflowConfig("revops",  "PROVY_KEY_REVOPS",  dict(_REVOPS_RATES)),
     "claims_payout": WorkflowConfig("claims_payout", "PROVY_KEY_CLAIMS_PAYOUT", dict(_CLAIMS_PAYOUT_RATES)),
+    "iam":     WorkflowConfig("iam",     "PROVY_KEY_IAM",     dict(_IAM_RATES)),
     "legal":   WorkflowConfig("legal",   "PROVY_KEY_LEGAL",   dict(_LEGAL_RATES)),
     "edwin":   WorkflowConfig("edwin",   "PROVY_KEY_EDWIN",   dict(_EDWIN_RATES)),
     "itsm":    WorkflowConfig("itsm",    "PROVY_KEY_ITSM",    dict(_ITSM_RATES)),

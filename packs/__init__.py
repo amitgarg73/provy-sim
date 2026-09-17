@@ -6,6 +6,7 @@ from .crm.pack import CRMPack
 from .travel.pack import TravelPack
 from .revops.pack import RevOpsPack
 from .claims_payout.pack import ClaimsPayoutPack
+from .iam.pack import IamPack
 from .legal.pack import LegalPack
 from .itsm.pack import ItsmPack
 from .edwin.pack import EdwinPack
@@ -20,6 +21,7 @@ PACKS = {
     "travel": TravelPack,
     "revops": RevOpsPack,
     "claims_payout": ClaimsPayoutPack,
+    "iam": IamPack,
     "legal": LegalPack,
     "edwin": EdwinPack,
     "teameight": TeameightPack,

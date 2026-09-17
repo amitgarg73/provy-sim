@@ -135,6 +135,32 @@
    "sla_breach"
   ]
  },
+ "iam": {
+  "<none>": [
+   "overt_error",
+   "quality_degrade",
+   "tool_fault"
+  ],
+  "access_change_effective": [
+   "escalation_refused",
+   "overliteral_constraint",
+   "reversed_on_appeal",
+   "silent_incomplete",
+   "silent_missed_action",
+   "silent_staleness",
+   "silent_unsupported",
+   "silent_wrong",
+   "skip_propagation"
+  ],
+  "entitlements_correct": [
+   "fabricated_policy",
+   "policy_violation",
+   "silent_policy"
+  ],
+  "sla_met": [
+   "retry_loop"
+  ]
+ },
  "legal": {
   "<none>": [
    "overt_error",
