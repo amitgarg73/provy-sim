@@ -389,6 +389,28 @@ SCENARIOS: dict[str, Scenario] = {
         measured_on="2026-09-19",
     ),
 
+    "same_call_over_and_over": Scenario(
+        key="same_call_over_and_over", journey="itsm_incident", step="s3",
+        lever="retry_loop",
+        mechanism="The same call fires repeatedly on identical input with no recognition of the "
+                  "repetition, burning budget and time.",
+        evidence=Source("Same call fires repeatedly on identical input; no recognition of "
+                        "repetition, token budget burns",
+                        "Openlayer production failure taxonomy",
+                        "docs/failure-research/00-evidence.md", "2026-08 (Aug research pass)",
+                        "vendor"),
+        expected="Cost and token overlays should fire. Step-similarity is not measured.",
+        expect_surfaces=("incident",),
+        measured="⭐ THE FIRST SCENARIO MEASURED THAT REACHES INCIDENTS, AND IT REACHES NOTHING ELSE. "
+                 "n=20 on teameight: 20 incidents opened, and zero attributions of any kind, at any "
+                 "confidence. It trips TOOL_RETRY_THRESHOLD=3 in the patterns engine, which is a "
+                 "structural shape in the traces rather than a reconciliation result. Compare "
+                 "tool_returns_200_and_nothing, which produced 20 attributions and zero incidents. "
+                 "Two mechanisms, two entirely separate halves of the product, and neither would "
+                 "have been visible if the harness only watched one surface.",
+        measured_on="2026-09-19",
+    ),
+
     "approval_that_never_happened": Scenario(
         key="approval_that_never_happened", journey="identity_access", step="s3",
         lever=None,
