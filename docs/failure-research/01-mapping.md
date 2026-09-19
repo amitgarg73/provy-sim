@@ -91,7 +91,28 @@ and the summary says so rather than dressing a vendor guide up as evidence.
 | Same call fires repeatedly on identical input | No recognition of repetition; token budget burns | `retry_loop` | Cost and token overlays should fire. Step-similarity is not measured |
 | Contradictory signals, so the agent does nothing. No call, no output, **no error** | Absence is the only signal | `agent_paralysis` | **Nothing to find.** Anything reading spans for a defect sees a short, clean, cheap run |
 | Long run pushes an earlier constraint out of context | The agent contradicts a fact it established itself, in the same run | `context_truncated` | The contradiction is in the trace and nothing reads across steps |
-| Tool-calling fails **3–15%** of the time in production | Malformed arguments, wrong types, missing fields | *not built* | See open items |
+| ~~Tool-calling fails **3–15%** of the time in production~~ **SEE CORRECTION BELOW** | Malformed arguments, wrong types, missing fields | *not built* | See open items |
+
+⛔ **CORRECTION, 18 Sep 2026: "3–15% of production tool calls" HAS NO PRIMARY SOURCE.** A second
+research pass went looking for it and could not find one for any vendor or workload
+(`provy_agentic_user_journeys_research_2026-09-18.md`, Gap 2). It is the third unsourced statistic
+this workstream has produced, after the two recorded as dead in `00-evidence.md`, and this one made
+it into the mapping table rather than being caught.
+
+**What is actually supported**, and it is better evidence because it is linkable and specific:
+
+- **33 of 267** Anthropic `tool_use` blocks carried a completely empty `input: {}` while declaring
+  required parameters. **12.4%**, measured at the provider boundary through a transparent proxy.
+  One practitioner, one n8n setup, September 2026. Not a general rate, and must never be quoted as
+  one. https://github.com/n8n-io/n8n/issues/37916
+- ⭐ **And a fail-open path worth a lever of its own.** Malformed tool-call JSON is swallowed and
+  replaced with `{}` before an approval predicate runs, so a content-based approval check evaluates
+  an empty object, returns false, and **the run proceeds without the human approval it was supposed
+  to require**. https://github.com/openai/openai-agents-python/issues/3863 (2026-07-17)
+
+That second one is the strongest new scenario in the research: a governance control that did not
+fire, leaving no error and no defect anywhere in the run. Nothing at run time can see it, which is
+the shape Provy exists for.
 
 ---
 

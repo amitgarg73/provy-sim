@@ -18,6 +18,9 @@ from typing import Optional
 
 from .contract import Criterion, meets, signal_index
 
+# Sentinel for "no window was given": earlier than any row this system can hold.
+_ALL_TIME = "1970-01-01T00:00:00+00:00"
+
 # The silent family: levers that leave the estimate green and diverge only on reality.
 # Their culprit truth is what the console scores Provy's attribution against. The
 # commitment_* faults are the mock-SoR settlement failures (support_ci): the agent
@@ -107,50 +110,158 @@ def aggregate_injected(records: list[dict], contract: list[Criterion], costs: di
 # ── Provy side (read-only) ───────────────────────────────────────────────────
 
 class ProvyQuery:
-    """Reads Provy's outputs to score detection. Uses Supabase (service key) if
-    present; otherwise every method returns a stub with a TODO so the harness
-    still runs. Reconciliation/divergence keys on entity_id; trust reads the
-    fleet's contract met-rate."""
+    """Reads Provy's own conclusions so the harness can score detection.
 
-    def __init__(self, tenant_id: str | None = None, workflow_id: str | None = None):
+    ⛔ THIS COMPARES INJECTED TRUTH TO PROVY'S CONCLUSION. IT NEVER RE-DERIVES A CONCLUSION FROM THE
+    TRACES. That rule is written here because breaking it produced a false finding on 19 Sep 2026: a
+    query asked `ag_traces.payload->'tool_output' IS NULL` and read the answer as "no output was
+    reported", when in fact every span had been offloaded to R2 and the whole `payload` column was
+    null. Provy had read the hydrated body, seen `{"changes":[]}`, and been right. The harness had
+    read a stripped proxy and been wrong.
+
+    So: read what Provy WROTE (`ag_outcome_ledger`, `ag_tool_attributions`, `ag_incidents`,
+    `ag_outcome_criterion_results`). Those rows are Provy's answer. `ag_traces` is its input, is
+    lossy at rest, and is not the harness's business.
+
+    ⛔ AND EVERY ATTRIBUTION CARRIES A CONFIDENCE. Scoring `method` alone reports a fleet as
+    confidently wrong when `applyBaseRateDiscipline` has already qualified the lead down to `low`.
+    Counting a low-confidence candidate as a confident accusation is the same defect Provy sells
+    against, committed by its own test harness.
+    """
+
+    def __init__(self, tenant_id: str | None = None, workflow_id: str | None = None,
+                 since: str | None = None):
         self.tenant_id = tenant_id or os.environ.get("PROVY_TENANT_ID", "")
         self.workflow_id = workflow_id or os.environ.get("PROVY_WORKFLOW_ID", "")
+        # ⛔ A WINDOW IS NOT OPTIONAL ON A FLEET WITH HISTORY. Without it the score mixes this run
+        # with every earlier one and the number quietly describes neither.
+        #
+        # ⛔ AND THE DEFAULT MUST NOT BE "NOW". The first draft of this line defaulted to the current
+        # time, which scores a window containing nothing and reports zeros as if they were findings.
+        # An absent window means all time, and the report says so out loud rather than implying a
+        # run-scoped number it did not compute.
+        self.since = since or os.environ.get("PROVY_SCORE_SINCE") or _ALL_TIME
+        self.windowed = self.since != _ALL_TIME
+        self.error: str | None = None
         self._db = self._connect()
 
     def _connect(self):
-        url = os.environ.get("SUPABASE_URL", "")
-        key = os.environ.get("SUPABASE_KEY", "")
-        if not (url and key):
+        """Postgres directly, the way scripts/fleet_doctor.py does.
+
+        ⛔ A MISSING DEPENDENCY AND A MISSING CREDENTIAL MUST NOT PRINT THE SAME SENTENCE. The old
+        version imported inside a bare `except Exception`, so an uninstalled driver reported as
+        "no credentials" and the fix people reached for was never the one they needed.
+        """
+        url = os.environ.get("PROVY_DB_URL") or os.environ.get("CERTIFY_DB_URL", "")
+        if not url:
+            self.error = ("set PROVY_DB_URL to the PRE-PROD connection string "
+                          "(the project ref is fpuyabfxtrzwciehfetk)")
             return None
         try:
-            from supabase import create_client  # optional dep
-            return create_client(url, key)
-        except Exception:
+            import psycopg2  # noqa: F401
+        except ImportError:
+            self.error = "psycopg2 is not installed: .venv/bin/pip install psycopg2-binary"
+            return None
+        try:
+            import psycopg2
+            return psycopg2.connect(url)
+        except Exception as e:                                    # noqa: BLE001
+            self.error = f"could not connect to the Provy database: {e}"
             return None
 
     @property
     def available(self) -> bool:
-        return self._db is not None and bool(self.tenant_id)
+        return self._db is not None and bool(self.workflow_id)
+
+    def _rows(self, sql: str, args: tuple):
+        with self._db.cursor() as cur:
+            cur.execute(sql, args)
+            return cur.fetchall()
 
     def contract_met_rate(self) -> Optional[float]:
-        # TODO: read the fleet met-rate Provy computes (lib/outcome-evaluator +
-        # the unified reconciliation number). Requires Supabase creds + workflow_id.
+        """Conditions Provy graded as met, over conditions it could measure, in the window."""
         if not self.available:
             return None
-        return None  # TODO: query ag_session_outcomes / rollup once creds exist
+        rows = self._rows(
+            """select count(*) filter (where cr.measurable and cr.passed),
+                      count(*) filter (where cr.measurable)
+                 from ag_outcome_criterion_results cr
+                 join ag_outcome_evaluations e on e.id = cr.evaluation_id
+                 join ag_sessions s on s.id = e.session_id
+                where s.workflow_id = %s and cr.created_at >= %s""",
+            (self.workflow_id, self.since))
+        met, measurable = rows[0] if rows else (0, 0)
+        return round(met / measurable, 4) if measurable else None
 
     def reconciled_divergence_rate(self) -> Optional[float]:
-        # TODO: fraction of reconciled outcomes Provy flagged as diverged
-        # (ledger: predicted success, real fail), keyed on entity_id.
+        """Diverged over settled, keyed the way §6 of the attribution doc insists: by work item."""
         if not self.available:
             return None
-        return None
+        rows = self._rows(
+            """select count(distinct entity_id) filter (where reconciliation = 'diverged'),
+                      count(distinct entity_id) filter (where reconciliation in ('diverged','matched'))
+                 from ag_outcome_ledger
+                where workflow_id = %s and created_at >= %s""",
+            (self.workflow_id, self.since))
+        diverged, settled = rows[0] if rows else (0, 0)
+        return round(diverged / settled, 4) if settled else None
 
     def incident_count(self) -> Optional[int]:
-        # TODO: count ag_incidents for the workflow in the run window.
         if not self.available:
             return None
-        return None
+        rows = self._rows(
+            "select count(*) from ag_incidents where workflow_id = %s and created_at >= %s",
+            (self.workflow_id, self.since))
+        return rows[0][0] if rows else None
+
+    def attribution_mix(self) -> Optional[dict]:
+        """What Provy concluded about cause, split by confidence.
+
+        The split is the point. "Provy named a tool" and "Provy offered a low-confidence candidate
+        it had already flagged as unsupported" are different claims, and only one of them is a
+        problem worth reporting.
+        """
+        if not self.available:
+            return None
+        rows = self._rows(
+            """select a.method, a.confidence,
+                      a.evidence->>'base_rate_verdict', count(*)
+                 from ag_tool_attributions a
+                 join ag_sessions s on s.id = a.session_id
+                where s.workflow_id = %s and a.created_at >= %s
+                group by 1,2,3""",
+            (self.workflow_id, self.since))
+        out: dict = {"by_method": {}, "named_with_confidence": 0, "named_low_only": 0,
+                     "refused": 0}
+        for method, confidence, verdict, n in rows:
+            key = f"{method}/{confidence}"
+            out["by_method"][key] = {"n": n, "base_rate_verdict": verdict}
+            if method == "undetermined":
+                out["refused"] += n
+            elif confidence in ("high", "medium"):
+                out["named_with_confidence"] += n
+            else:
+                out["named_low_only"] += n
+        return out
+
+    def silent_checks(self) -> Optional[list]:
+        """Checks that are enabled and have produced nothing, ever (#1027).
+
+        Not windowed on purpose: "has never graded anything" is a claim about the check's whole
+        life, and a window would make a dormant check look merely quiet.
+        """
+        if not self.available:
+            return None
+        rows = self._rows(
+            """select c.layer, c.eval_name
+                 from ag_eval_configs c
+                where c.workflow_id = %s and c.enabled
+                  and not exists (select 1 from ag_evals e
+                                   where e.workflow_id = c.workflow_id
+                                     and e.eval_name = c.eval_name)
+                group by 1,2 order by 1,2""",
+            (self.workflow_id,))
+        return [{"layer": r[0], "eval_name": r[1]} for r in rows]
 
 
 # ── The report ───────────────────────────────────────────────────────────────
@@ -162,9 +273,13 @@ def build_report(records: list[dict], contract: list[Criterion],
 
     detected = {
         "provy_available": provy.available,
+        "why_unavailable": provy.error,
+        "window_since": provy.since,
         "contract_met_rate": provy.contract_met_rate(),
         "reconciled_divergence_rate": provy.reconciled_divergence_rate(),
         "incident_count": provy.incident_count(),
+        "attribution_mix": provy.attribution_mix(),
+        "silent_checks": provy.silent_checks(),
     }
 
     # Feature-proof rows (the §7 checklist). Injected side is real; detected side
@@ -214,7 +329,39 @@ def format_report(report: dict, workflow: str) -> str:
     for r in report["rows"]:
         lines.append(f"  [{r['status']:<7}] {r['feature']:<40} "
                      f"injected={r['injected']} detected={r['detected']} {r['note']}")
-    if not report["detected"]["provy_available"]:
-        lines.append("\nTODO: set SUPABASE_URL/SUPABASE_KEY + PROVY_TENANT_ID/PROVY_WORKFLOW_ID "
-                     "to score the detected side.")
+    det = report["detected"]
+    if not det["provy_available"]:
+        lines.append("\n⛔ The detected side did not run, so every row above is the injected side "
+                     "talking to itself.")
+        lines.append(f"   reason: {det.get('why_unavailable') or 'PROVY_WORKFLOW_ID is not set'}")
+        return "\n".join(lines)
+
+    if det.get("window_since") == _ALL_TIME:
+        lines.append("\n⚠ scored against ALL of this fleet's history, not just this run.\n"
+                     "   Set PROVY_SCORE_SINCE to the batch start time to scope it.")
+    else:
+        lines.append(f"\nscored against Provy since {det['window_since']}")
+
+    mix = det.get("attribution_mix")
+    if mix:
+        lines.append("what Provy concluded about cause:")
+        lines.append(f"  named with high/medium confidence : {mix['named_with_confidence']}")
+        lines.append(f"  offered only as low confidence    : {mix['named_low_only']}")
+        lines.append(f"  refused to name one               : {mix['refused']}")
+        for key, d in sorted(mix["by_method"].items()):
+            verdict = d["base_rate_verdict"] or "no base rate recorded"
+            lines.append(f"    {key:<30} n={d['n']:<4} {verdict}")
+        # ⛔ The only line here that is evidence of a problem. Everything above is description.
+        if mix["named_with_confidence"] == 0 and mix["named_low_only"]:
+            lines.append("  ⚠ every cause this run was low confidence: Provy committed to nothing")
+
+    silent = det.get("silent_checks")
+    if silent:
+        lines.append(f"⛔ {len(silent)} enabled check(s) on this fleet have NEVER produced a result "
+                     f"(#1027). An unfired check is not a passing one:")
+        for c in silent:
+            lines.append(f"    L{c['layer']}  {c['eval_name']}")
+    elif silent == []:
+        lines.append("every enabled check on this fleet has produced at least one result")
+
     return "\n".join(lines)
