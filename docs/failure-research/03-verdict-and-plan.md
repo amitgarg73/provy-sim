@@ -218,30 +218,28 @@ before the isolated measurements exist means tuning numbers whose meaning is unk
 
 ---
 
-## Added 19 Sep 2026: configured rate is not effective rate, and nobody knows the ratio
+## Added 19 Sep 2026: the scoreboard was dividing by the wrong denominator
 
-Running `edwin` with exactly two levers, each configured at **0.5**, and nothing else enabled:
+⛔ **AN EARLIER VERSION OF THIS SECTION CLAIMED CONFIGURED RATES DELIVER SIX TIMES LOWER THAN THEY
+READ, FROM AN UNTRACED GATE. That was wrong, and the cause was mine.**
 
-| lever | configured | actually fired |
-|---|---:|---:|
-| `change_blind` | 0.50 | **0.069** (4 of 58) |
-| `correlation_split` | 0.50 | **0.086** (5 of 58) |
+Running `edwin` with `change_blind` at 0.5 reported `rate=0.069 n=4`, and I read the 0.069 as
+evidence of a hidden gate. The denominator was the problem: `ledger.read(workflow=pack)` returns the
+pack's entire accumulated ground truth, so 4 fires from a 14-run batch were divided by 58 rows of
+history. The real rate was 4 of 14.
 
-Together they claimed 15.5% of runs against a configured 100%. ⛔ **Phase-A exclusivity does not
-explain this**, because no other lever was enabled to starve them. Something else gates the pack
-injector and it has not been traced.
+Fixed in `scripts/run_batch.py`: the scoreboard now scopes to the rows this batch appended, and says so. Re-measured on a clean 20-run batch, `change_blind` at a configured 0.5 reads **0.4**, which is
+what it should.
 
-**Why it matters more than it looks.** Every rate in `config/workflows.py` is written as though it
-were the frequency a mechanism occurs. If the delivered rate is six or seven times lower, then
-`change_blind` at its configured 0.22 fires on roughly 3% of runs, and `reprovisioned_by_sync` at
-0.015 fires on roughly two runs in a thousand. That is the arithmetic behind the reachability
-result: three fleets had conditions that had never once failed, and in every case the mechanism
-existed and was configured.
+**What is actually true about rates, and it is smaller but real.** Some levers carry a semantic
+precondition on the work item as well as a rate. `change_blind` is gated on `gt["change_caused"]`,
+true for 4 of 8 fault types, because you cannot be blind to a change on an incident no change
+caused. That is correct design, not a defect, and it does mean a configured rate is an upper bound on a
+subset rather than a frequency.
 
-⛔ **So the rates in that file cannot be reasoned about until the ratio is measured.** Phase 4 of
-the plan above says rates come last. This is why: setting a mix today means choosing numbers whose
-delivered meaning is unknown, and the only honest way to pick one is to run a lever alone at 1.0,
-observe what fraction actually fires, and calibrate from that.
+**And the reachability arithmetic never needed a mystery multiplier.** `reprovisioned_by_sync` at
+0.015 across 52 sessions is 0.78 expected hits. That alone explains a condition that passed 52 times
+and failed none. The conclusion below stands; only my explanation of it was inflated.
 
 **The reachability sweep that produced this**, after exercising each gap:
 

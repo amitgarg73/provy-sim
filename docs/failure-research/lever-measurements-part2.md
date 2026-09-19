@@ -24,3 +24,65 @@ method / confidence breakdown:
 |---|---|---|
 | `undetermined/low` | 16 | none recorded |
 
+## `escalation_refused` on `teameight` (n=16, seed=4337)
+
+| measure | value |
+|---|---|
+| contract met-rate (Provy) | 0.8763 |
+| divergence rate, by work item | 1.0 |
+| incidents opened | 0 |
+| **cause named, high/medium confidence** | **0** |
+| cause offered, low confidence only | 0 |
+| refused to name a cause | 16 |
+
+method / confidence breakdown:
+
+| method / confidence | n | base-rate verdict |
+|---|---|---|
+| `undetermined/low` | 16 | none recorded |
+
+## `fabricated_policy` on `teameight` (n=16, seed=4474)
+
+| measure | value |
+|---|---|
+| contract met-rate (Provy) | 0.8763 |
+| divergence rate, by work item | 1.0 |
+| incidents opened | 0 |
+| **cause named, high/medium confidence** | **0** |
+| cause offered, low confidence only | 16 |
+| refused to name a cause | 0 |
+
+method / confidence breakdown:
+
+| method / confidence | n | base-rate verdict |
+|---|---|---|
+| `empty_output/low` | 16 | uninformative |
+
+## `overliteral_constraint` on `claude_code` (n=16, seed=4611)
+
+| measure | value |
+|---|---|
+| contract met-rate (Provy) | 0.8333 |
+| divergence rate, by work item | 1.0 |
+| incidents opened | 0 |
+| **cause named, high/medium confidence** | **0** |
+| cause offered, low confidence only | 0 |
+| refused to name a cause | 16 |
+
+method / confidence breakdown:
+
+| method / confidence | n | base-rate verdict |
+|---|---|---|
+| `undetermined/low` | 16 | none recorded |
+
+## `reversed_on_appeal` on `edwin` (n=16, seed=4748)
+
+| measure | value |
+|---|---|
+| contract met-rate (Provy) | 0.693 |
+| divergence rate, by work item | None |
+| incidents opened | 0 |
+| **cause named, high/medium confidence** | **0** |
+| cause offered, low confidence only | 0 |
+| refused to name a cause | 0 |
+

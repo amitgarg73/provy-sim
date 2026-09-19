@@ -97,6 +97,15 @@ def main() -> int:
     else:
         levers = wf.lever_config()
 
+    # ⛔ HOW MANY GROUND-TRUTH ROWS EXISTED BEFORE THIS BATCH, SO THE SCOREBOARD CAN SCORE THIS
+    # BATCH. The ledger is append-only per pack and `ledger.read` returns the pack's whole life, so
+    # scoring it describes every run ever made rather than the one just finished. Measured 19 Sep
+    # 2026: a 14-run edwin batch reported `change_blind rate=0.069 n=4`, because 4 fires were divided
+    # by 58 accumulated rows. The real rate was 4 of 14, which matches the lever's configured 0.5
+    # halved by its `change_caused` precondition. I read the 0.069 as evidence of an untraced gate
+    # and wrote it up before checking the denominator.
+    ledger_rows_before = len(ledger.read(workflow=args.pack))
+
     runner = BatchRunner(pack, levers, emitter=emitter, ledger=ledger,
                          llm=llm, seed=args.seed, start_index=args.start_index)
 
@@ -232,7 +241,14 @@ def main() -> int:
 
     # Post the injected-truth summary to the console (best-effort, offline-safe) so its scoreboard
     # has the injected side: lever rates, per-entity attribution truth, and value at risk.
-    records = ledger.read(workflow=args.pack)
+    all_records = ledger.read(workflow=args.pack)
+    records = all_records[ledger_rows_before:]
+    if not records:                      # nothing new, so scoring history is better than scoring nothing
+        records = all_records
+        print(f"⚠ this batch appended no ground-truth rows; scoring the pack's full history "
+              f"({len(all_records)} rows) instead.")
+    elif len(all_records) != len(records):
+        print(f"scoreboard scopes to this batch: {len(records)} of {len(all_records)} ledger rows")
     injected = aggregate_injected(records, pack.contract(), pack.failure_cost())
     print(f"post injected → console: {post_injected(args.pack, injected)}")
 
