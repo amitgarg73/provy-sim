@@ -127,9 +127,36 @@ def main() -> int:
         if not j.pack:
             print(f"⛔ `{j.key}` has no pack, so nothing can run it."); return 2
         show_journey(j)
-        print(f"\n{DIM}running the pack's configured mix, not one lever. These numbers belong to the "
-              f"journey and cannot be attributed to a single mechanism.{RESET}\n")
-        return run_batch(j.pack, None, a.count, a.seed)
+
+        # ⛔ A JOURNEY FIRES ITS OWN SCENARIOS, NOT THE PACK'S DEFAULT MIX.
+        # The first version of this ran the pack's configured rates, which is a different experiment
+        # wearing this one's name: the journey would have reported numbers produced by levers that
+        # are not in its catalogue, and omitted the scenarios that are. A journey is the bundle of
+        # the mechanisms attached to its steps, so that bundle is what runs.
+        scens = scenarios_for(j.key)
+        runnable = [s for s in scens if s.lever]
+        blocked = [s for s in scens if not s.lever]
+        if not runnable:
+            print(f"\n⛔ every scenario on `{j.key}` is missing a lever, so the journey cannot run.")
+            for s in blocked:
+                print(f"    {s.key}")
+            return 2
+
+        rate = round(1.0 / len(runnable), 4)
+        levers = "{" + ",".join(f'"{s.lever}":{{"rate":{rate}}}' for s in runnable) + "}"
+        print(f"\n{BOLD}firing this journey's {len(runnable)} scenario(s){RESET} at {rate} each:")
+        for s in runnable:
+            print(f"    {s.step}  {s.key:<34} {s.lever}")
+        if blocked:
+            # ⛔ Silence here would let a journey look complete while a step was never exercised.
+            print(f"\n⚠ {len(blocked)} scenario(s) on this journey have no lever and will NOT fire, "
+                  f"so those steps go untested:")
+            for s in blocked:
+                print(f"    {s.step}  {s.key}")
+        print(f"\n{DIM}⛔ Phase-A levers are exclusive: the first to fire claims the run, so these "
+              f"rates are upper bounds and the result cannot be attributed to any one mechanism. "
+              f"To measure a mechanism, run it alone with --run-scenario.{RESET}\n")
+        return run_batch(j.pack, levers, a.count, a.seed)
 
     if a.scenario:
         s = SCENARIOS.get(a.scenario)

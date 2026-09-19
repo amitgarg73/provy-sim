@@ -61,6 +61,24 @@ class Journey:
     sources: tuple = ()
 
 
+# ⛔ WHICH PROVY SURFACES A SCENARIO SHOULD LIGHT UP, AND WHY THE LIST IS NOT "ALL OF THEM".
+#
+# Measured 19 Sep 2026, and it corrects an assumption worth stating plainly: A DIVERGED WORK ITEM
+# DOES NOT BECOME AN INCIDENT. Four of eight live fleets carry divergences and attributions and zero
+# incidents, and that is correct rather than broken.
+#
+# Attribution runs on every diverged work item, one to one. Incidents come from three writers, none
+# of which is reconciliation: the patterns engine (structural shapes inside the traces, thresholds
+# FABRICATION_MIN_COUNT=3, HYPERACTIVE_POLL_THRESHOLD=6, TOOL_RETRY_THRESHOLD=3,
+# COST_LOOP_MIN_REPEATS=3), absence detection, and run-volume anomaly.
+#
+# So a reasoning-error scenario legitimately raises no incident: nothing it emits matches a
+# structural detector. Expecting one would make a correct product look broken. Each scenario
+# therefore declares the surfaces it SHOULD reach, and a measurement that finds a surface dark can
+# then be read as a miss rather than argued about.
+SURFACES = ("divergence", "attribution", "incident", "quality_check", "contract_condition")
+
+
 @dataclass(frozen=True)
 class Scenario:
     key: str
@@ -70,6 +88,9 @@ class Scenario:
     mechanism: str                # one sentence a practitioner would recognise
     evidence: Source
     expected: str                 # what Provy SHOULD do
+    # ⛔ The pass mark for "validated in Provy". Empty means nobody has decided yet, which is a
+    # different and more honest state than an empty list meaning "should reach nothing".
+    expect_surfaces: tuple = ()
     measured: Optional[str] = None   # what Provy was last measured doing
     measured_on: Optional[str] = None
 
@@ -357,6 +378,15 @@ SCENARIOS: dict[str, Scenario] = {
                         "vendor"),
         expected="empty_output may catch it, may not: the existing tool_fault:empty sets an error and "
                  "this deliberately does not. Worth measuring before the story is told.",
+        expect_surfaces=("divergence", "attribution"),
+        measured="IT CATCHES IT. n=20 on teameight: 20 of 20 diverged, `empty_output` fired on 17. "
+                 "So the open question in 01-mapping.md is answered: a 200 with a hollow body IS "
+                 "detected even though it sets no error. ⛔ BUT EVERY ONE IS LOW CONFIDENCE WITH "
+                 "base_rate_verdict=uninformative, meaning the tool appears just as often on runs "
+                 "that held, so it cannot discriminate. Zero causes named at high or medium "
+                 "confidence, zero refusals, zero incidents. The customer gets 20 qualified "
+                 "candidates and no answer, which is honest and not yet useful.",
+        measured_on="2026-09-19",
     ),
 
     "approval_that_never_happened": Scenario(
@@ -371,7 +401,18 @@ SCENARIOS: dict[str, Scenario] = {
                         "https://github.com/openai/openai-agents-python/issues/3863", "2026-07-17"),
         expected="⭐ THE STRONGEST NEW SCENARIO IN THE 18 SEP RESEARCH. A governance control that did "
                  "not fire, leaving no error and no defect anywhere in the run. Nothing at run time "
-                 "can see it, which is the exact shape Provy exists for. No lever yet.",
+                 "can see it, which is the exact shape Provy exists for.",
+        measured="⛔ NOT A MISSING LEVER. A MISSING CONTRACT CONDITION. Attempted 19 Sep 2026 and "
+                 "reverted: `tests/test_levers_settle_distinctly.py` refused it, reporting that "
+                 "'decision_correct grew from 9 levers to 10; approval_fail_open joined an existing "
+                 "pile instead of failing its own condition'. The guard is right. No pack carries a "
+                 "condition about whether an approval was obtained, so the lever can only break "
+                 "correctness or policy, and both already have levers that mean something else. "
+                 "Writing it anyway would have made a tenth alias for _corrupt_correctness, which is "
+                 "the exact defect the August research was written to end. The work is a contract "
+                 "condition on the IAM pack ('the action was approved by a human before it was "
+                 "taken'), and the lever after it.",
+        measured_on="2026-09-19",
     ),
 
     "empty_tool_arguments": Scenario(
