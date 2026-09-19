@@ -244,6 +244,51 @@ class ProvyQuery:
                 out["named_low_only"] += n
         return out
 
+    def condition_reachability(self) -> Optional[list]:
+        """Every contract condition, and whether it has been seen BOTH passing and failing.
+
+        ⛔ "GRADED" IS NOT "REACHABLE". A condition that has only ever passed is indistinguishable
+        from one nothing can break, and a contract full of those grades every work item green while
+        proving nothing. `_SUPPORT_RATES` already records the shape in a comment: `category_correct`
+        never failed in 500 runs until its rate was raised, and only a guard caught it.
+
+        ⛔ NOT WINDOWED, deliberately. "Has never failed" is a claim about the condition's whole
+        life; a window would make an untested condition look merely quiet.
+
+        ⛔ AND IT READS `measurable`. A condition can be graded and unmeasurable on every row, which
+        is a third state and not the same as passing.
+        """
+        if not self.available:
+            return None
+        rows = self._rows(
+            """select crit->>'id'  as cid,
+                      coalesce(crit->>'text', crit->>'signal', '?') as label,
+                      count(cr.*) filter (where cr.measurable)                as measured,
+                      count(cr.*) filter (where cr.measurable and cr.passed)  as passed,
+                      count(cr.*) filter (where cr.measurable and cr.passed is false) as failed
+                 from ag_outcome_contracts oc
+                 cross join lateral jsonb_array_elements(oc.criteria) as crit
+                 left join ag_outcome_evaluations e on e.contract_id = oc.id
+                 left join ag_outcome_criterion_results cr
+                        on cr.evaluation_id = e.id and cr.criterion_id = crit->>'id'
+                where oc.workflow_id = %s
+                  and oc.status = 'active' and coalesce(oc.deleted,false) = false
+                group by 1,2 order by 1""",
+            (self.workflow_id,))
+        out = []
+        for cid, label, measured, passed, failed in rows:
+            if measured == 0:
+                verdict = "NEVER MEASURED"
+            elif failed == 0:
+                verdict = "never failed: nothing can break it"
+            elif passed == 0:
+                verdict = "never passed: it may be impossible to satisfy"
+            else:
+                verdict = "reachable both ways"
+            out.append({"criterion": cid, "label": (label or "")[:70], "measured": measured,
+                        "passed": passed, "failed": failed, "verdict": verdict})
+        return out
+
     def silent_checks(self) -> Optional[list]:
         """Checks that are enabled and have produced nothing, ever (#1027).
 
