@@ -315,14 +315,26 @@ SCENARIOS: dict[str, Scenario] = {
 
     "duplicate_identity": Scenario(
         key="duplicate_identity", journey="identity_access", step="s5",
-        lever=None,
-        mechanism="Provisioning creates a second account instead of matching the existing one. Both "
-                  "exist, both look valid, and entitlements split between them.",
+        lever="reprovisioned_by_sync",
+        mechanism="An HR sync re-creates the account after the access change, restoring the access "
+                  "that was just removed. Both records look valid and the entitlement comes back.",
         evidence=Source("creates a user every time instead of updating when the user already exists.",
                         "SCIM implementer",
                         "https://github.com/AzureAD/SCIMReferenceCode/issues/63", "2021-08-16"),
-        expected="Unknown. Identity resolution is the hard part of the 2029 thesis and nothing "
-                 "measures it today.",
+        expected="The IAM contract already asks this as c5, 'The account was not re-created by a "
+                 "later sync', settling on `no_reprovision`. Provy should grade it and fail it.",
+        expect_surfaces=("divergence", "contract_condition"),
+        measured="⛔ THE LEVER EXISTS AND HAS NEVER FIRED, WHICH IS A RATE PROBLEM WEARING A "
+                 "COVERAGE PROBLEM'S CLOTHES. An earlier version of this entry said `lever=None`; "
+                 "that was wrong. `reprovisioned_by_sync` is declared in packs/iam/pack.py, wired to "
+                 "c5 through `settle_map` ('duplicate' -> 'no_reprovision'), and configured in "
+                 "_IAM_RATES at **0.015**. Across 52 sessions that is under one expected hit, so c5 "
+                 "has passed 52 times and failed 0 and reads as a condition nothing can break.\n"
+                 "⛔ AND 0.015 IS THE EXACT RATE THE CODEBASE ALREADY FLAGS AS TOO LOW. "
+                 "_SUPPORT_RATES carries the comment: 'at 0.015 category_correct never failed in 500 "
+                 "runs and the guard caught it.' The same number, the same outcome, in a second pack, "
+                 "and nothing connected them because nothing tested reachability until now.",
+        measured_on="2026-09-19",
     ),
 
     "stale_edit_reapplied": Scenario(
