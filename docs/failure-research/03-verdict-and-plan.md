@@ -92,20 +92,33 @@ ten runs before it is worth asking out loud.
 verdict this experiment could ever have produced. The design was too small to answer the question it
 was posed. Phase 0 sizes runs against `MIN_GROUP` rather than against convenience.
 
-### 4. Nine of ten Guardrail checks on the demo fleet have never graded anything
+### 4. The Guardrail finding I filed, and then closed as not a defect
 
-Filed as **#1027**. On ITSM Incident Resolution, across 76 settled sessions, the configured check
-catalogue and the checks that actually produce numbers are nearly disjoint sets, overlapping on one
-name. Every configured check predates every session, so it is not a timing artefact. Production is
-affected too: 7 of 23 enabled layer-3 checks on Strategy C Trading have never produced a result.
+⛔ **Filed as #1027 at P1, from SQL alone, and wrong.** I claimed nine of ten enabled checks never
+grade anything and that nothing reports it. Opening the page ended it: Guardrails carries a group
+headed `Not running · 4 checks, 4 have never run` with a `Retire 4` button that names each one, and
+prints `nothing measured`, `Still calibrating`, `Never caught anything 8` and `Separating nothing 4`
+elsewhere.
+
+The last survivor was `method_conformance`, enabled five times and rendered nowhere. It writes to
+`ag_agent_conformance`, never to `ag_evals`, so the query asked the wrong table. Production holds
+463 rows, newest landing within a second of its `7 5 * * *` cron. Pre-prod is stale because crons
+run against production only.
+
+**Three corrections, all in the same direction: the product was right and the query was wrong.** The
+one real trap is that `ag_eval_configs` holds two kinds of row, a check that grades and a record
+that stores a threshold, with nothing in the schema to tell them apart. That belongs in a doc.
 
 ### 5. The contract side is healthy, and the contrast is the useful part
 
 Every condition on every live fleet gets graded. The weak spot is different and milder: conditions
-that are measurable and have **never once failed**. That is 5 of 10 on Claims, 3 of 5 on
-Identity, 2 of 5 on Refund. A condition nothing can break is a condition the simulator cannot exercise, which is the
-trap `_SUPPORT_RATES` already records in a comment: `category_correct` never failed in 500 runs
-until its rate was raised.
+that are measurable and have **never once failed**. A condition nothing can break is one the
+simulator cannot exercise, and `_SUPPORT_RATES` already records the shape in a comment:
+`category_correct` never failed in 500 runs until its rate was raised.
+
+**Measured, then fixed by running it.** Identity went 2 of 5 to 5 of 5, Refund 3 of 5 to 5 of 5,
+AIOps 0 of 6 to 6 of 6. See the rate section at the end of this document: not one of those gaps
+needed a new lever.
 
 ⛔ **So "test every check and every contract condition" has two different answers.** Contracts need
 a reachability test. Checks need a liveness test, and they need it urgently.
@@ -202,3 +215,47 @@ before the isolated measurements exist means tuning numbers whose meaning is unk
 - **Quote a production tool-calling failure rate.** The "3 to 15%" in `01-mapping.md` has no primary
   source; see the correction in that file. One practitioner's 12.4% on 267 calls is what exists, and
   it is a sample, not a rate.
+
+---
+
+## Added 19 Sep 2026: configured rate is not effective rate, and nobody knows the ratio
+
+Running `edwin` with exactly two levers, each configured at **0.5**, and nothing else enabled:
+
+| lever | configured | actually fired |
+|---|---:|---:|
+| `change_blind` | 0.50 | **0.069** (4 of 58) |
+| `correlation_split` | 0.50 | **0.086** (5 of 58) |
+
+Together they claimed 15.5% of runs against a configured 100%. ⛔ **Phase-A exclusivity does not
+explain this**, because no other lever was enabled to starve them. Something else gates the pack
+injector and it has not been traced.
+
+**Why it matters more than it looks.** Every rate in `config/workflows.py` is written as though it
+were the frequency a mechanism occurs. If the delivered rate is six or seven times lower, then
+`change_blind` at its configured 0.22 fires on roughly 3% of runs, and `reprovisioned_by_sync` at
+0.015 fires on roughly two runs in a thousand. That is the arithmetic behind the reachability
+result: three fleets had conditions that had never once failed, and in every case the mechanism
+existed and was configured.
+
+⛔ **So the rates in that file cannot be reasoned about until the ratio is measured.** Phase 4 of
+the plan above says rates come last. This is why: setting a mix today means choosing numbers whose
+delivered meaning is unknown, and the only honest way to pick one is to run a lever alone at 1.0,
+observe what fraction actually fires, and calibrate from that.
+
+**The reachability sweep that produced this**, after exercising each gap:
+
+| Fleet | Conditions reachable both ways |
+|---|---|
+| ITSM Incident Resolution | 7 of 7 |
+| Strategy C Trading | 6 of 6 |
+| Identity Operations | 5 of 5, was 2 of 5 |
+| Refund Operations | 5 of 5, was 3 of 5 |
+| AIOps Investigations | 6 of 6, was 0 of 6 |
+| Claims Adjudication | 3 of 5 and 2 of 5, untouched |
+| Post-call follow-up | 2 of 8, untouched |
+
+⛔ **AND NOT ONE OF THOSE GAPS NEEDED A NEW LEVER.** Every mechanism already existed in its pack,
+wired to the right condition, at a rate too low to ever fire. The simulator's coverage problem was a
+calibration problem the whole time, and nothing measured it because nothing asked whether a
+condition could fail.
