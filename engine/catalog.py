@@ -247,6 +247,9 @@ SCENARIOS: dict[str, Scenario] = {
                         "https://www.reddit.com/r/CustomerService/comments/1vf0k4w/my_companys_ai_chatbot_spread_false_information/",
                         "2026-08-04"),
         expected="Catchable: the cited document id can be checked against what was retrieved.",
+        expect_surfaces=('divergence', 'attribution'),
+        measured="n=16 on teameight, seed 4474: 16 of 16 diverged, and 16 low-confidence candidates with ZERO at high or medium. ⛔ THE MAPPING EXPECTED THIS ONE TO BE CATCHABLE: 'the cited id is checkable against what was retrieved'. Provy produced a candidate every time and committed to none, so the check that would make it confident is not being made. This is the clearest gap of the nine: a mechanism with real evidence in the trace, and no path from evidence to confidence.",
+        measured_on="2026-09-19",
     ),
 
     "escalation_refused": Scenario(
@@ -258,6 +261,9 @@ SCENARIOS: dict[str, Scenario] = {
                         "Consumer complaint, the single most-cited failure in AI support",
                         "docs/failure-research/00-evidence.md", "2026-08 (Aug research pass)"),
         expected="Nothing today. The handoff requests sit in the trace and nothing reads them.",
+        expect_surfaces=('divergence',),
+        measured="n=16 on teameight, seed 4337: 16 of 16 diverged, and Provy REFUSED to name a cause on all 16. Zero at any confidence. The mapping said 'Nothing today. The handoff requests sit in the trace and nothing reads them', and that is exactly what a refusal means here: the divergence is caught, the reason is not, and Provy says so instead of guessing.",
+        measured_on="2026-09-19",
     ),
 
     "refund_never_lands": Scenario(
@@ -311,6 +317,9 @@ SCENARIOS: dict[str, Scenario] = {
                         "date not displayed", "government"),
         expected="⭐ The single best fit in the product. Nothing in the run is wrong, so nothing at "
                  "run time can catch it.",
+        expect_surfaces=('divergence',),
+        measured='n=16 on edwin, seed 4748: NOTHING. No divergence, no incident, no attribution. ⛔ AND THAT IS THE SCENARIO WORKING, NOT FAILING. reversed_on_appeal models an outcome that settles weeks later, so at the moment of measurement there is nothing to reconcile against and Provy correctly records no verdict. It is the only one of the nine that produces no signal at all at run time, which is precisely why it is the best fit for the product and why measuring it needs a second pass after settlement rather than a bigger n.',
+        measured_on="2026-09-19",
     ),
 
     "duplicate_identity": Scenario(
@@ -383,6 +392,9 @@ SCENARIOS: dict[str, Scenario] = {
                         "arXiv study of failed agent pull requests",
                         "docs/failure-research/00-evidence.md", "2026-08 (Aug research pass)", "study"),
         expected="Nothing. There is no defect in the trace. Only reconciliation can see it.",
+        expect_surfaces=('divergence',),
+        measured="n=16 on claude_code, seed 4611: 16 of 16 diverged, 16 refusals, nothing named. Correct and expected. The mapping said 'Nothing. There is no defect in the trace. Only reconciliation can see it.' Reconciliation saw it every time and refused to invent a culprit, which is the honest answer for a run that looks like compliance.",
+        measured_on="2026-09-19",
     ),
 
     "rca_named_by_proximity": Scenario(
