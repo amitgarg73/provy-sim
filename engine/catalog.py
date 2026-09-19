@@ -337,6 +337,31 @@ SCENARIOS: dict[str, Scenario] = {
         measured_on="2026-09-19",
     ),
 
+    "answered_from_the_model_not_the_document": Scenario(
+        key="answered_from_the_model_not_the_document", journey="support_refund", step="s3",
+        lever="parametric_override",
+        mechanism="Retrieval returned the right document, fresh and high-scoring, and the agent "
+                  "answered from its own prior instead. The correct answer is sitting in the trace, "
+                  "unused.",
+        evidence=Source("The right document was retrieved, fresh and high-scoring, and the agent "
+                        "answered from its prior instead (parametric bias)",
+                        "Arize failure classes",
+                        "docs/failure-research/00-evidence.md", "2026-08 (Aug research pass)",
+                        "vendor"),
+        expected="01-mapping.md predicted this WRONG, and said so plainly: 'Would probably blame the "
+                 "retriever, which would be wrong. The retriever did its job perfectly.'",
+        expect_surfaces=("divergence",),
+        measured="⭐ THE PREDICTION WAS WRONG IN THE GOOD DIRECTION, AND THIS IS THE BEST PRODUCT "
+                 "RESULT MEASURED TONIGHT. n=16 on teameight, seed 4200: 16 of 16 diverged, and "
+                 "Provy named a cause ZERO times at any confidence. All 16 came back "
+                 "`undetermined`. It did not blame the retriever, which is the innocent party and "
+                 "the obvious thing to point at, because the retrieved document is right there in "
+                 "the trace looking perfect. On the one scenario built so the obvious culprit is "
+                 "innocent, Provy declined rather than guessed. That is the behaviour the whole "
+                 "product argues for, and it had never been measured.",
+        measured_on="2026-09-19",
+    ),
+
     "stale_edit_reapplied": Scenario(
         key="stale_edit_reapplied", journey="coding_agent", step="s3",
         lever="context_truncated",
