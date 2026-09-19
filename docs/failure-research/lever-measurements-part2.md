@@ -7,3 +7,20 @@ n=16 per lever, each scored over its own window.
 guard already qualified is not an accusation. Counting the two together is the defect Provy
 sells against.
 
+## `parametric_override` on `teameight` (n=16, seed=4200)
+
+| measure | value |
+|---|---|
+| contract met-rate (Provy) | 0.8763 |
+| divergence rate, by work item | 1.0 |
+| incidents opened | 0 |
+| **cause named, high/medium confidence** | **0** |
+| cause offered, low confidence only | 0 |
+| refused to name a cause | 16 |
+
+method / confidence breakdown:
+
+| method / confidence | n | base-rate verdict |
+|---|---|---|
+| `undetermined/low` | 16 | none recorded |
+
