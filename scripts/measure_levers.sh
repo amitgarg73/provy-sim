@@ -66,6 +66,7 @@ reversed_on_appeal|edwin|$FLEET_EDWIN
   echo
 } > "$OUT"
 
+seed_offset=0
 for spec in $RUNS; do
   [ -z "$spec" ] && continue
   lever="${spec%%|*}"; rest="${spec#*|}"
@@ -75,17 +76,30 @@ for spec in $RUNS; do
   since="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
   echo "[$(date -u +%H:%M:%S)] $lever on $pack (n=$N)" >&2
 
-  .venv/bin/python scripts/run_batch.py --pack "$pack" --count "$N" --seed 91 \
+  # ⛔ A DIFFERENT SEED PER LEVER, AND IT IS NOT COSMETIC.
+  #
+  # The seed decides the entity ids. The ledger is keyed on (entity_id, business_date) and
+  # `writeLedgerPredictions` refuses a row that has already settled, so a second lever run on the
+  # same seed and the same day creates NO LEDGER ROWS AT ALL. Measured 19 Sep 2026: teameight took
+  # 30 ledger rows from the first two runs and zero from the next three, and the divergence column
+  # came back None for every lever after the first. Incidents and attributions were still real,
+  # because those are keyed per session, which is what made the artefact hard to see.
+  #
+  # SEED_BASE plus a per-lever offset keeps each lever on its own work items.
+  seed=$(( ${SEED_BASE:-1000} + seed_offset ))
+  seed_offset=$(( seed_offset + 137 ))
+
+  .venv/bin/python scripts/run_batch.py --pack "$pack" --count "$N" --seed "$seed" \
       --levers "{\"$lever\":{\"rate\":1.0}}" --reconcile --show 0 >/tmp/lever_$lever.log 2>&1
   rc=$?
 
-  PROVY_TENANT_ID="$tenant" PROVY_WORKFLOW_ID="$workflow" PROVY_SCORE_SINCE="$since" \
+  LEVER_SEED="$seed" PROVY_TENANT_ID="$tenant" PROVY_WORKFLOW_ID="$workflow" PROVY_SCORE_SINCE="$since" \
   .venv/bin/python - "$lever" "$pack" "$N" "$rc" >> "$OUT" 2>&1 <<'PY'
-import json, sys
+import os, sys
 from engine.scoreboard import ProvyQuery
 lever, pack, n, rc = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 q = ProvyQuery()
-print(f"## `{lever}` on `{pack}` (n={n})\n")
+print(f"## `{lever}` on `{pack}` (n={n}, seed={os.environ.get('LEVER_SEED','?')})\n")
 if rc != "0":
     print(f"⚠ the batch exited {rc}; see /tmp/lever_{lever}.log. Scored anyway, treat as partial.\n")
 if not q.available:
