@@ -42,7 +42,9 @@ FLEET_EDWIN="f4e78321-17a3-440f-8c67-4c3c7bc62487|4839de37-6e2c-4782-9ade-40c48b
 FLEET_T8="98aa14ca-73ce-48f6-bd09-af7c8e1064f4|dd9d7acc-2e61-4de5-8805-52b6e1ed9a4c"
 FLEET_CC="341ccb19-e5ba-4eda-b178-3dbf25664d33|f49fcb26-6689-4bee-aa5e-6aa544040803"
 
-RUNS="
+# ⛔ EDIT THIS LIST TO RE-RUN A SUBSET, AND CHANGE SEED_BASE WHEN YOU DO. Re-running a lever on a
+# seed already used today produces no ledger rows, for the reason in the seed comment below.
+RUNS="${RUNS_OVERRIDE:-
 ok_but_empty|teameight|$FLEET_T8
 retry_loop|teameight|$FLEET_T8
 agent_paralysis|teameight|$FLEET_T8
@@ -52,7 +54,7 @@ escalation_refused|teameight|$FLEET_T8
 fabricated_policy|teameight|$FLEET_T8
 overliteral_constraint|claude_code|$FLEET_CC
 reversed_on_appeal|edwin|$FLEET_EDWIN
-"
+}"
 
 {
   echo "# What Provy does with each evidence lever"
