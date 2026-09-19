@@ -111,9 +111,15 @@ def servicenow_property(instance: str, user: str, password: str, name: str) -> s
 
 
 def check(conn, pack: str | None) -> int:
+    # ⛔ THE PACK NAME DOES NOT IDENTIFY A FLEET AND PRINTING IT ALONE READS AS A DUPLICATE.
+    # Two tenants run the claims pack, Meridian Mutual and Harborline Insurance, and both name their
+    # workflow "Claims Adjudication" because that is what it is. Nothing is wrong with that: a fleet
+    # is a tenant's workflow, not a pack. The header carries the operator so the two cannot be
+    # mistaken for one row written twice, which is exactly how they were read on 18 Sep 2026.
     fleets = _rows(conn, """
-        select sc.pack, sc.workflow_id, sc.tenant_id, sc.ingest_key, sc.provy_url, sc.outcomes_wired
-        from sim_control_config sc order by sc.pack
+        select sc.pack, sc.workflow_id, sc.tenant_id, sc.ingest_key, sc.provy_url, sc.outcomes_wired,
+               sc.operator_email, sc.display_name
+        from sim_control_config sc order by sc.pack, sc.operator_email
     """)
     if pack:
         fleets = [f for f in fleets if f[0] == pack]
@@ -122,8 +128,12 @@ def check(conn, pack: str | None) -> int:
         return 1
 
     problems = 0
-    for pack_name, workflow_id, tenant_id, console_key, provy_url, wired in fleets:
-        print(f"\n── {pack_name}  ({workflow_id})")
+    for (pack_name, workflow_id, tenant_id, console_key, provy_url, wired,
+         operator, display_name) in fleets:
+        who = operator or "(no operator recorded)"
+        print(f"\n── {pack_name} · {who}  ({workflow_id})")
+        if display_name:
+            print(f"   fleet   {display_name}")
         console_hash = _sha(console_key) if console_key else None
 
         live = _rows(conn, """
