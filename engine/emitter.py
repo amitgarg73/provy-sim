@@ -170,22 +170,26 @@ class ProvyEmitter:
             return {"error": str(e)}
 
     # ── high-level ───────────────────────────────────────────────────────────
-    def open_session(self, result: RunResult) -> dict:
+    def open_session(self, result: RunResult, occurred_at: str | None = None) -> dict:
         # Do NOT send a separate external_id: Provy resolves later trace/eval/close/outcome calls by
         # matching external_id to the session id we send here. If external_id differed from session_id
         # (e.g. the entity id), those later calls would miss and spawn a duplicate session. The work-item
         # id lives in metadata and on each trace instead, which is what reconciliation keys off.
+        when = occurred_at or datetime.now(timezone.utc).isoformat()
         return self._post("/api/ingest/session/open", {
             "session_id": result.session_id,
             "session_type": result.session_type,
             "is_simulated": self.is_simulated,
+            # argus#1072: when the work ran, not when we seeded it. The server refuses a future time
+            # and falls back to arrival, so a pack that dates itself wrong degrades to today.
+            "started_at": when,
             "metadata": {
-                "date": datetime.now(timezone.utc).date().isoformat(),
+                "date": when[:10],
                 "entity_id": result.entity_id,
             },
         })
 
-    def trace(self, result: RunResult, step) -> dict:
+    def trace(self, result: RunResult, step, occurred_at: str | None = None) -> dict:
         span_id = uuid.uuid4().hex[:16]
         payload: dict[str, Any] = {
             "session_id": result.session_id,
@@ -238,6 +242,9 @@ class ProvyEmitter:
             blob[k] = v
         if blob:
             payload["payload"] = blob
+        # argus#1072: a step that ran last Tuesday says so, or the server stamps it as arriving now.
+        if occurred_at:
+            payload["occurred_at"] = occurred_at
         return self._post("/api/ingest/trace", payload)
 
     def eval(self, result: RunResult, ev) -> dict:
@@ -301,7 +308,22 @@ class ProvyEmitter:
         return self._post("/api/ingest/outcome", self.outcome_payload(result, occurred_at))
 
     # ── convenience: emit a whole run except the outcome (that's EOD reconcile) ─
-    def emit_run(self, result: RunResult, agents: list | None = None) -> None:
+    def emit_run(self, result: RunResult, agents: list | None = None,
+                 occurred_at: str | None = None) -> None:
+        """Emit a whole run.
+
+        `occurred_at` is when the work ran, ISO 8601. Omit it for a live run.
+
+        ⛔ WITHOUT IT EVERY SESSION IS STAMPED AT THE MOMENT OF SEEDING (argus#1072). The outcome side
+        has dated itself correctly since #812 ("fall back to when the work ran, never to now"), and
+        the session side never did, so a pack representing weeks of business landed as one afternoon.
+        Measured on pre-prod: Post-call 157 sessions across 1 day, Claims 108 across 2, Refund 106
+        across 3, every one of them the sitting that seeded it. Only Strategy C has real spread, and
+        only because it genuinely ran on a cron for six weeks.
+
+        So every activity chart, drift window and "running less than usual" ever read off a simulated
+        fleet was measuring the seeding run rather than the simulated business.
+        """
         # We use OUR OWN session id throughout (id-agnostic ingest, #165): Provy stores it as external_id
         # and resolves every later call by it. No need to capture Provy's internal uuid.
         #
@@ -313,9 +335,9 @@ class ProvyEmitter:
         # SHOULD have run; falling back to the agents that DID run makes a skipped agent invisible,
         # which is the failure it exists to catch. So it is computed only when a roster is passed,
         # and the caller that has one always passes it.
-        self.open_session(result)
+        self.open_session(result, occurred_at)
         for step in result.traces:
-            self.trace(result, step)
+            self.trace(result, step, occurred_at)
         # ⛔ AN EVAL FOR AN AGENT THAT DID NOT RUN IS A FABRICATED PASS, and it is what made a total
         # pipeline break read as a 0.9-quality session (argus#677). Dropped here, at the same seam
         # the structural checks are derived, so every pack gets it.
