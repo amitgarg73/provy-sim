@@ -17,8 +17,16 @@ from .types import RunResult
 
 def build_record(workflow: str, result: RunResult, session_index: int,
                  occurred_at: Optional[str] = None) -> dict:
+    """
+    ⛔ `ts` IS WHEN THE WORK RAN, AND IT USED TO BE WHEN THE RECORD WAS BUILT (argus#1072).
+
+    `occurred_at` was already a parameter here and was used only for the outcome payload, so `ts`
+    was the wall clock even when the caller had said otherwise. reconcile.py reads `ts` as its
+    fallback for exactly this ("fall back to when the work ran, never to now", #812), so a simulated
+    clock was being discarded by the one field that consumes it.
+    """
     return {
-        "ts": datetime.now(timezone.utc).isoformat(),
+        "ts": occurred_at or datetime.now(timezone.utc).isoformat(),
         "workflow": workflow,
         "session_index": session_index,
         "session_id": result.session_id,
