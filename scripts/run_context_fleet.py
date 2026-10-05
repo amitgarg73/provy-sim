@@ -63,7 +63,7 @@ def build_configs(role: str, fail_rate: float, background_rate: float, change_da
 def run_fleet(pack_name: str, fleet: str, role: str, count: int, days: float, seed: int,
               fail_rate: float = DEFAULT_FAIL_RATE, background_rate: float = 0.2,
               rates: dict | None = None, instruction_share: float = DEFAULT_INSTRUCTION_SHARE,
-              warmup: int = DEFAULT_WARMUP, change_days: tuple = (0.5, 0.7, 0.9), emitter: ProvyEmitter | None = None,
+              warmup: int = DEFAULT_WARMUP, workers: int = 1, change_days: tuple = (0.5, 0.7, 0.9), emitter: ProvyEmitter | None = None,
               ledger: GroundTruthLedger | None = None, now: datetime | None = None):
     """Run the fleet and return (outputs, truth records). Pure of any file or network unless handed one."""
     now = now or datetime.now(timezone.utc)
@@ -73,7 +73,7 @@ def run_fleet(pack_name: str, fleet: str, role: str, count: int, days: float, se
     warm, steady = build_configs(role, fail_rate, background_rate, change_date,
                                  rates if rates is not None else DEFAULT_FAULT_RATES, instruction_share)
     pack = get_pack(pack_name)
-    runner = BatchRunner(pack, warm, emitter=emitter, ledger=ledger, llm=LLM(offline=True), seed=seed,
+    runner = BatchRunner(pack, warm, emitter=emitter if workers <= 1 else None, ledger=ledger, llm=LLM(offline=True), seed=seed,
                          starts_at=start, every=every)
     outs, truth = [], []
     for i in range(count):
@@ -81,6 +81,16 @@ def run_fleet(pack_name: str, fleet: str, role: str, count: int, days: float, se
         o = runner.run_one()
         outs.append(o)
         truth.append(truth_record(fleet, role, pack_name, o.result, o.record["ts"]))
+    if emitter is not None and emitter.enabled and workers > 1:
+        # The run above built every payload and sent none (the runner was given no emitter). Send the
+        # sessions now, in time order, several at a time: a session close is slow on the server and one
+        # at a time a 400-session fleet takes hours. Order within a few sessions does not matter to the
+        # checks, which read the stored time of each step.
+        from concurrent.futures import ThreadPoolExecutor
+        agents = pack.agents()
+        emitter._verify_environment()     # one probe, before the threads start
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            list(ex.map(lambda o: emitter.emit_run(o.result, agents, occurred_at=o.record["ts"]), outs))
     return outs, truth, change_date
 
 
@@ -112,6 +122,7 @@ def main() -> int:
     ap.add_argument("--rates", default=None, help='JSON, e.g. {"ctx_stale_source": 0.06}')
     ap.add_argument("--truth", required=True, help="ground-truth JSONL path (never sent)")
     ap.add_argument("--key-env", default="PROVY_KEY", help="NAME of the env var holding the fleet's ingest key")
+    ap.add_argument("--workers", type=int, default=1, help="sessions sent at once (the run itself is built first)")
     ap.add_argument("--no-reconcile", action="store_true")
     args = ap.parse_args()
 
@@ -124,7 +135,7 @@ def main() -> int:
           f"emit={'ON' if emitter.enabled else 'OFF (dry run)'}")
     outs, truth, change_date = run_fleet(args.pack, args.fleet, args.role, args.count, args.days, args.seed,
                                          args.fail_rate, args.background_rate, rates, args.instruction_share,
-                                         args.warmup, emitter=emitter, ledger=ledger)
+                                         args.warmup, workers=args.workers, emitter=emitter, ledger=ledger)
     digest = write_truth(args.truth, truth)
     print(f"instruction change dates {change_date}; truth sha256 {digest}")
     print(json.dumps(summarise(truth), indent=1))
