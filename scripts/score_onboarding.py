@@ -106,6 +106,9 @@ def main() -> int:
     ap.add_argument("--tag", default="")
     a = ap.parse_args()
     truth = load(a.truth)
+    # a work item id the pack drew twice makes two plan rows share one session id, so Provy holds ONE session for both: neither can be scored
+    dup = {k for k, n in __import__("collections").Counter(r["session_id"] for r in truth).items() if n > 1}
+    truth = [r for r in truth if r["session_id"] not in dup]
     evals = read_csv(os.path.join(a.export, "evals.csv"))
     sess = {r["session_id"] for r in read_csv(os.path.join(a.export, "sessions.csv"))}
     steps = read_csv(os.path.join(a.export, "steps.csv"))
@@ -130,7 +133,7 @@ def main() -> int:
     text = [f"## {a.label}: catch, miss and not measured, per fault type (n = work items that carried the fault)\n", md(cols, rows),
             f"\nInstruction changes after the first session on a new version (the check is not meant to fire again): {res['continuing']}",
             f"\n## {a.label}: false alarms per check (a failing verdict on a work item that carried no fault of that check's kind)\n", md(fa_cols, fa_rows),
-            f"\nWork items in the truth file: {len(truth)}; found in the pre-prod export: {len(in_db)}."]
+            f"\nWork items scored: {len(truth)} (left out, same session id drawn twice by the pack: {len(dup)} ids); found in the pre-prod export: {len(in_db)}."]
     mrows = None
     if any("sent_mode" in r for r in truth):
         mrows = mode_table(in_db, evals, steps)
