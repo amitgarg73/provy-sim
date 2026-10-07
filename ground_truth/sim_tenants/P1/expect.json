@@ -1,0 +1,140 @@
+{
+ "fleets": {
+  "claims": {
+   "calibration": {
+    "0.5": {
+     "claims": 9,
+     "held": 4,
+     "rate": 0.444,
+     "too_few": true
+    },
+    "0.7": {
+     "claims": 6,
+     "held": 3,
+     "rate": 0.5,
+     "too_few": true
+    },
+    "0.9": {
+     "claims": 5,
+     "held": 4,
+     "rate": 0.8,
+     "too_few": true
+    }
+   },
+   "claims": 20,
+   "counted_steps": 100,
+   "declares": [],
+   "door": "rest",
+   "outcomes": {
+    "fail": 5,
+    "success": 15,
+    "work_items": 20
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "healthy",
+   "session_ids": [
+    "sim-claims-CLM-714918-sp1claims100714",
+    "sim-claims-CLM-322564-sp1claims100714",
+    "sim-claims-CLM-874596-sp1claims100714",
+    "sim-claims-CLM-329679-sp1claims100714",
+    "sim-claims-CLM-699292-sp1claims100714",
+    "sim-claims-CLM-947120-sp1claims100714",
+    "sim-claims-CLM-331521-sp1claims100714",
+    "sim-claims-CLM-869491-sp1claims100714",
+    "sim-claims-CLM-702347-sp1claims100714",
+    "sim-claims-CLM-394939-sp1claims100714",
+    "sim-claims-CLM-292023-sp1claims100714",
+    "sim-claims-CLM-831697-sp1claims100714",
+    "sim-claims-CLM-939159-sp1claims100714",
+    "sim-claims-CLM-718938-sp1claims100714",
+    "sim-claims-CLM-209894-sp1claims100714",
+    "sim-claims-CLM-394649-sp1claims100714",
+    "sim-claims-CLM-195066-sp1claims100714",
+    "sim-claims-CLM-101887-sp1claims100714",
+    "sim-claims-CLM-912096-sp1claims100714",
+    "sim-claims-CLM-329859-sp1claims100714"
+   ],
+   "sessions": 20,
+   "steps": 100,
+   "stored_steps": 100,
+   "truth_file": "ground_truth/sim_tenants/P1/claims.truth.jsonl",
+   "truth_sha256": "a69103ca35aec30fb6713a2582802e03d32f47947a370e5be8aa598e6efe8df0"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-p1@demo.provy.ai",
+  "key": "P1",
+  "name": "Sim P1 Pilot Ended",
+  "nonces": {
+   "claims": "sp1claims100714"
+  },
+  "purpose": "A pilot that ended 5 days ago and was not converted. The roll pauses Provy's optional model work for it; the staff panel says so.",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": {
+  "calls": [
+   {
+    "body": {
+     "paid": false,
+     "plan": "pilot",
+     "reason": "Sim set: pilot ended 5 days ago, not converted",
+     "startsOn": "2026-09-17",
+     "terms": {
+      "pilotEndsOn": "2026-10-02",
+      "pricingMode": "fleet",
+      "tier": "startup"
+     }
+    },
+    "route": "/api/admin/orders"
+   }
+  ],
+  "discount_percent": null,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": "2026-10-02",
+    "starts_on": "2026-09-17"
+   }
+  ],
+  "pilot_as_of_build": {
+   "daysSince": 5,
+   "endsOn": "2026-10-02",
+   "state": "ended"
+  },
+  "plan": {
+   "fee_cents": 49900,
+   "included_steps": 50000,
+   "mode": "fleet",
+   "name": "Startup",
+   "tier": "startup"
+  },
+  "spec": {
+   "kind": "fleet",
+   "pilot_offset_days": -5,
+   "plan": "pilot",
+   "reason": "Sim set: pilot ended 5 days ago, not converted",
+   "starts_on_offset_days": -20,
+   "tier": "startup"
+  }
+ },
+ "spend_ceiling_usd": null
+}

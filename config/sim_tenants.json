@@ -1,0 +1,134 @@
+{
+  "_about": "The persistent pre-prod sim tenant set. One entry per workspace, one per fleet inside it. Read by provy-sim scripts/sim_set.py and by provy-sim-control scripts/provision-sim-set.mts. The nightly sweep only deletes @argustest.com users and a tenant named 'Nightly Certification', so these logins live on demo.provy.ai and the names start with 'Sim '. A ground-truth file per tenant (ground_truth/sim_tenants/<key>.json) says what the product must say about it.",
+  "name_prefix": "Sim ",
+  "email_domain": "demo.provy.ai",
+  "tenants": [
+    {
+      "key": "H1",
+      "name": "Sim H1 Healthy",
+      "email": "sim-h1@demo.provy.ai",
+      "purpose": "Healthy, fully instrumented fleet: all six context signals on every model step, settled outcomes, a well calibrated agent claim, learned checks established, a Growth fleet plan, and a notices recipient who is not the owner.",
+      "extra_users": [{"email": "sim-h1-ops@demo.provy.ai", "role": "operator"}],
+      "order": {"kind": "fleet", "tier": "growth", "plan": "standard", "starts_on": "2026-10-01", "reason": "Sim set: Growth fleet plan"},
+      "notices": {"people": ["sim-h1-ops@demo.provy.ai"], "notify50": true, "notify75": true},
+      "spend_ceiling_usd": 175,
+      "fleets": [
+        {"key": "claims", "name": "Sim H1 Claims Desk", "pack": "claims", "door": "rest", "scenario": "healthy", "sessions": 60, "days": 6, "seed": 1101, "claims": {"profile": "calibrated"}}
+      ]
+    },
+    {
+      "key": "H2",
+      "name": "Sim H2 Thin Context",
+      "email": "sim-h2@demo.provy.ai",
+      "purpose": "Thin context like Third Eye: a record on model steps only, one agent that runs code and no model (no record, not counted), source age on some items only, no instruction fingerprint. Enterprise fleet plan with a typed fee, a tiny pool so extra usage is real, and a 100 percent internal discount.",
+      "extra_users": [{"email": "sim-h2-ops@demo.provy.ai", "role": "operator"}],
+      "order": {"kind": "fleet", "tier": "enterprise", "plan": "custom", "starts_on": "2026-10-01", "fleet_fee": "2500.00", "fleet_steps": 40, "discount_percent": 100, "discount_note": "internal customer (sim)", "reason": "Sim set: Enterprise fleet plan with an internal discount, like Third Eye"},
+      "notices": {"people": ["sim-h2-ops@demo.provy.ai"], "notify50": true, "notify75": true},
+      "fleets": [
+        {"key": "claims", "name": "Sim H2 Thin Desk", "pack": "claims", "door": "rest", "scenario": "thin", "sessions": 60, "days": 6, "seed": 1201, "claims": {"profile": "calibrated"}}
+      ]
+    },
+    {
+      "key": "H3",
+      "name": "Sim H3 No Context",
+      "email": "sim-h3@demo.provy.ai",
+      "purpose": "The customer who never sent a manifest: nothing breaks, every context answer reads unknown, never a pass. Pilot ending in 14 days on a Startup fleet plan.",
+      "order": {"kind": "fleet", "tier": "startup", "plan": "pilot", "starts_on_offset_days": -1, "pilot_offset_days": 14, "reason": "Sim set: pilot ending in 14 days"},
+      "fleets": [
+        {"key": "iam", "name": "Sim H3 Access Desk", "pack": "iam", "door": "rest", "scenario": "none", "sessions": 40, "days": 6, "seed": 1301}
+      ]
+    },
+    {
+      "key": "H4",
+      "name": "Sim H4 Planted Faults",
+      "email": "sim-h4@demo.provy.ai",
+      "purpose": "Planted stale sources, unapproved sources and empty retrievals with a declared 30 day limit and approved list. The ground truth lists every planted fault by session. No order on file.",
+      "fleets": [
+        {"key": "iam", "name": "Sim H4 Access Desk", "pack": "iam", "door": "sdk", "scenario": "faults", "sessions": 50, "days": 6, "seed": 1402, "declare": {"limit_days": 30, "approved": "profile"}, "fault_rates": {"stale": 0.12, "unapproved": 0.12, "empty": 0.08}}
+      ]
+    },
+    {
+      "key": "H5",
+      "name": "Sim H5 Instruction Change",
+      "email": "sim-h5@demo.provy.ai",
+      "purpose": "Three instruction stories on three agents: a real change, an A-B-A-B alternating rollout, and a same-label fingerprint change. Pilot ending in 3 days on a Scale fleet plan.",
+      "order": {"kind": "fleet", "tier": "scale", "plan": "pilot", "starts_on_offset_days": -11, "pilot_offset_days": 3, "reason": "Sim set: pilot ending in 3 days"},
+      "fleets": [
+        {"key": "iam", "name": "Sim H5 Access Desk", "pack": "iam", "door": "otlp", "scenario": "instruction", "sessions": 50, "days": 6, "seed": 1501}
+      ]
+    },
+    {
+      "key": "H6",
+      "name": "Sim H6 Declared Checks",
+      "email": "sim-h6@demo.provy.ai",
+      "purpose": "Declared Guardrails checks (a freshness limit and an approved list), then a check switched off, then switched on again, with traffic in each phase. A per-agent order, for the case that is not a fleet plan.",
+      "order": {"kind": "per_agent", "plan": "standard", "starts_on": "2026-10-01", "price_per_agent": "300.00", "steps_per_agent": 48000, "overage_per_1000": "7.00", "included_agents": 4, "reason": "Sim set: per-agent order"},
+      "fleets": [
+        {"key": "claims", "name": "Sim H6 Claims Desk", "pack": "claims", "door": "rest", "scenario": "declared", "sessions": 60, "days": 6, "seed": 1601, "phases": 3, "warmup": 10, "declare": {"limit_days": 30, "approved": "profile", "as": "guardrails"}, "fault_rates": {"stale": 0.2, "unapproved": 0.15, "empty": 0.1}}
+      ]
+    },
+    {
+      "key": "H7",
+      "name": "Sim H7 Outcomes Duo",
+      "email": "sim-h7@demo.provy.ai",
+      "purpose": "Two fleets in one workspace. One agent states its confidence and is right about as often as it says; the other states 0.9 and is right about half the time. Each contract has a condition that can be measured and one that never can. Only the first fleet declares a 30 day limit and an approved list: proves a declaration lands on the card's own fleet (#1630).",
+      "order": {"kind": "fleet", "tier": "startup", "plan": "standard", "starts_on": "2026-10-01", "reason": "Sim set: Startup fleet plan"},
+      "fleets": [
+        {"key": "calibrated", "name": "Sim H7 Calibrated Desk", "pack": "claims", "door": "rest", "scenario": "outcomes", "sessions": 40, "days": 6, "seed": 1701, "claims": {"profile": "calibrated"}, "declare": {"limit_days": 30, "approved": "profile"}, "extra_criteria": true},
+        {"key": "overconfident", "name": "Sim H7 Overconfident Desk", "pack": "claims", "door": "rest", "scenario": "outcomes", "sessions": 40, "days": 6, "seed": 1702, "claims": {"profile": "overconfident"}, "extra_criteria": true}
+      ]
+    },
+    {
+      "key": "H8",
+      "name": "Sim H8 Doors",
+      "email": "sim-h8@demo.provy.ai",
+      "purpose": "The same planned story sent by five doors: the SDK, OpenTelemetry, direct JSON, a log line and a log field map. Readiness is identical on the first four. The field map cannot carry three of the six signals, and that is a documented limit of the door.",
+      "fleets": [
+        {"key": "sdk", "name": "Sim H8 via SDK", "pack": "claims", "door": "sdk", "scenario": "doors", "sessions": 16, "days": 3, "seed": 1801},
+        {"key": "otlp", "name": "Sim H8 via OpenTelemetry", "pack": "claims", "door": "otlp", "scenario": "doors", "sessions": 16, "days": 3, "seed": 1801},
+        {"key": "rest", "name": "Sim H8 via JSON", "pack": "claims", "door": "rest", "scenario": "doors", "sessions": 16, "days": 3, "seed": 1801},
+        {"key": "log", "name": "Sim H8 via log line", "pack": "claims", "door": "log", "scenario": "doors", "sessions": 16, "days": 3, "seed": 1801},
+        {"key": "logmap", "name": "Sim H8 via log field map", "pack": "claims", "door": "log_map", "scenario": "doors", "sessions": 16, "days": 3, "seed": 1801, "declare": {"fields_only": true}}
+      ]
+    },
+    {
+      "key": "H9",
+      "name": "Sim H9 Agent Roster",
+      "email": "sim-h9@demo.provy.ai",
+      "purpose": "A roster with a retired agent and an agent that sent data and was never accepted, next to agents that count. Retries and step ids: every step is sent twice and must be stored once.",
+      "fleets": [
+        {"key": "claims", "name": "Sim H9 Claims Desk", "pack": "claims", "door": "rest", "scenario": "roster", "sessions": 40, "days": 6, "seed": 1901, "retire": ["reviewer"], "never_accepted": ["validator"]}
+      ]
+    },
+    {
+      "key": "P1",
+      "name": "Sim P1 Pilot Ended",
+      "email": "sim-p1@demo.provy.ai",
+      "purpose": "A pilot that ended 5 days ago and was not converted. The roll pauses Provy's optional model work for it; the staff panel says so.",
+      "order": {"kind": "fleet", "tier": "startup", "plan": "pilot", "starts_on_offset_days": -20, "pilot_offset_days": -5, "reason": "Sim set: pilot ended 5 days ago, not converted"},
+      "fleets": [
+        {"key": "claims", "name": "Sim P1 Claims Desk", "pack": "claims", "door": "rest", "scenario": "healthy", "sessions": 20, "days": 4, "seed": 2001, "claims": {"profile": "calibrated"}}
+      ]
+    },
+    {
+      "key": "P2",
+      "name": "Sim P2 Pilot Converted",
+      "email": "sim-p2@demo.provy.ai",
+      "purpose": "A pilot that ended and was converted: a later paid order with no pilot date.",
+      "order": {"kind": "fleet", "tier": "startup", "plan": "pilot", "starts_on_offset_days": -20, "pilot_offset_days": -5, "reason": "Sim set: pilot", "then": {"plan": "standard", "paid": true, "starts_on_offset_days": -4, "reason": "Sim set: pilot converted, paid"}},
+      "fleets": [
+        {"key": "claims", "name": "Sim P2 Claims Desk", "pack": "claims", "door": "rest", "scenario": "healthy", "sessions": 20, "days": 4, "seed": 2101, "claims": {"profile": "calibrated"}}
+      ]
+    },
+    {
+      "key": "P3",
+      "name": "Sim P3 Pilot Extended",
+      "email": "sim-p3@demo.provy.ai",
+      "purpose": "A pilot that was about to end and was extended by staff: the end date moves out, the state reads running.",
+      "order": {"kind": "fleet", "tier": "startup", "plan": "pilot", "starts_on_offset_days": -12, "pilot_offset_days": 2, "reason": "Sim set: pilot", "extend_to_offset_days": 20, "extend_reason": "Sim set: pilot extended by staff"},
+      "fleets": [
+        {"key": "claims", "name": "Sim P3 Claims Desk", "pack": "claims", "door": "rest", "scenario": "healthy", "sessions": 20, "days": 4, "seed": 2201, "claims": {"profile": "calibrated"}}
+      ]
+    }
+  ]
+}

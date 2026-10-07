@@ -1,0 +1,377 @@
+{
+ "fleets": {
+  "claims": {
+   "counted_steps": 300,
+   "declared": {
+    "approved": [
+     "coverage-kb",
+     "claims-faq-*",
+     "claims-api",
+     "agent-memory"
+    ],
+    "findings": {
+     "sim-claims-CLM-102844-sh6claims100714": {
+      "index": 19,
+      "phase": 1,
+      "stale": [],
+      "unapproved": [
+       {
+        "agent": "reviewer",
+        "id": "page-401",
+        "source": "forum-scrape"
+       }
+      ]
+     },
+     "sim-claims-CLM-153931-sh6claims100714": {
+      "index": 35,
+      "phase": 2,
+      "stale": [],
+      "unapproved": [
+       {
+        "agent": "validator",
+        "id": "file-605",
+        "source": "shared-drive"
+       }
+      ]
+     },
+     "sim-claims-CLM-207051-sh6claims100714": {
+      "index": 56,
+      "phase": 3,
+      "stale": [
+       {
+        "age_hours": 1440.4,
+        "agent": "adjudicator",
+        "id": "doc-646",
+        "source": "coverage-kb"
+       }
+      ],
+      "unapproved": []
+     },
+     "sim-claims-CLM-222066-sh6claims100714": {
+      "index": 16,
+      "phase": 1,
+      "stale": [],
+      "unapproved": [
+       {
+        "agent": "intake",
+        "id": "file-603",
+        "source": "shared-drive"
+       }
+      ]
+     },
+     "sim-claims-CLM-320767-sh6claims100714": {
+      "index": 12,
+      "phase": 1,
+      "stale": [
+       {
+        "age_hours": 2568.8,
+        "agent": "adjudicator",
+        "id": "doc-618",
+        "source": "coverage-kb"
+       }
+      ],
+      "unapproved": []
+     },
+     "sim-claims-CLM-425627-sh6claims100714": {
+      "index": 15,
+      "phase": 1,
+      "stale": [
+       {
+        "age_hours": 2064.4,
+        "agent": "reviewer",
+        "id": "doc-956",
+        "source": "coverage-kb"
+       }
+      ],
+      "unapproved": []
+     },
+     "sim-claims-CLM-493842-sh6claims100714": {
+      "index": 43,
+      "phase": 3,
+      "stale": [],
+      "unapproved": [
+       {
+        "agent": "validator",
+        "id": "file-602",
+        "source": "shared-drive"
+       }
+      ]
+     },
+     "sim-claims-CLM-616296-sh6claims100714": {
+      "index": 36,
+      "phase": 2,
+      "stale": [],
+      "unapproved": [
+       {
+        "agent": "intake",
+        "id": "file-602",
+        "source": "shared-drive"
+       }
+      ]
+     },
+     "sim-claims-CLM-804450-sh6claims100714": {
+      "index": 14,
+      "phase": 1,
+      "stale": [
+       {
+        "age_hours": 1752.4,
+        "agent": "validator",
+        "id": "doc-485",
+        "source": "coverage-kb"
+       }
+      ],
+      "unapproved": []
+     }
+    },
+    "limit_hours": 720,
+    "stale_sessions": [
+     "sim-claims-CLM-207051-sh6claims100714",
+     "sim-claims-CLM-320767-sh6claims100714",
+     "sim-claims-CLM-425627-sh6claims100714",
+     "sim-claims-CLM-804450-sh6claims100714"
+    ],
+    "unapproved_sessions": [
+     "sim-claims-CLM-102844-sh6claims100714",
+     "sim-claims-CLM-153931-sh6claims100714",
+     "sim-claims-CLM-222066-sh6claims100714",
+     "sim-claims-CLM-493842-sh6claims100714",
+     "sim-claims-CLM-616296-sh6claims100714"
+    ]
+   },
+   "declares": [
+    "context_max_age"
+   ],
+   "door": "rest",
+   "outcomes": {
+    "fail": 22,
+    "success": 38,
+    "work_items": 60
+   },
+   "pack": "claims",
+   "phases": {
+    "checks": {
+     "1": {
+      "empty": true,
+      "fresh": true,
+      "sources": true
+     },
+     "2": {
+      "empty": false,
+      "fresh": false,
+      "sources": true
+     },
+     "3": {
+      "empty": false,
+      "fresh": true,
+      "sources": true
+     }
+    },
+    "count": 3,
+    "session_phase": {
+     "sim-claims-CLM-102844-sh6claims100714": 1,
+     "sim-claims-CLM-153931-sh6claims100714": 2,
+     "sim-claims-CLM-158083-sh6claims100714": 3,
+     "sim-claims-CLM-175832-sh6claims100714": 2,
+     "sim-claims-CLM-207051-sh6claims100714": 3,
+     "sim-claims-CLM-211051-sh6claims100714": 2,
+     "sim-claims-CLM-222066-sh6claims100714": 1,
+     "sim-claims-CLM-234200-sh6claims100714": 1,
+     "sim-claims-CLM-260714-sh6claims100714": 3,
+     "sim-claims-CLM-296386-sh6claims100714": 2,
+     "sim-claims-CLM-296585-sh6claims100714": 1,
+     "sim-claims-CLM-300108-sh6claims100714": 3,
+     "sim-claims-CLM-311462-sh6claims100714": 3,
+     "sim-claims-CLM-320767-sh6claims100714": 1,
+     "sim-claims-CLM-323779-sh6claims100714": 3,
+     "sim-claims-CLM-327241-sh6claims100714": 2,
+     "sim-claims-CLM-331871-sh6claims100714": 2,
+     "sim-claims-CLM-341893-sh6claims100714": 1,
+     "sim-claims-CLM-343039-sh6claims100714": 3,
+     "sim-claims-CLM-353741-sh6claims100714": 3,
+     "sim-claims-CLM-353975-sh6claims100714": 3,
+     "sim-claims-CLM-363783-sh6claims100714": 1,
+     "sim-claims-CLM-372409-sh6claims100714": 3,
+     "sim-claims-CLM-376919-sh6claims100714": 2,
+     "sim-claims-CLM-387151-sh6claims100714": 1,
+     "sim-claims-CLM-402808-sh6claims100714": 2,
+     "sim-claims-CLM-405722-sh6claims100714": 2,
+     "sim-claims-CLM-409304-sh6claims100714": 2,
+     "sim-claims-CLM-416090-sh6claims100714": 3,
+     "sim-claims-CLM-425627-sh6claims100714": 1,
+     "sim-claims-CLM-443194-sh6claims100714": 3,
+     "sim-claims-CLM-474929-sh6claims100714": 3,
+     "sim-claims-CLM-480267-sh6claims100714": 3,
+     "sim-claims-CLM-486957-sh6claims100714": 3,
+     "sim-claims-CLM-493842-sh6claims100714": 3,
+     "sim-claims-CLM-496200-sh6claims100714": 2,
+     "sim-claims-CLM-503135-sh6claims100714": 1,
+     "sim-claims-CLM-512167-sh6claims100714": 1,
+     "sim-claims-CLM-512427-sh6claims100714": 1,
+     "sim-claims-CLM-538982-sh6claims100714": 1,
+     "sim-claims-CLM-557449-sh6claims100714": 1,
+     "sim-claims-CLM-591567-sh6claims100714": 3,
+     "sim-claims-CLM-616296-sh6claims100714": 2,
+     "sim-claims-CLM-717884-sh6claims100714": 2,
+     "sim-claims-CLM-729109-sh6claims100714": 1,
+     "sim-claims-CLM-748135-sh6claims100714": 2,
+     "sim-claims-CLM-762832-sh6claims100714": 1,
+     "sim-claims-CLM-798283-sh6claims100714": 1,
+     "sim-claims-CLM-804450-sh6claims100714": 1,
+     "sim-claims-CLM-809149-sh6claims100714": 1,
+     "sim-claims-CLM-815511-sh6claims100714": 2,
+     "sim-claims-CLM-817562-sh6claims100714": 2,
+     "sim-claims-CLM-835552-sh6claims100714": 2,
+     "sim-claims-CLM-861199-sh6claims100714": 2,
+     "sim-claims-CLM-933780-sh6claims100714": 3,
+     "sim-claims-CLM-935171-sh6claims100714": 3,
+     "sim-claims-CLM-943464-sh6claims100714": 3,
+     "sim-claims-CLM-949585-sh6claims100714": 1,
+     "sim-claims-CLM-957286-sh6claims100714": 2,
+     "sim-claims-CLM-968575-sh6claims100714": 2
+    }
+   },
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "partly_sent",
+     "search_result": "sent",
+     "source": "partly_sent",
+     "source_age": "partly_sent"
+    },
+    "signalsSent": 3,
+    "state": "thin",
+    "stepsCounted": 20
+   },
+   "scenario": "declared",
+   "session_ids": [
+    "sim-claims-CLM-512167-sh6claims100714",
+    "sim-claims-CLM-729109-sh6claims100714",
+    "sim-claims-CLM-809149-sh6claims100714",
+    "sim-claims-CLM-762832-sh6claims100714",
+    "sim-claims-CLM-503135-sh6claims100714",
+    "sim-claims-CLM-387151-sh6claims100714",
+    "sim-claims-CLM-798283-sh6claims100714",
+    "sim-claims-CLM-296585-sh6claims100714",
+    "sim-claims-CLM-512427-sh6claims100714",
+    "sim-claims-CLM-341893-sh6claims100714",
+    "sim-claims-CLM-363783-sh6claims100714",
+    "sim-claims-CLM-538982-sh6claims100714",
+    "sim-claims-CLM-320767-sh6claims100714",
+    "sim-claims-CLM-234200-sh6claims100714",
+    "sim-claims-CLM-804450-sh6claims100714",
+    "sim-claims-CLM-425627-sh6claims100714",
+    "sim-claims-CLM-222066-sh6claims100714",
+    "sim-claims-CLM-557449-sh6claims100714",
+    "sim-claims-CLM-949585-sh6claims100714",
+    "sim-claims-CLM-102844-sh6claims100714",
+    "sim-claims-CLM-835552-sh6claims100714",
+    "sim-claims-CLM-175832-sh6claims100714",
+    "sim-claims-CLM-331871-sh6claims100714",
+    "sim-claims-CLM-402808-sh6claims100714",
+    "sim-claims-CLM-296386-sh6claims100714",
+    "sim-claims-CLM-861199-sh6claims100714",
+    "sim-claims-CLM-496200-sh6claims100714",
+    "sim-claims-CLM-748135-sh6claims100714",
+    "sim-claims-CLM-968575-sh6claims100714",
+    "sim-claims-CLM-957286-sh6claims100714",
+    "sim-claims-CLM-405722-sh6claims100714",
+    "sim-claims-CLM-327241-sh6claims100714",
+    "sim-claims-CLM-815511-sh6claims100714",
+    "sim-claims-CLM-717884-sh6claims100714",
+    "sim-claims-CLM-409304-sh6claims100714",
+    "sim-claims-CLM-153931-sh6claims100714",
+    "sim-claims-CLM-616296-sh6claims100714",
+    "sim-claims-CLM-376919-sh6claims100714",
+    "sim-claims-CLM-211051-sh6claims100714",
+    "sim-claims-CLM-817562-sh6claims100714",
+    "sim-claims-CLM-158083-sh6claims100714",
+    "sim-claims-CLM-372409-sh6claims100714",
+    "sim-claims-CLM-474929-sh6claims100714",
+    "sim-claims-CLM-493842-sh6claims100714",
+    "sim-claims-CLM-260714-sh6claims100714",
+    "sim-claims-CLM-933780-sh6claims100714",
+    "sim-claims-CLM-343039-sh6claims100714",
+    "sim-claims-CLM-416090-sh6claims100714",
+    "sim-claims-CLM-353741-sh6claims100714",
+    "sim-claims-CLM-443194-sh6claims100714",
+    "sim-claims-CLM-591567-sh6claims100714",
+    "sim-claims-CLM-486957-sh6claims100714",
+    "sim-claims-CLM-353975-sh6claims100714",
+    "sim-claims-CLM-943464-sh6claims100714",
+    "sim-claims-CLM-300108-sh6claims100714",
+    "sim-claims-CLM-323779-sh6claims100714",
+    "sim-claims-CLM-207051-sh6claims100714",
+    "sim-claims-CLM-480267-sh6claims100714",
+    "sim-claims-CLM-935171-sh6claims100714",
+    "sim-claims-CLM-311462-sh6claims100714"
+   ],
+   "sessions": 60,
+   "steps": 300,
+   "stored_steps": 300,
+   "truth_file": "ground_truth/sim_tenants/H6/claims.truth.jsonl",
+   "truth_sha256": "1b605a65740e8dfb34f165894c364447d40a489d5ac304c8cc422696d86c0f92"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-h6@demo.provy.ai",
+  "key": "H6",
+  "name": "Sim H6 Declared Checks",
+  "nonces": {
+   "claims": "sh6claims100714"
+  },
+  "purpose": "Declared Guardrails checks (a freshness limit and an approved list), then a check switched off, then switched on again, with traffic in each phase. A per-agent order, for the case that is not a fleet plan.",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": {
+  "calls": [
+   {
+    "body": {
+     "includedAgents": 4,
+     "paid": false,
+     "plan": "standard",
+     "reason": "Sim set: per-agent order",
+     "startsOn": "2026-10-01",
+     "terms": {
+      "overagePer1000": "7.00",
+      "pricePerAgent": "300.00",
+      "stepsPerAgent": 48000
+     }
+    },
+    "route": "/api/admin/orders"
+   }
+  ],
+  "discount_percent": null,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": null,
+    "starts_on": "2026-10-01"
+   }
+  ],
+  "pilot_as_of_build": {
+   "state": "none"
+  },
+  "plan": {
+   "mode": "per_agent",
+   "steps_per_agent": 48000
+  },
+  "spec": {
+   "included_agents": 4,
+   "kind": "per_agent",
+   "overage_per_1000": "7.00",
+   "plan": "standard",
+   "price_per_agent": "300.00",
+   "reason": "Sim set: per-agent order",
+   "starts_on": "2026-10-01",
+   "steps_per_agent": 48000
+  }
+ },
+ "spend_ceiling_usd": null
+}

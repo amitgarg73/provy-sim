@@ -196,7 +196,7 @@ class RestDoor:
             body["context"] = s.context                 # the guide: a `context` object at the top level of the step
         return body
 
-    def send_session(self, result, occurred_at: str, agents, resend_first_step: bool = False) -> dict:
+    def send_session(self, result, occurred_at: str, agents, resend_first_step: bool = False, resend_all: bool = False) -> dict:
         sid = result.session_id
         self.w.post("/api/ingest/session/open", {"session_id": sid, "session_type": result.session_type, "is_simulated": False,
                                                  "started_at": occurred_at, "metadata": {"date": occurred_at[:10], "entity_id": result.entity_id}}, sid)
@@ -207,6 +207,9 @@ class RestDoor:
             self.w.post("/api/ingest/trace", b, sid)
         if resend_first_step and bodies:
             self.w.post("/api/ingest/trace", bodies[0], sid)        # a lost reply: the same step, the same span_id, again
+        if resend_all:
+            for b in bodies:                                        # every reply lost: each step sent a second time with the same span_id
+                self.w.post("/api/ingest/trace", b, sid)
         for ev in evals_of(result, agents):
             self.w.post("/api/ingest/eval", eval_body(result, ev), sid)
         self.w.post("/api/ingest/session/close", close_body(result), sid)
@@ -374,4 +377,65 @@ class OtlpDoor:
         return self.rest.send_outcome(rec)
 
 
-DOORS = {"rest": RestDoor, "sdk": SdkDoor, "otlp": OtlpDoor}
+class LogDoor:
+    """The log door: one POST of log lines for the whole session, as a pipeline that already writes JSON logs would send it.
+
+    mode "line": beside each model step's event line, a `{"provy_context": {...}}` line carrying the manifest (the guidance for a
+    team that can add a log line). mode "map": no manifest line at all; the retrieval rides on the event as an array a fleet
+    DECLARES a field map for (`context_log_fields`, config.context_sets.DECLARATIONS), bound to the agent's first event of the
+    session. The map has no field for a fingerprint, a version or an instruction: a documented limit of that door, so the manifest
+    is cut to what the map can say before it is written. Outcomes and evals go over REST, as for any log customer."""
+    name = "log"
+
+    def __init__(self, base: str, key: str, replies: Replies, mode: str = "line"):
+        assert mode in ("line", "map")
+        self.mode = mode
+        self.name = "log" if mode == "line" else "log_map"
+        self.rest = RestDoor(base, key, replies)
+        self.rest.w.door = self.name + "-rest"
+        self.w = Wire(base, key, self.name, replies)
+
+    def body(self, result, occurred_at: str) -> dict:
+        plans = plan_steps(result, occurred_at)
+        first_event: dict[str, int] = {}
+        for p in plans:
+            first_event.setdefault(p.step.agent, p.i)
+        lines: list[str] = []
+        for p in plans:
+            s = p.step
+            ev: dict[str, Any] = {"ts": p.at, "level": "INFO", "agent": s.agent, "event": s.step_type, "outcome": s.outcome or "",
+                                  "entity_id": result.entity_id}
+            if s.tool_name:
+                ev["tool"] = s.tool_name
+            if s.model:
+                ev["model"] = s.model
+            if s.tokens_input:
+                ev["tokens_in"] = s.tokens_input
+            if s.tokens_output:
+                ev["tokens_out"] = s.tokens_output
+            if s.cost_usd:
+                ev["cost_usd"] = s.cost_usd
+            if self.mode == "map" and first_event.get(s.agent) == p.i:
+                owner = next((q.step for q in plans if q.step.agent == s.agent and q.step.step_type in ("decision", "agent_message") and q.step.context), None)
+                if owner is not None:
+                    docs = [it for it in owner.context.get("items", []) if it.get("kind") == "document"]
+                    ev["retrieved"] = [{"index": i["source"], "doc": i["id"], "updated": i.get("as_of"), "cited": bool(i.get("used"))} for i in docs]
+            lines.append(json.dumps(ev, separators=(",", ":")))
+            if self.mode == "line" and s.context is not None and s.step_type in ("decision", "agent_message"):
+                lines.append(json.dumps({"provy_context": {"agent": s.agent, "step_type": s.step_type, **s.context}}, separators=(",", ":")))
+        return {"session_type": result.session_type, "session_id": result.session_id, "entity_id": result.entity_id,
+                "occurred_at": occurred_at, "logs": "\n".join(lines)}
+
+    def send_session(self, result, occurred_at: str, agents, resend_first_step: bool = False, resend_all: bool = False) -> dict:
+        r = self.w.post("/api/ingest/log", self.body(result, occurred_at), result.session_id)
+        return {"status": r.get("status"), "reply": r.get("json")}
+
+    def close_again(self, session_id: str, terminal_reason: str) -> dict:
+        return self.rest.close_again(session_id, terminal_reason)
+
+    def send_outcome(self, rec: dict) -> dict:
+        return self.rest.send_outcome(rec)
+
+
+DOORS = {"rest": RestDoor, "sdk": SdkDoor, "otlp": OtlpDoor, "log": lambda b, k, r: LogDoor(b, k, r, "line"),
+         "log_map": lambda b, k, r: LogDoor(b, k, r, "map")}

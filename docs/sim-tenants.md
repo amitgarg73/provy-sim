@@ -1,0 +1,106 @@
+# The sim tenants: a persistent pre-prod test bed
+
+Written 7 October 2026. Pre-prod only. Nothing here touches production, Third Eye, the d1 and d2 demo tenants, the Onboard and walk tenants, or the ITSM tenant and pack.
+
+## What this is
+
+Twelve small workspaces on pre-prod, each built to be one thing the product has to get right. Each has a ground-truth file that says what the product should show for it, so a script can check the answer instead of a person looking at a screen. Names start with `Sim ` and logins are on `demo.provy.ai`. The nightly sweep deletes only users on `@argustest.com` and a tenant named `Nightly Certification`, so these survive nights with no change to argus.
+
+The set exists because the simulators were built before the context manifest, readiness, fleet plans, notices, pilots and claims-first work. Before this set, one simulated tenant sent context records at all (the Onboard tenants, which belong to another job), none sent a claim with a stated confidence, none had an order, and none could show a fleet that sends nothing.
+
+## The twelve
+
+| Key | Tenant | What it is for | Door | Sessions | What the product should say |
+|---|---|---|---|---|---|
+| H1 | Sim H1 Healthy | A healthy, fully instrumented fleet on a Growth fleet plan, with a notice recipient who is not the owner and a raised upper ceiling | JSON | 60 | Ingestion ready, 6 of 6. All 60 work items settled. Expected side is the agent's own claim. Calibration table matches the plan. Growth, 150,000 steps. |
+| H2 | Sim H2 Thin Context | The Third Eye shape: record on model steps only, one agent runs code and no model, dates on some items, no instruction fingerprint. Enterprise fleet plan, small pool, 100 percent internal discount | JSON | 60 | Thin, 4 of 6. 5 of 20 steps not counted. Source age partly sent. Instruction fingerprint not sent. |
+| H3 | Sim H3 No Context | The customer who never sent a record. Pilot ending in 14 days | JSON | 40 | Thin, 0 of 6, never ready. No context check writes any verdict, none passes. Pilot ending notice at 14 days. |
+| H4 | Sim H4 Planted Faults | Stale sources, unapproved sources and empty searches, with a declared 30 day limit and approved list. No order | SDK | 50 | Every planted stale and unapproved item is flagged on its session and nothing else is. |
+| H5 | Sim H5 Instruction Change | A real change, an A-B-A-B rollout and a same-label fingerprint change on three agents. Pilot ending in 3 days | OpenTelemetry | 50 | Findings exactly as the learned rule gives them: change once, went back once, back and forth once, then quiet. A fourth agent never changes and is never flagged. |
+| H6 | Sim H6 Declared Checks | Declared freshness and approved-source rules; freshness switched off for a phase, then on; the learned empty-search check switched off. Per-agent order | JSON | 60 | Freshness verdicts exist in phases 1 and 3 and not in phase 2. Approved-source verdicts in all three. No empty-search verdict after the switch-off. |
+| H7 | Sim H7 Outcomes Duo | Two fleets: one agent whose stated confidence is about right, one that states 0.9 and holds about half the time. A contract condition that can never be measured on each. Only the first fleet has a declared limit. Startup plan | JSON | 40 + 40 | Each fleet's calibration table matches its plan. Declarations land on the first fleet only. |
+| H8 | Sim H8 Doors | One planned story sent five ways: SDK, OpenTelemetry, JSON, log line, log field map | all | 5 x 16 | Ready on the first four. Thin on the field map, which cannot carry three of the six signals (a limit of that door). |
+| H9 | Sim H9 Agent Roster | A retired agent and an agent that sent data and was never accepted. Every step sent twice | JSON | 40 | Steps stored once. Roster shows one retired, one not accepted. |
+| P1 | Sim P1 Pilot Ended | Pilot ended 5 days ago, not converted | JSON | 20 | State ended, 5 days since. |
+| P2 | Sim P2 Pilot Converted | Pilot ended and a later paid order | JSON | 20 | Converted. |
+| P3 | Sim P3 Pilot Extended | Pilot moved from 2 days out to 20 days out by staff | JSON | 20 | Running, 20 days left. |
+
+Ground truth for each lives in `ground_truth/sim_tenants/<key>/`: `expect.json` (what the product should say, with the clock and nonce the plan was built on, the order calls with absolute dates, and the SHA-256 of each truth file) and `<fleet>.truth.jsonl` (one line per work item: its steps, items, instruction, claim, planted faults, outcome). Neither is ever sent to Provy; a test scans every body for it.
+
+The spec is `config/sim_tenants.json`. The scenarios are `engine/sim_scenarios.py`. The expectations are written from the plan, independently of the product, from its documented rules (`docs/readiness-contract.md`, the learned-check rules in argus `docs/operations/context-default-checks-runbook.md`). A disagreement is a finding about one of the two.
+
+## Which server
+
+Use a local server started from the argus checkout at `provydev`, pointed at pre-prod. On 7 October 2026 the deployed pre-prod (`dev.provy.ai`) was running a build older than `provydev`: it accepted an order with fleet terms and stored it as a per-agent order with no terms, and it had no pricing, upper-ceiling or staff readiness route. The local server also holds the four R2 names empty, so the sim stores trace bodies in the database and writes nothing to the bucket the pre-prod and production share.
+
+    cd "$HOME/Claude Projects/argus"; git status --short | grep -v '^??'      # must print nothing
+    git switch --detach provydev; node scripts/check-local-dev.mjs
+    cd web && scripts/with-secrets WAITLIST_ADMIN_KEY_PREVIEW ADMIN_SECRET_PREVIEW -- sh -c \
+      'WAITLIST_ADMIN_KEY="$WAITLIST_ADMIN_KEY_PREVIEW" ADMIN_SECRET="$ADMIN_SECRET_PREVIEW" RESEND_API_KEY= R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET= PORT=3100 npm run dev'
+    # when done: git switch provydev, and confirm git status is clean
+
+(Port 3000 is the Sales OS front end on this machine.) Teardown is the one call that goes to `dev.provy.ai`, because only that deployment holds the R2 names.
+
+## Rules
+
+- Pre-prod only. Every client refuses another project or host, and asks the database and the deployment which environment they are in.
+- Secrets by name, through `argus/scripts/with-secrets`. Passwords and ingest keys live in one file with mode 0600, `credentials.json` in the session scratchpad. It is never printed or committed, and a looser mode is refused.
+- Workspaces come from `provisionFleet` (provy-sim-control `scripts/provision-sim-set.mts`), not from sign-up. The 20 a day sign-up cap is not touched.
+- The ITSM pack is refused by the spec check. Another job owns it and the PDI.
+- Volume is bounded: 80 to 480 steps a tenant. This is a test bed, not a load test.
+
+## Build, check, tear down
+
+Under `with-secrets SUPABASE_URL SUPABASE_KEY WAITLIST_ADMIN_KEY_PREVIEW`, with the scratchpad venv that has `provy-sdk`, `opentelemetry-sdk` and `requests`:
+
+    python scripts/sim_set.py plan --now <ISO clock, not ahead of now>      # writes the truth and expectation files, no network
+    # provision (provy-sim-control worktree):
+    npx vite-node --config vite.node.config.mts scripts/provision-sim-set.mts --spec <path>/config/sim_tenants.json --out <credentials file> [--only H1,H2]
+    python scripts/sim_set.py build H1 --creds <file>      # declarations, send in phases where the fleet has them, then order, notices, ceiling, roster
+    PROVY_SIM_CONTROL=<provy-sim-control worktree> python scripts/sim_assert.py --creds <file> --out docs/sim-evidence/assert.json
+    node scripts/shoot_sim_tenants.mjs --creds <file> --out docs/sim-evidence
+
+To rebuild one tenant: tear it down, forget its credentials, provision it again, plan with the same clock, build. `scripts/sim_teardown.py H1 --creds <file> --apply` does the teardown in the right order: the product's own delete empties the tenant's R2 objects first (counted before and after with a read-only list of `traces/<tenant id>/` only), then the rows, then this script clears the console's own rows (`sim_control_config`, `sim_control_runs`, `sim_pending_outcomes`), which have no foreign key to the workflow. Orders and the audit log outlive a workspace by design.
+
+Never delete a tenant by domain. Only by tenant id, from the credentials file, with a name that starts with `Sim `.
+
+## How often
+
+- After every deploy of argus to pre-prod, and before a release: `sim_assert.py`. It is read-only and takes about a minute.
+- Every two weeks, rebuild the pilot tenants (H3, H5, P1, P2, P3). Their states are dated: 14 days out, 3 days out, ended 5 days ago. The expected state is computed from the absolute dates on the day the check runs, so the check stays true, but the scenario each one was built for drifts.
+- When the product changes what it counts (readiness window, learned-check thresholds, tiers), update the expectation function first, read the diff, then rebuild.
+
+## What the product cannot be asked to do here
+
+- The hourly roll's pilot pause and the usage notices run from the scheduler with `CRON_SECRET`, a production-tier secret. This set does not hold it. So P1 shows the ended pilot and the staff finding, but the roll has not paused its optional model work, and no extra-usage notice has been claimed for H2 even though it is over its pool. Running the roll for these tenants is the founder's call.
+- A sealed month, a month boundary and a pilot that ends by the clock need the billing-clock hook that only `ent-walkb-*` workspaces have.
+- The deployed pre-prod (`dev.provy.ai`) is behind `provydev` until it is next deployed.
+
+## Where the simulators stood on 7 October 2026 (the gap list this set closes)
+
+Read from pre-prod by SELECT and from the repos. No customer content was read.
+
+| Area | Before | Evidence | Now |
+|---|---|---|---|
+| Existing sim workspaces | 8 shells from August (Northwind Commerce, NorthPeak, Teameight, Claude Code Live, Meridian Mutual, Harborline Insurance, Vantage Group, Weekone Travel): provisioned, never run, 0 steps, 0 sessions. Wiring is healthy (the console's key matches the product's for every one) | `sim_control_config` joined to `ag_traces` and `ag_ingest_keys`, hash compared in SQL, no value read | Left alone. They are not part of the set. Tear them down when the founder says |
+| ITSM Demo | 910 steps, 84 sessions, 0 steps carrying a context record. 5 ingest keys on the fleet and one matches the console. Another job owns it | same | Not touched. Gaps listed in the final report |
+| Onboard SDK, OTel, JSON, Missed | The only sim tenants with context records (482, 480, 480, 328 steps). Another job's | same | Not touched |
+| C-series customers | Harbourline Customs, Tidewater Customs, Bluebonnet (on `@argustest.com`, not in the sweep's exempt list), Anchorfield and Cascade (exempt), Kestrel and Finch; all marked contaminated (#1136), none with a context record | tenant list, `lib/test-tenant-sweep.ts` | Left alone. Three are exposed to the sweep |
+| Context records on every door | Only through the one-off context sets and the onboarding runner, on the iam and claims packs. No pack run through the console sent one | `engine/context_levers.py` PROFILES has two packs | Every fleet in this set goes through a door that sends them, by REST, SDK, OpenTelemetry, a log line and a field map |
+| The six signals | Built whole or cut by hand | n/a | Whole (H1, H8), partial by design (H2, H8 field map), none (H3) |
+| Steps that ran no model | None. Every decision step carried a model | pack code | H2: one agent runs code and no model |
+| Agent claims with a stated confidence | Every claim at 0.9. The first claim this set sent was never graded (remapped signal), so the product fell back to its forecast on 60 of 60 rows | ledger rows on the first build | One graded claim per work item at 0.5, 0.7 or 0.9 (H1, H2, H7); overconfident agent (H7) |
+| Settled outcomes | Dated at the moment the work began, before the decision it answers | `engine/groundtruth.py` | Dated 30 to 90 minutes after the last step |
+| Retries and step ids | The console emitter sends a fresh random span id on every call | `engine/emitter.py` | H9 sends every step twice with the same id |
+| Retired and never-accepted agents | None | n/a | H9 |
+| Orders: fleet plan, tier, Enterprise, discount, per agent | None. Every sim workspace has the empty per-agent order the migration wrote | `ag_workspace_orders` | H1 Growth, H2 Enterprise with 100 percent discount, H3 Startup, H5 Scale, H7 Startup, P1 to P3 Startup, H6 per agent |
+| Pilots | None | n/a | 14 days, 3 days, ended unconverted, converted, extended |
+| Notices recipients | None | `ag_usage_settings` has 3 rows | H1 and H2 name a second login |
+| Upper ceiling | Platform figure only | `GET .../spend-ceiling` | H1 raised to 175 dollars a day with a reason |
+| Declarations (limit, approved list, field map) | Two keys, sent by hand | `scripts/declare_context.py` | H4, H7 (first fleet only), H8 field map; Guardrails rows in H6 |
+| Learned default checks | Never established on a sim fleet that was also kept | n/a | Established on H1 (60 sessions, no fault, nothing flagged) |
+| Switched-off checks | None | n/a | H6 |
+| Multi-fleet workspace | None | n/a | H7 (two fleets), H8 (five) |
+| Previous months before the meter | Every tenant shows them; none was built to | meter began 2026-10-04 | Same for all; not separately built |
+| Staff Activity rows | Only from the walk tenants | `ag_audit_log` | Every order, pilot change and ceiling change here writes one |
+| fleet_doctor | Reads provy.config directly, and reads ServiceNow and GitHub secrets | `scripts/fleet_doctor.py` | Not run (secret door rule, and ServiceNow is off limits). `sim_assert.py` and the console-key hash query above do the wiring check by SELECT |
