@@ -15,23 +15,25 @@
 # ⛔ n IS SIZED AGAINST MIN_GROUP (6), NOT AGAINST PATIENCE. A 10-run sample can only ever return
 # base_rate_verdict=insufficient, which answers nothing about confidence. That mistake was made on
 # the first run of the night.
-# ⛔ NO `set -u` HERE. provy.config contains entries that reference other variables, so sourcing it
-# under `-u` aborts the script on the first one and the failure reads as "unbound variable
-# CERTIFY_DB_URL", which points at the wrong thing entirely. Cost: one dead overnight launch.
+# ⛔ NO SECRET IS READ FROM A FILE HERE (#1648). The names come from the environment, which the secret door
+# fills. Run it as:
+#
+#   cd "$HOME/Claude Projects/argus" && scripts/with-secrets CERTIFY_DB_URL GROQ_API_KEY -- \
+#       "$HOME/Claude Projects/provy-sim/scripts/measure_levers.sh"
+#
+# The earlier version sourced the config file with `eval "$(grep ...)"`. That was also the reason for the old
+# "no `set -u`" warning (config entries reference other variables); with plain environment variables that
+# hazard is gone, but `set -u` is still left off because the script predates it and nothing needs it.
 set -o pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 OUT="${1:-docs/failure-research/lever-measurements.md}"
 N="${LEVER_N:-20}"
 
-# ⛔ `. <(grep ...)` SILENTLY LOADS NOTHING UNDER THIS MACHINE'S BASH (3.2.57, arm64). It works in
-# zsh, which is why the documented one-liner looks fine when pasted into a terminal and then loads
-# an empty string inside a script. It fails with no error and no exit code: the variables are simply
-# absent. Use eval, which is proven here, and check the result rather than trusting it.
-set -a; eval "$(grep -E '^(CERTIFY_[A-Z_]+|GROQ_API_KEY)=' "$HOME/Claude Projects/provy.config")"; set +a
 export PROVY_DB_URL="${CERTIFY_DB_URL:-}"
 if [ -z "$PROVY_DB_URL" ]; then
-  echo "⛔ CERTIFY_DB_URL did not load from provy.config; nothing would be scored. Stopping." >&2
+  echo "CERTIFY_DB_URL is not in the environment; nothing would be scored. Stopping." >&2
+  echo "Run: cd \"\$HOME/Claude Projects/argus\" && scripts/with-secrets CERTIFY_DB_URL GROQ_API_KEY -- <this script>" >&2
   exit 1
 fi
 export PROVY_EMIT=1

@@ -21,11 +21,21 @@ plaintext. Nothing here prints a secret and nothing here writes one.
 dispatch, ServiceNow logs into a table nobody reads, and the workflow goes green. That is four
 independent ways to look like it worked.
 
-Usage:
-    python3 scripts/fleet_doctor.py                 # every registered sim fleet
-    python3 scripts/fleet_doctor.py --pack itsm     # one of them
+Usage (the names come from the environment; the secret door puts them there, #1648):
 
-Exit code is 1 when any fleet has a mismatch, so it can gate a seed.
+    cd "$HOME/Claude Projects/argus" && scripts/with-secrets CERTIFY_DB_URL SERVICENOW_INSTANCE \\
+        SERVICENOW_USER SERVICENOW_PASSWORD -- python3 <path to>/scripts/fleet_doctor.py [--pack itsm]
+
+⛔ THIS SCRIPT NEVER OPENS A CREDENTIAL FILE. It reads four names from its own environment and nothing else:
+CERTIFY_DB_URL (or PROVY_DB_URL, the same pre-prod address under the name engine/scoreboard.py uses),
+and, only when an ITSM fleet is among those checked, SERVICENOW_INSTANCE / SERVICENOW_USER /
+SERVICENOW_PASSWORD. A name that is missing stops the run with the name and the exact command above, never
+a value. A pack other than itsm needs no ServiceNow name at all. The GitHub secrets (place 4) are not
+readable by anyone, by design; the runner using the same three SERVICENOW_* names is checked by the login
+below, and `gh secret list --repo amitgarg73/provy-sim` shows only that the names exist and when they changed.
+
+Exit code is 1 when any fleet has a mismatch, so it can gate a seed. Exit 2 when a name is missing or the
+database address is not the pre-prod project.
 """
 from __future__ import annotations
 
@@ -34,12 +44,9 @@ import base64
 import hashlib
 import json
 import os
-import re
 import sys
 import urllib.error
 import urllib.request
-
-CONFIG = os.path.expanduser("~/Claude Projects/provy.config")
 
 # ⛔ PRE-PROD, ALWAYS. A sim fleet pointed at production writes simulated work into the real ledger,
 # which happened on 27 Jul 2026. Anything else here is a finding, not a preference.
@@ -54,32 +61,66 @@ def _short(digest: str | None) -> str:
     return (digest[:10] + "…") if digest else "—"
 
 
-def _cfg_backticked(line_no: int) -> str:
-    """The first backticked token on a numbered line of provy.config.
+PREPROD_REF = "fpuyabfxtrzwciehfetk"
+PROD_REF = "eckthcvacrkfjihluubt"
 
-    ⛔ READ, NEVER TRANSCRIBE. The PDI password contains a digit one next to characters that read as
-    a lowercase L, and it has already been typed wrong once. Extracting it programmatically removes
-    that class of mistake entirely.
+DOOR_DIR = "$HOME/Claude Projects/argus"
+DB_NAMES = ("CERTIFY_DB_URL", "PROVY_DB_URL")
+SERVICENOW_NAMES = ("SERVICENOW_INSTANCE", "SERVICENOW_USER", "SERVICENOW_PASSWORD")
+
+
+class MissingSecret(Exception):
+    """One or more names are not in the environment. Carries NAMES, never values."""
+
+    def __init__(self, names: list[str]):
+        self.names = names
+        super().__init__(", ".join(names))
+
+
+def door_command(names: list[str]) -> str:
+    """The exact command that would supply these names. Printed in errors; it holds no value."""
+    return (f'cd "{DOOR_DIR}" && scripts/with-secrets {" ".join(names)} -- '
+            f'python3 "$HOME/Claude Projects/provy-sim/scripts/fleet_doctor.py"')
+
+
+def _env(environ, name: str) -> str:
+    return (environ.get(name) or "").strip()
+
+
+def database_url(environ) -> str:
+    """The pre-prod connection string from the environment, or MissingSecret / ValueError.
+
+    ⛔ FAILS CLOSED. An address that does not name the pre-prod project is refused, and an address that
+    names production is refused loudly: a read-only doctor must never be pointed at the real ledger.
     """
-    try:
-        with open(CONFIG) as f:
-            line = f.readlines()[line_no - 1]
-    except (OSError, IndexError):
-        return ""
-    m = re.search(r"`([^`]+)`", line)
-    return m.group(1) if m else ""
+    for name in DB_NAMES:
+        url = _env(environ, name)
+        if url:
+            break
+    else:
+        raise MissingSecret([DB_NAMES[0]])
+    if PROD_REF in url:
+        raise ValueError("the database address names the PRODUCTION project; refusing. "
+                         "This tool is pre-prod only.")
+    if PREPROD_REF not in url:
+        raise ValueError(f"the database address does not name the pre-prod project ({PREPROD_REF}); refusing")
+    return url
 
 
-def _db():
+def servicenow_credentials(environ) -> tuple[str, str, str]:
+    """(instance URL, user, password) from the environment, or MissingSecret listing every absent name."""
+    missing = [n for n in SERVICENOW_NAMES if not _env(environ, n)]
+    if missing:
+        raise MissingSecret(missing)
+    instance = _env(environ, "SERVICENOW_INSTANCE")
+    if "://" not in instance:
+        instance = "https://" + instance
+    return instance, _env(environ, "SERVICENOW_USER"), _env(environ, "SERVICENOW_PASSWORD")
+
+
+def _db(url: str):
     """Direct Postgres, because the console's own API cannot tell you the console is wrong."""
-    try:
-        import psycopg2  # noqa: F401
-    except ImportError:
-        return None
     import psycopg2
-    url = os.environ.get("PROVY_DB_URL", "")
-    if not url:
-        return None
     return psycopg2.connect(url)
 
 
@@ -110,7 +151,9 @@ def servicenow_property(instance: str, user: str, password: str, name: str) -> s
     return result[0]["value"] if result else None
 
 
-def check(conn, pack: str | None) -> int:
+def check(conn, pack: str | None, environ=None, property_reader=None) -> int:
+    environ = os.environ if environ is None else environ
+    property_reader = property_reader or servicenow_property
     # ⛔ THE PACK NAME DOES NOT IDENTIFY A FLEET AND PRINTING IT ALONE READS AS A DUPLICATE.
     # Two tenants run the claims pack, Meridian Mutual and Harborline Insurance, and both name their
     # workflow "Claims Adjudication" because that is what it is. Nothing is wrong with that: a fleet
@@ -174,15 +217,17 @@ def check(conn, pack: str | None) -> int:
         # ⛔ ITSM ALONE HAS A THIRD COPY. Its outcomes are pushed BY the instance, so the key in
         # ServiceNow is what settles every work item. It can be stale while the other two agree.
         if pack_name == "itsm":
-            instance = _cfg_backticked(866)
-            user = _cfg_backticked(867)
-            password = _cfg_backticked(868)
-            if not (instance and user and password):
-                print("   servicenow  credentials not found in provy.config")
+            creds = None
+            try:
+                creds = servicenow_credentials(environ)
+            except MissingSecret as e:
+                print(f"   servicenow  not checked: {', '.join(e.names)} not in the environment")
+                print(f"               run: {door_command(list(DB_NAMES[:1]) + list(SERVICENOW_NAMES))}")
                 problems += 1
-            else:
-                sn_key = servicenow_property(instance, user, password, "provy.ingest.key")
-                sn_url = servicenow_property(instance, user, password, "provy.ingest.url")
+            if creds:
+                instance, user, password = creds
+                sn_key = property_reader(instance, user, password, "provy.ingest.key")
+                sn_url = property_reader(instance, user, password, "provy.ingest.url")
                 if isinstance(sn_key, str) and sn_key.startswith("__HTTP_"):
                     code = sn_key.replace("__HTTP_", "").rstrip("_")
                     print(f"   servicenow  HTTP {code} — the instance refused these credentials")
@@ -219,19 +264,30 @@ def check(conn, pack: str | None) -> int:
     return 1 if problems else 0
 
 
-def main() -> int:
+def main(argv=None, environ=None) -> int:
+    environ = os.environ if environ is None else environ
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--pack", help="check one pack instead of all of them")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
-    conn = _db()
-    if conn is None:
-        print("set PROVY_DB_URL to the PRE-PROD connection string "
-              "(the ref is fpuyabfxtrzwciehfetk) and install psycopg2", file=sys.stderr)
+    try:
+        url = database_url(environ)
+    except MissingSecret as e:
+        print(f"fleet_doctor: {', '.join(e.names)} is not in the environment.\n"
+              f"Run it under the secret door:\n  {door_command(list(DB_NAMES[:1]) + list(SERVICENOW_NAMES))}",
+              file=sys.stderr)
+        return 2
+    except ValueError as e:
+        print(f"fleet_doctor: {e}", file=sys.stderr)
         return 2
     try:
-        return check(conn, args.pack)
+        conn = _db(url)
+    except ImportError:
+        print("fleet_doctor: install psycopg2 (pip install psycopg2-binary)", file=sys.stderr)
+        return 2
+    try:
+        return check(conn, args.pack, environ)
     finally:
         conn.close()
 

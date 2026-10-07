@@ -68,7 +68,7 @@ No mismatch between the product and its documented rules survived. Every defect 
 - `provisionFleet` writes the roster and no `accepted` event, so every provisioned agent read as never accepted and "Agents counting" read 0. The set accepts its agents at setup through `ag_record_agent_events`, the same function the product's routes use.
 - The log door answers 503 without a working model key. A session it did not accept is no longer marked sent, and no outcome is posted for it.
 - The provy-sim-control levers page did not typecheck: the seven context levers had no entry in its two maps.
-- `scripts/fleet_doctor.py` opens `provy.config` directly and reads ServiceNow and GitHub secrets. It was not run. The console-key check is a SELECT comparing hashes.
+- `scripts/fleet_doctor.py` opened the config file directly and read ServiceNow rows by line number. Fixed in #1648: it now reads `CERTIFY_DB_URL`, `SERVICENOW_INSTANCE`, `SERVICENOW_USER` and `SERVICENOW_PASSWORD` from its environment, which `argus/scripts/with-secrets` fills, and a test (`tests/test_secret_door_tripwire.py`) fails if any file in this repo names a credential file. The console-key check is a SELECT comparing hashes.
 
 Behaviour that is by design and now has an assertion: the OpenTelemetry root-span wrapper reads as one more agent, never accepted, and adds a stored step per session (Help says so); the field map binds a retrieval to the agent's first event.
 
@@ -148,4 +148,4 @@ Read from pre-prod by SELECT and from the repos. No customer content was read.
 | Multi-fleet workspace | None | n/a | H7 (two fleets), H8 (five) |
 | Previous months before the meter | Every tenant shows them; none was built to | meter began 2026-10-04 | Same for all; not separately built |
 | Staff Activity rows | Only from the walk tenants | `ag_audit_log` | Every order, pilot change and ceiling change here writes one |
-| fleet_doctor | Reads provy.config directly, and reads ServiceNow and GitHub secrets | `scripts/fleet_doctor.py` | Not run (secret door rule, and ServiceNow is off limits). `sim_assert.py` and the console-key hash query above do the wiring check by SELECT |
+| fleet_doctor | Read the config file directly, and read ServiceNow secrets | `scripts/fleet_doctor.py` | Reads its names from the environment (#1648), run under the door; tripwire test added |
