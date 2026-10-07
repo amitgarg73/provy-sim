@@ -43,8 +43,9 @@ def main() -> int:
     ap.add_argument("tenants", nargs="+")
     ap.add_argument("--creds", required=True)
     ap.add_argument("--apply", action="store_true")
+    ap.add_argument("--spec", help="a spec file other than the persistent set's (config/sim_tenants_itsm.json for the ITSM parity tenant)")
     a = ap.parse_args()
-    spec = X.load_spec()
+    spec = X.load_spec(a.spec) if a.spec else X.load_spec()
     creds = X.Creds(a.creds)
     pg = X.Pg()
     prefix = spec["name_prefix"]

@@ -74,6 +74,10 @@ Behaviour that is by design and now has an assertion: the OpenTelemetry root-spa
 
 One thing seen once and not reproduced: on the first build of H2, 1 of 60 work items took the forecast although the agent's claim was stored on the session. The rebuilt tenant passes all 39 comparisons. If it comes back, it is a race between the session close and the claim being readable.
 
+## The ITSM parity tenant (argus#1649)
+
+The persistent set refuses the ITSM pack: it works real tickets in a ServiceNow instance. A second, disposable spec (`config/sim_tenants_itsm.json`, tenant I1 "Sim ITSM Parity Check") holds one LIVE ITSM fleet on its own desk marker `provy-itsm-parity`. `scripts/itsm_parity.py` creates at most 30 incidents on that marker, lets the pack work them, sends the sessions, closes the tickets, and settles them by running `servicenow/outcome_push.js` over the closed records and posting the result to this fleet only. The instance's sweep, SLA targets and outcome push belong to the default marker and push with one key that is ITSM Demo's, so none of them sees these tickets. See `docs/itsm-parity-check.md` for the run and its numbers.
+
 ## Which server
 
 Use a local server started from the argus checkout at `provydev`, pointed at pre-prod. On 7 October 2026 the deployed pre-prod (`dev.provy.ai`) was running a build older than `provydev`: it accepted an order with fleet terms and stored it as a per-agent order with no terms, and it had no pricing, upper-ceiling or staff readiness route. The local server also holds the four R2 names empty, so the sim stores trace bodies in the database and writes nothing to the bucket the pre-prod and production share.
