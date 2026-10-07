@@ -1,0 +1,4801 @@
+{
+ "summary": {
+  "pass": 512,
+  "FAIL": 0,
+  "info": 0,
+  "no-data": 0
+ },
+ "by_tenant": {
+  "H1": {
+   "pass": 39,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "H2": {
+   "pass": 39,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "H3": {
+   "pass": 30,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "H4": {
+   "pass": 25,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "H5": {
+   "pass": 34,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "H6": {
+   "pass": 31,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "H7": {
+   "pass": 74,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "H8": {
+   "pass": 102,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "H9": {
+   "pass": 21,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "P1": {
+   "pass": 39,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "P2": {
+   "pass": 38,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  },
+  "P3": {
+   "pass": 40,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  }
+ },
+ "at": "2026-10-07T16:11:19.254909+00:00",
+ "rows": [
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "sessions stored",
+   "expected": 60,
+   "observed": 60,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 300,
+   "observed": 300,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 300,
+   "observed": 300,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "steps carrying a context record",
+   "expected": 240,
+   "observed": 240,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "work items settled",
+   "expected": 60,
+   "observed": 60,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "expected side is the agent's own claim (unpredicted 0)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "claims that held (matched)",
+   "expected": 34,
+   "observed": 34,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "claims that did not hold (diverged)",
+   "expected": 26,
+   "observed": 26,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "calibration at 0.5: claims",
+   "expected": 22,
+   "observed": 22,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "calibration at 0.5: held",
+   "expected": 7,
+   "observed": 7,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "calibration at 0.5: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "calibration at 0.7: claims",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "calibration at 0.7: held",
+   "expected": 11,
+   "observed": 11,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "calibration at 0.7: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "calibration at 0.9: claims",
+   "expected": 18,
+   "observed": 18,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "calibration at 0.9: held",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "calibration at 0.9: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "claims with no stated confidence",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "-",
+   "check": "order: pricing mode",
+   "expected": "fleet",
+   "observed": "fleet",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "-",
+   "check": "order: tier",
+   "expected": "growth",
+   "observed": "growth",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "-",
+   "check": "order: steps included for the whole fleet",
+   "expected": 150000,
+   "observed": 150000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "-",
+   "check": "order: fee (staff only)",
+   "expected": 119900,
+   "observed": 119900,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "claims",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "-",
+   "check": "notices go to the added recipients",
+   "expected": [
+    "sim-h1-ops@demo.provy.ai"
+   ],
+   "observed": [
+    "sim-h1-ops@demo.provy.ai"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H1",
+   "fleet": "-",
+   "check": "upper ceiling raised for this workspace (USD a day)",
+   "expected": 175,
+   "observed": 175,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "sessions stored",
+   "expected": 60,
+   "observed": 60,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 300,
+   "observed": 300,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 300,
+   "observed": 300,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "steps carrying a context record",
+   "expected": 180,
+   "observed": 180,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "readiness state",
+   "expected": "thin",
+   "observed": "thin",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "steps given context (judged)",
+   "expected": 15,
+   "observed": 15,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "steps not counted (no model, no record)",
+   "expected": 5,
+   "observed": 5,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "signals sent on every step",
+   "expected": 4,
+   "observed": 4,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "signal instruction_fingerprint",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "signal source_age",
+   "expected": "partly_sent",
+   "observed": "partly_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "work items settled",
+   "expected": 60,
+   "observed": 60,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "expected side is the agent's own claim (unpredicted 0)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "claims that held (matched)",
+   "expected": 46,
+   "observed": 46,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "claims that did not hold (diverged)",
+   "expected": 14,
+   "observed": 14,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "calibration at 0.5: claims",
+   "expected": 19,
+   "observed": 19,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "calibration at 0.5: held",
+   "expected": 7,
+   "observed": 7,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "calibration at 0.5: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "calibration at 0.7: claims",
+   "expected": 15,
+   "observed": 15,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "calibration at 0.7: held",
+   "expected": 13,
+   "observed": 13,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "calibration at 0.7: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "calibration at 0.9: claims",
+   "expected": 26,
+   "observed": 26,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "calibration at 0.9: held",
+   "expected": 26,
+   "observed": 26,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "calibration at 0.9: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "claims with no stated confidence",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "-",
+   "check": "order: pricing mode",
+   "expected": "fleet",
+   "observed": "fleet",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "-",
+   "check": "order: tier",
+   "expected": "enterprise",
+   "observed": "enterprise",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "-",
+   "check": "order: steps included for the whole fleet",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "-",
+   "check": "order: fee (staff only)",
+   "expected": 250000,
+   "observed": 250000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "-",
+   "check": "order: discount percent",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "claims",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H2",
+   "fleet": "-",
+   "check": "notices go to the added recipients",
+   "expected": [
+    "sim-h2-ops@demo.provy.ai"
+   ],
+   "observed": [
+    "sim-h2-ops@demo.provy.ai"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "sessions stored",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 274,
+   "observed": 274,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 274,
+   "observed": 274,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "steps carrying a context record",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "readiness state",
+   "expected": "thin",
+   "observed": "thin",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "signals sent on every step",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "signal instruction_fingerprint",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "signal instruction_version",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "signal item_fingerprint",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "signal search_result",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "signal source",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "signal source_age",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "work items settled",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "context checks that wrote a verdict (all unknown, so none)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "context verdicts that PASSED (never a pass)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "-",
+   "check": "order: pricing mode",
+   "expected": "fleet",
+   "observed": "fleet",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "-",
+   "check": "order: tier",
+   "expected": "startup",
+   "observed": "startup",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "-",
+   "check": "order: steps included for the whole fleet",
+   "expected": 50000,
+   "observed": 50000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "-",
+   "check": "order: fee (staff only)",
+   "expected": 49900,
+   "observed": 49900,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "-",
+   "check": "pilot state today (2026-10-07): running",
+   "expected": "in_pilot",
+   "observed": "in_pilot",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "-",
+   "check": "pilot end date",
+   "expected": "2026-10-21",
+   "observed": "2026-10-21",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "-",
+   "check": "pilot ending notice shown (within 14 days)",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "-",
+   "check": "pilot days left in the staff headline",
+   "expected": "14 days left.",
+   "observed": "14 days left.",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H3",
+   "fleet": "iam",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "sessions stored",
+   "expected": 50,
+   "observed": 50,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 337,
+   "observed": 337,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 337,
+   "observed": 337,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "steps carrying a context record",
+   "expected": 200,
+   "observed": 200,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "work items settled",
+   "expected": 50,
+   "observed": 50,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [
+    "context_max_age"
+   ],
+   "observed": [
+    "context_max_age"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "sessions with a stale source flagged",
+   "expected": [
+    "sim-iam-AC-2124-sh4iam100714",
+    "sim-iam-AC-4907-sh4iam100714",
+    "sim-iam-AC-8690-sh4iam100714",
+    "sim-iam-AC-9575-sh4iam100714"
+   ],
+   "observed": [
+    "sim-iam-AC-2124-sh4iam100714",
+    "sim-iam-AC-4907-sh4iam100714",
+    "sim-iam-AC-8690-sh4iam100714",
+    "sim-iam-AC-9575-sh4iam100714"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "sessions with an unapproved source flagged",
+   "expected": [
+    "sim-iam-AC-3372-sh4iam100714"
+   ],
+   "observed": [
+    "sim-iam-AC-3372-sh4iam100714"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "planted empty retrievals the learned check can judge are flagged",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "no clean session is flagged for an empty search",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "-",
+   "check": "no order on file",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H4",
+   "fleet": "iam",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "sessions stored",
+   "expected": 50,
+   "observed": 50,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 390,
+   "observed": 390,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 390,
+   "observed": 390,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "steps carrying a context record",
+   "expected": 200,
+   "observed": 200,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "ingest door recorded",
+   "expected": "otlp",
+   "observed": "otlp",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "work items settled",
+   "expected": 50,
+   "observed": 50,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "instruction changes flagged (agent, session)",
+   "expected": [
+    [
+     "applier",
+     "sim-iam-AC-6303-sh5iam100714"
+    ],
+    [
+     "intake",
+     "sim-iam-AC-9411-sh5iam100714"
+    ],
+    [
+     "mapper",
+     "sim-iam-AC-3339-sh5iam100714"
+    ],
+    [
+     "mapper",
+     "sim-iam-AC-5135-sh5iam100714"
+    ],
+    [
+     "mapper",
+     "sim-iam-AC-9302-sh5iam100714"
+    ]
+   ],
+   "observed": [
+    [
+     "applier",
+     "sim-iam-AC-6303-sh5iam100714"
+    ],
+    [
+     "intake",
+     "sim-iam-AC-9411-sh5iam100714"
+    ],
+    [
+     "mapper",
+     "sim-iam-AC-3339-sh5iam100714"
+    ],
+    [
+     "mapper",
+     "sim-iam-AC-5135-sh5iam100714"
+    ],
+    [
+     "mapper",
+     "sim-iam-AC-9302-sh5iam100714"
+    ]
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "instruction story of applier: findings",
+   "expected": 1,
+   "observed": 1,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "instruction story of intake: findings",
+   "expected": 1,
+   "observed": 1,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "instruction story of mapper: findings",
+   "expected": 3,
+   "observed": 3,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "reviewer never changed: nothing flagged",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "-",
+   "check": "order: pricing mode",
+   "expected": "fleet",
+   "observed": "fleet",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "-",
+   "check": "order: tier",
+   "expected": "scale",
+   "observed": "scale",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "-",
+   "check": "order: steps included for the whole fleet",
+   "expected": 300000,
+   "observed": 300000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "-",
+   "check": "order: fee (staff only)",
+   "expected": 199900,
+   "observed": 199900,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "-",
+   "check": "pilot state today (2026-10-07): running",
+   "expected": "in_pilot",
+   "observed": "in_pilot",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "-",
+   "check": "pilot end date",
+   "expected": "2026-10-10",
+   "observed": "2026-10-10",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "-",
+   "check": "pilot ending notice shown (within 14 days)",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "-",
+   "check": "pilot days left in the staff headline",
+   "expected": "3 days left.",
+   "observed": "3 days left.",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "roster: the OpenTelemetry wrapper span reads as one more agent, never accepted (documented in Help)",
+   "expected": "never accepted",
+   "observed": "never accepted",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H5",
+   "fleet": "iam",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "sessions stored",
+   "expected": 60,
+   "observed": 60,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 300,
+   "observed": 300,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 300,
+   "observed": 300,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "steps carrying a context record",
+   "expected": 240,
+   "observed": 240,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "readiness state",
+   "expected": "thin",
+   "observed": "thin",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "signals sent on every step",
+   "expected": 3,
+   "observed": 3,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "signal item_fingerprint",
+   "expected": "partly_sent",
+   "observed": "partly_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "signal source",
+   "expected": "partly_sent",
+   "observed": "partly_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "signal source_age",
+   "expected": "partly_sent",
+   "observed": "partly_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "work items settled",
+   "expected": 60,
+   "observed": 60,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "sessions with a stale source flagged",
+   "expected": [
+    "sim-claims-CLM-207051-sh6claims100714",
+    "sim-claims-CLM-320767-sh6claims100714",
+    "sim-claims-CLM-425627-sh6claims100714",
+    "sim-claims-CLM-804450-sh6claims100714"
+   ],
+   "observed": [
+    "sim-claims-CLM-207051-sh6claims100714",
+    "sim-claims-CLM-320767-sh6claims100714",
+    "sim-claims-CLM-425627-sh6claims100714",
+    "sim-claims-CLM-804450-sh6claims100714"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "sessions with an unapproved source flagged",
+   "expected": [
+    "sim-claims-CLM-102844-sh6claims100714",
+    "sim-claims-CLM-153931-sh6claims100714",
+    "sim-claims-CLM-222066-sh6claims100714",
+    "sim-claims-CLM-493842-sh6claims100714",
+    "sim-claims-CLM-616296-sh6claims100714"
+   ],
+   "observed": [
+    "sim-claims-CLM-102844-sh6claims100714",
+    "sim-claims-CLM-153931-sh6claims100714",
+    "sim-claims-CLM-222066-sh6claims100714",
+    "sim-claims-CLM-493842-sh6claims100714",
+    "sim-claims-CLM-616296-sh6claims100714"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "phase 1: freshness rule wrote a verdict for its sessions",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "phase 2: freshness rule wrote a verdict for its sessions",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "phase 2: learned empty-search check wrote no verdict (switched off)",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "phase 3: freshness rule wrote a verdict for its sessions",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "phase 3: learned empty-search check wrote no verdict (switched off)",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "-",
+   "check": "order: per agent, no fleet tier",
+   "expected": "no tier",
+   "observed": "no tier",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "-",
+   "check": "order: seats",
+   "expected": 4,
+   "observed": 4,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "-",
+   "check": "order: steps per agent",
+   "expected": 48000,
+   "observed": 48000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "-",
+   "check": "order: price per agent (staff only, cents)",
+   "expected": 30000,
+   "observed": 30000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H6",
+   "fleet": "claims",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "sessions stored",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 200,
+   "observed": 200,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 200,
+   "observed": 200,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "steps carrying a context record",
+   "expected": 160,
+   "observed": 160,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "work items settled",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "expected side is the agent's own claim (unpredicted 0)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "claims that held (matched)",
+   "expected": 26,
+   "observed": 26,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "claims that did not hold (diverged)",
+   "expected": 14,
+   "observed": 14,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "calibration at 0.5: claims",
+   "expected": 14,
+   "observed": 14,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "calibration at 0.5: held",
+   "expected": 4,
+   "observed": 4,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "calibration at 0.5: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "calibration at 0.7: claims",
+   "expected": 12,
+   "observed": 12,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "calibration at 0.7: held",
+   "expected": 11,
+   "observed": 11,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "calibration at 0.7: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "calibration at 0.9: claims",
+   "expected": 14,
+   "observed": 14,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "calibration at 0.9: held",
+   "expected": 11,
+   "observed": 11,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "calibration at 0.9: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "claims with no stated confidence",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "the unmeasurable condition is listed",
+   "expected": 1,
+   "observed": 1,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "the unmeasurable condition settled nothing",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "the unmeasurable condition is not shown as on",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "the measurable conditions are on",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [
+    "context_max_age"
+   ],
+   "observed": [
+    "context_max_age"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "sessions with a stale source flagged",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "sessions with an unapproved source flagged",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "sessions stored",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 200,
+   "observed": 200,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 200,
+   "observed": 200,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "steps carrying a context record",
+   "expected": 160,
+   "observed": 160,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "work items settled",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "expected side is the agent's own claim (unpredicted 0)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "claims that held (matched)",
+   "expected": 21,
+   "observed": 21,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "claims that did not hold (diverged)",
+   "expected": 19,
+   "observed": 19,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "calibration at 0.9: claims",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "calibration at 0.9: held",
+   "expected": 21,
+   "observed": 21,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "calibration at 0.9: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "claims with no stated confidence",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "the unmeasurable condition is listed",
+   "expected": 1,
+   "observed": 1,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "the unmeasurable condition settled nothing",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "the unmeasurable condition is not shown as on",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "the measurable conditions are on",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "-",
+   "check": "order: pricing mode",
+   "expected": "fleet",
+   "observed": "fleet",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "-",
+   "check": "order: tier",
+   "expected": "startup",
+   "observed": "startup",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "-",
+   "check": "order: steps included for the whole fleet",
+   "expected": 50000,
+   "observed": 50000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "-",
+   "check": "order: fee (staff only)",
+   "expected": 49900,
+   "observed": 49900,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "calibrated",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H7",
+   "fleet": "overconfident",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "sessions stored",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "steps carrying a context record",
+   "expected": 64,
+   "observed": 64,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "work items settled",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "sessions stored",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 96,
+   "observed": 96,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 96,
+   "observed": 96,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "steps carrying a context record",
+   "expected": 64,
+   "observed": 64,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "ingest door recorded",
+   "expected": "otlp",
+   "observed": "otlp",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "work items settled",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "sessions stored",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "steps carrying a context record",
+   "expected": 64,
+   "observed": 64,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "work items settled",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "sessions stored",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "steps carrying a context record",
+   "expected": 64,
+   "observed": 64,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "ingest door recorded",
+   "expected": "log",
+   "observed": "log",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "work items settled",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "sessions stored",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "steps carrying a context record",
+   "expected": 64,
+   "observed": 64,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "ingest door recorded",
+   "expected": "log",
+   "observed": "log",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "readiness state",
+   "expected": "thin",
+   "observed": "thin",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "signals sent on every step",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "signal instruction_fingerprint",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "signal instruction_version",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "signal item_fingerprint",
+   "expected": "not_sent",
+   "observed": "not_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "signal search_result",
+   "expected": "partly_sent",
+   "observed": "partly_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "signal source",
+   "expected": "partly_sent",
+   "observed": "partly_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "signal source_age",
+   "expected": "partly_sent",
+   "observed": "partly_sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "work items settled",
+   "expected": 16,
+   "observed": 16,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [
+    "context_log_fields"
+   ],
+   "observed": [
+    "context_log_fields"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "-",
+   "check": "no order on file",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "log",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "logmap",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "roster: the OpenTelemetry wrapper span reads as one more agent, never accepted (documented in Help)",
+   "expected": "never accepted",
+   "observed": "never accepted",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "otlp",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "rest",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H8",
+   "fleet": "sdk",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "sessions stored",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 200,
+   "observed": 200,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 200,
+   "observed": 200,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "steps carrying a context record",
+   "expected": 160,
+   "observed": 160,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "work items settled",
+   "expected": 40,
+   "observed": 40,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "-",
+   "check": "no order on file",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "H9",
+   "fleet": "claims",
+   "check": "roster: who is accepted, retired and never accepted",
+   "expected": {
+    "adjudicator": "accepted",
+    "intake": "accepted",
+    "reviewer": "retired",
+    "validator": "never accepted"
+   },
+   "observed": {
+    "adjudicator": "accepted",
+    "intake": "accepted",
+    "reviewer": "retired",
+    "validator": "never accepted"
+   },
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "sessions stored",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "steps carrying a context record",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "work items settled",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "expected side is the agent's own claim (unpredicted 0)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "claims that held (matched)",
+   "expected": 11,
+   "observed": 11,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "claims that did not hold (diverged)",
+   "expected": 9,
+   "observed": 9,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "calibration at 0.5: claims",
+   "expected": 9,
+   "observed": 9,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "calibration at 0.5: held",
+   "expected": 4,
+   "observed": 4,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "calibration at 0.5: too few to judge",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "calibration at 0.7: claims",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "calibration at 0.7: held",
+   "expected": 3,
+   "observed": 3,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "calibration at 0.7: too few to judge",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "calibration at 0.9: claims",
+   "expected": 5,
+   "observed": 5,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "calibration at 0.9: held",
+   "expected": 4,
+   "observed": 4,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "calibration at 0.9: too few to judge",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "claims with no stated confidence",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "-",
+   "check": "order: pricing mode",
+   "expected": "fleet",
+   "observed": "fleet",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "-",
+   "check": "order: tier",
+   "expected": "startup",
+   "observed": "startup",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "-",
+   "check": "order: steps included for the whole fleet",
+   "expected": 50000,
+   "observed": 50000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "-",
+   "check": "order: fee (staff only)",
+   "expected": 49900,
+   "observed": 49900,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "-",
+   "check": "pilot state today (2026-10-07): ended",
+   "expected": "ended",
+   "observed": "ended",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "-",
+   "check": "pilot end date",
+   "expected": "2026-10-02",
+   "observed": "2026-10-02",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P1",
+   "fleet": "claims",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "sessions stored",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "steps carrying a context record",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "work items settled",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "expected side is the agent's own claim (unpredicted 0)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "claims that held (matched)",
+   "expected": 15,
+   "observed": 15,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "claims that did not hold (diverged)",
+   "expected": 5,
+   "observed": 5,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "calibration at 0.5: claims",
+   "expected": 10,
+   "observed": 10,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "calibration at 0.5: held",
+   "expected": 7,
+   "observed": 7,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "calibration at 0.5: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "calibration at 0.7: claims",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "calibration at 0.7: held",
+   "expected": 5,
+   "observed": 5,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "calibration at 0.7: too few to judge",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "calibration at 0.9: claims",
+   "expected": 4,
+   "observed": 4,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "calibration at 0.9: held",
+   "expected": 3,
+   "observed": 3,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "calibration at 0.9: too few to judge",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "claims with no stated confidence",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "-",
+   "check": "order: pricing mode",
+   "expected": "fleet",
+   "observed": "fleet",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "-",
+   "check": "order: tier",
+   "expected": "startup",
+   "observed": "startup",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "-",
+   "check": "order: steps included for the whole fleet",
+   "expected": 50000,
+   "observed": 50000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "-",
+   "check": "order: fee (staff only)",
+   "expected": 49900,
+   "observed": 49900,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "-",
+   "check": "pilot state today (2026-10-07): converted",
+   "expected": "none",
+   "observed": "none",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P2",
+   "fleet": "claims",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "sessions stored",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "steps carrying a context record",
+   "expected": 80,
+   "observed": 80,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "steps given context (judged)",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "steps not counted (no model, no record)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "work items settled",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "expected side is the agent's own claim (unpredicted 0)",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "claims that held (matched)",
+   "expected": 15,
+   "observed": 15,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "claims that did not hold (diverged)",
+   "expected": 5,
+   "observed": 5,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "calibration at 0.5: claims",
+   "expected": 4,
+   "observed": 4,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "calibration at 0.5: held",
+   "expected": 2,
+   "observed": 2,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "calibration at 0.5: too few to judge",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "calibration at 0.7: claims",
+   "expected": 10,
+   "observed": 10,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "calibration at 0.7: held",
+   "expected": 8,
+   "observed": 8,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "calibration at 0.7: too few to judge",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "calibration at 0.9: claims",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "calibration at 0.9: held",
+   "expected": 5,
+   "observed": 5,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "calibration at 0.9: too few to judge",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "claims with no stated confidence",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [],
+   "observed": [],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "-",
+   "check": "order: pricing mode",
+   "expected": "fleet",
+   "observed": "fleet",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "-",
+   "check": "order: tier",
+   "expected": "startup",
+   "observed": "startup",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "-",
+   "check": "order: steps included for the whole fleet",
+   "expected": 50000,
+   "observed": 50000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "-",
+   "check": "order: fee (staff only)",
+   "expected": 49900,
+   "observed": 49900,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "-",
+   "check": "pilot state today (2026-10-07): running",
+   "expected": "in_pilot",
+   "observed": "in_pilot",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "-",
+   "check": "pilot end date",
+   "expected": "2026-10-27",
+   "observed": "2026-10-27",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "-",
+   "check": "pilot ending notice shown (within 14 days)",
+   "expected": false,
+   "observed": false,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "P3",
+   "fleet": "claims",
+   "check": "roster: every agent that sent data is accepted",
+   "expected": true,
+   "observed": true,
+   "verdict": "pass",
+   "note": ""
+  }
+ ]
+}

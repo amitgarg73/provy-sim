@@ -138,9 +138,7 @@
      "sim-claims-CLM-616296-sh6claims100714"
     ]
    },
-   "declares": [
-    "context_max_age"
-   ],
+   "declares": [],
    "door": "rest",
    "outcomes": {
     "fail": 22,

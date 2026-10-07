@@ -1,0 +1,45 @@
+CHECK WHAT MY FLEET SENDS
+?
+
+This is what your fleet has sent, compared with what Provy needs to run its context checks.
+
+Ingestion5
+Outcomesok
+Connected.
+Receiving traces. 4 agents across 30 sessions in the latest 200 steps.
+As of Oct 7, 16:00. Window: the latest 20 decision steps.
+Provy cannot yet catch stale information, unapproved sources, empty searches, changed instructions and changed documents.
+Over the latest 20 steps that were given context.
+
+20 of 20 steps sent no record. A step that sends nothing counts as no record. Provy never reads no record as fine.
+
+Catch stale information
+Off
+Your steps do not say how old a source was.
+Guardrails shows this check as not measured until it arrives.
+Fix it
+Catch sources you have not approved
+Off
+Your steps do not say where information came from.
+Guardrails shows this check as not measured until it arrives.
+Fix it
+Catch searches that found nothing
+Off
+Your steps do not say whether a search found anything.
+Guardrails shows this check as not measured until it arrives.
+Fix it
+Catch changed instructions
+Off
+Your steps do not say which instructions ran.
+Guardrails shows this check as not measured until it arrives.
+Fix it
+Know which version of a document the agent read
+Off
+Your steps do not say which version of a document was read.
+Fix it
+No item is dated, on any of 20 steps.
+Some sources never carry an age
+0 of 5 checks are fully on.
+See all fixes (5)
+Check again
+Test a fix with a sample before you send more

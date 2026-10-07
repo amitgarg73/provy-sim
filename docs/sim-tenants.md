@@ -19,7 +19,7 @@ The set exists because the simulators were built before the context manifest, re
 | H5 | Sim H5 Instruction Change | A real change, an A-B-A-B rollout and a same-label fingerprint change on three agents. Pilot ending in 3 days | OpenTelemetry | 50 | Findings exactly as the learned rule gives them: change once, went back once, back and forth once, then quiet. A fourth agent never changes and is never flagged. |
 | H6 | Sim H6 Declared Checks | Declared freshness and approved-source rules; freshness switched off for a phase, then on; the learned empty-search check switched off. Per-agent order | JSON | 60 | Freshness verdicts exist in phases 1 and 3 and not in phase 2. Approved-source verdicts in all three. No empty-search verdict after the switch-off. |
 | H7 | Sim H7 Outcomes Duo | Two fleets: one agent whose stated confidence is about right, one that states 0.9 and holds about half the time. A contract condition that can never be measured on each. Only the first fleet has a declared limit. Startup plan | JSON | 40 + 40 | Each fleet's calibration table matches its plan. Declarations land on the first fleet only. |
-| H8 | Sim H8 Doors | One planned story sent five ways: SDK, OpenTelemetry, JSON, log line, log field map | all | 5 x 16 | Ready on the first four. Thin on the field map, which cannot carry three of the six signals (a limit of that door). |
+| H8 | Sim H8 Doors | One planned story sent five ways: SDK, OpenTelemetry, JSON, log line, log field map | all | 5 x 16 | Ready on the first four. Thin, 0 of 6, on the field map: it has no field for three of the six signals (a documented limit of that door), and it binds a retrieval to the agent's first event, so an agent that looks something up first has its record on the lookup and its decision step reads as no record (the other three signals are partly sent). |
 | H9 | Sim H9 Agent Roster | A retired agent and an agent that sent data and was never accepted. Every step sent twice | JSON | 40 | Steps stored once. Roster shows one retired, one not accepted. |
 | P1 | Sim P1 Pilot Ended | Pilot ended 5 days ago, not converted | JSON | 20 | State ended, 5 days since. |
 | P2 | Sim P2 Pilot Converted | Pilot ended and a later paid order | JSON | 20 | Converted. |
@@ -28,6 +28,51 @@ The set exists because the simulators were built before the context manifest, re
 Ground truth for each lives in `ground_truth/sim_tenants/<key>/`: `expect.json` (what the product should say, with the clock and nonce the plan was built on, the order calls with absolute dates, and the SHA-256 of each truth file) and `<fleet>.truth.jsonl` (one line per work item: its steps, items, instruction, claim, planted faults, outcome). Neither is ever sent to Provy; a test scans every body for it.
 
 The spec is `config/sim_tenants.json`. The scenarios are `engine/sim_scenarios.py`. The expectations are written from the plan, independently of the product, from its documented rules (`docs/readiness-contract.md`, the learned-check rules in argus `docs/operations/context-default-checks-runbook.md`). A disagreement is a finding about one of the two.
+
+## Where they are (7 October 2026)
+
+Tenant ids, fleet ids and logins. No password and no key is here: they are in a 0600 file, `credentials.json`, in the session scratchpad
+(`/private/tmp/claude-501/-Users-amitgarg/df44c595-ffd9-40ef-8535-927a02d2085a/scratchpad/sim-tenants/credentials.json`), and nowhere else. R2: the
+tenants were ingested through a local server with the bucket names empty, so every one has 0 objects under `traces/<tenant id>/` (counted read-only on the day).
+
+| Key | Tenant | Tenant id | Fleet | Fleet id | Login | Steps |
+|---|---|---|---|---|---|---|
+| H1 | Sim H1 Healthy | 9dcd69b0-11a1-4e5b-90e4-5a6d016166f1 | Sim H1 Claims Desk | 547b8ad8-62b7-4c2e-ad12-7f2ee12d9da7 | sim-h1@demo.provy.ai | 300 |
+| H2 | Sim H2 Thin Context | 0c587584-4191-46d0-851d-035ffb5c0bab | Sim H2 Thin Desk | 6b18b0f7-c4e3-4a4f-bd61-a837e7e4b581 | sim-h2@demo.provy.ai | 300 |
+| H3 | Sim H3 No Context | 01448857-5432-4a86-a941-51d84a70aac9 | Sim H3 Access Desk | f975f759-3223-40ca-bfa1-604ca9119701 | sim-h3@demo.provy.ai | 274 |
+| H4 | Sim H4 Planted Faults | a3962c45-2caf-4a55-bab9-37ff5a6e696c | Sim H4 Access Desk | 0a611dc5-87b8-423b-9704-7e067d65d9bd | sim-h4@demo.provy.ai | 337 |
+| H5 | Sim H5 Instruction Change | 7ceb2bd6-e6fc-48d8-a18b-df97d8ec8b5c | Sim H5 Access Desk | 6695a0af-bdf1-4b43-99ba-648460ec8db4 | sim-h5@demo.provy.ai | 390 |
+| H6 | Sim H6 Declared Checks | 6b70b829-11f6-4cab-8d76-75a209c642a3 | Sim H6 Claims Desk | 3643378d-6637-4f3a-a794-1d5f8512ac25 | sim-h6@demo.provy.ai | 300 |
+| H7 | Sim H7 Outcomes Duo | 0ae4bfbd-1b36-4fe1-b5f2-9f8d559d843d | Sim H7 Calibrated Desk | 25a49338-ef3a-4bf5-a04e-2979597bedc5 | sim-h7@demo.provy.ai | 200 |
+| H7 | Sim H7 Outcomes Duo | 0ae4bfbd-1b36-4fe1-b5f2-9f8d559d843d | Sim H7 Overconfident Desk | defeab7d-9831-444b-9c5f-3e95835d4c59 | h7-overconfident@demo.provy.ai | 200 |
+| H8 | Sim H8 Doors | 7e1aa411-c650-465b-b2df-6676ff7e73cb | Sim H8 via SDK | eb0ff5df-db73-4a1b-9ae1-a680f1741190 | sim-h8@demo.provy.ai | 80 |
+| H8 | Sim H8 Doors | 7e1aa411-c650-465b-b2df-6676ff7e73cb | Sim H8 via OpenTelemetry | a3134293-f501-4a08-9347-89455530c2c4 | h8-otlp@demo.provy.ai | 96 |
+| H8 | Sim H8 Doors | 7e1aa411-c650-465b-b2df-6676ff7e73cb | Sim H8 via JSON | eb22f331-2684-40a4-a93c-e7c8c2e04244 | h8-rest@demo.provy.ai | 80 |
+| H8 | Sim H8 Doors | 7e1aa411-c650-465b-b2df-6676ff7e73cb | Sim H8 via log line | 64de3917-4841-4ef5-9d69-5221c300f6ed | h8-log@demo.provy.ai | 80 |
+| H8 | Sim H8 Doors | 7e1aa411-c650-465b-b2df-6676ff7e73cb | Sim H8 via log field map | 52d6b7cf-421c-4013-a7ad-8686aaf34cbd | h8-logmap@demo.provy.ai | 80 |
+| H9 | Sim H9 Agent Roster | 1c6f8911-da70-484f-b250-9d8480bf7ca0 | Sim H9 Claims Desk | ee7cc2a3-40b6-44e1-b719-5a8830c1adcd | sim-h9@demo.provy.ai | 200 |
+| P1 | Sim P1 Pilot Ended | 7323da4f-a21e-4ce7-be5d-c24d68baa3ee | Sim P1 Claims Desk | 9f770f3b-aec5-4ace-abbc-82ae7effbab1 | sim-p1@demo.provy.ai | 100 |
+| P2 | Sim P2 Pilot Converted | 8ea59d70-d256-4e4a-bf66-aebb91283801 | Sim P2 Claims Desk | a198a0f7-5556-4da8-a0a6-dc22d0d036de | sim-p2@demo.provy.ai | 100 |
+| P3 | Sim P3 Pilot Extended | 62aeb864-423f-4832-a23f-2401a20925f9 | Sim P3 Claims Desk | f24e93c8-3e68-43a9-8bf4-0767515a2415 | sim-p3@demo.provy.ai | 100 |
+
+Last run of `sim_assert.py` against pre-prod, 7 October 2026: 512 comparisons, 512 pass, 0 fail, 0 no-data (`docs/sim-evidence/assert.json`, one row per comparison with expected and observed).
+One screenshot per tenant purpose, with the page text beside it, is in `docs/sim-evidence/`.
+
+## What building it found
+
+No mismatch between the product and its documented rules survived. Every defect found was in the simulator or its tooling, and each is fixed here with a test:
+
+- A claim about a remapped signal is never graded. The first tenant's agent claims named `decision_correct`, which the claims pack remaps for the trace, so the product fell back to its forecast on 60 of 60 ledger rows. Claims now name a signal the product can grade without a human (`within_limit`), and a test holds that.
+- The packs date an outcome at the moment the work began, before the decision it answers. Outcomes are now dated 30 to 90 minutes after the last step.
+- A random work-item draw can collide: H4 planned 50 sessions and the product stored 49, correctly. A plan with a collision is now refused.
+- `provisionFleet` writes the roster and no `accepted` event, so every provisioned agent read as never accepted and "Agents counting" read 0. The set accepts its agents at setup through `ag_record_agent_events`, the same function the product's routes use.
+- The log door answers 503 without a working model key. A session it did not accept is no longer marked sent, and no outcome is posted for it.
+- The provy-sim-control levers page did not typecheck: the seven context levers had no entry in its two maps.
+- `scripts/fleet_doctor.py` opens `provy.config` directly and reads ServiceNow and GitHub secrets. It was not run. The console-key check is a SELECT comparing hashes.
+
+Behaviour that is by design and now has an assertion: the OpenTelemetry root-span wrapper reads as one more agent, never accepted, and adds a stored step per session (Help says so); the field map binds a retrieval to the agent's first event.
+
+One thing seen once and not reproduced: on the first build of H2, 1 of 60 work items took the forecast although the agent's claim was stored on the session. The rebuilt tenant passes all 39 comparisons. If it comes back, it is a race between the session close and the claim being readable.
 
 ## Which server
 

@@ -1,0 +1,69 @@
+Contract in draft
+Provy drafted one for this fleet. It counts once you confirm it.
+Confirm it →
+Ledger
+?
+What this workflow delivered and what came back, reconciled.
+7 days
+30 days
+90 days
+All time
+This month
+Last month
+2026-09-07 to 2026-10-07, 30 days · compared with the 30 days before it
+⭳ Export PDF
+88% of what settled held, but no contract condition is confirmed, so this is not a verdict. Confirm or write one and it counts.Not verified
+40 of 40 claims have settled.
+HELD RATE
+88%
+35 claims held, 5 did not · settled, 30 days
+ADDRESSABLE · 30 DAYS
+—
+nothing attributed yet
+NEVER SETTLED
+0 claims
+0% of the last 40 claims that ran, no outcome yet
+TRACED TO ONE STEP
+—
+no cause named yet
+When your agents stated a confidence, how often did it hold?
+STATED	HELD	HELD OF CLAIMS
+0.9	
+	11 of 14 (79%)
+0.7	
+	11 of 12 (92%)
+0.5	
+	4 of 14 (29%)
+The black mark is what was claimed. Counted over the 40 settled claims your agents made.
+HOW THIS WORKFLOW IS TRENDING · 30 DAYS
+88%
+of settled claims held
+no prior period to compare
+Provy predicted it would hold
+no forecast made
+Actual held
+35
+Cost per held claim
+under $0.01
+WEEK BY WEEK, HOW MANY HELD
+2 settled weeks so far.
+A direction needs 3, so this fills in as more settle.
+PROVY PREDICTED VS WHAT SETTLED
+Not enough settled outcomes to draw a trend yet.
+LINE	30 DAYS	POPULATION	COUNT
+OUTCOMES · CLAIMS
+Held		35 claims	35
+▸Came back		5 claims	5
+Held rate		40 reconciled	88%
+no recorded step explains it		1 of 1 miss	1
+failed, and was expected to		4 claims · not counted above	4
+OPERATING COST
+LLM spend		40 sessions	$0.04
+per session, the floor		40 sessions	under $0.01
+Per claim that held		35 held	under $0.01
+WHAT THE SPEND BOUGHT (SESSIONS THAT STARTED IN THIS PERIOD)
+Provy forecast it would hold, and it did not		1 session	under $0.01
+Failed, and expected to		4 sessions	under $0.01
+Not graded, the contract is not confirmed		35 sessions	$0.03
+▾ Show what failed on the 1 returns no recorded step explains
+No value section on this fleet. Nothing here is priced, so Provy will not put a number ona claim that came back. Set it on Contracts →

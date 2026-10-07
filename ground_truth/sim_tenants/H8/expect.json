@@ -71,17 +71,17 @@
    "pack": "claims",
    "readiness": {
     "givenSteps": 20,
-    "manifestSteps": 20,
+    "manifestSteps": 15,
     "notGivenSteps": 0,
     "signals": {
      "instruction_fingerprint": "not_sent",
      "instruction_version": "not_sent",
      "item_fingerprint": "not_sent",
-     "search_result": "sent",
-     "source": "sent",
-     "source_age": "sent"
+     "search_result": "partly_sent",
+     "source": "partly_sent",
+     "source_age": "partly_sent"
     },
-    "signalsSent": 3,
+    "signalsSent": 0,
     "state": "thin",
     "stepsCounted": 20
    },
@@ -115,6 +115,7 @@
    "declares": [],
    "door": "otlp",
    "door_limit": [],
+   "otlp_wrapper_agent": "process_claim",
    "outcomes": {
     "fail": 4,
     "success": 12,

@@ -60,10 +60,13 @@ def plan_fleet(tenant: dict, fleet: dict, now: datetime, nonce: str | None = Non
         "readiness": S.expected_readiness(outs, fleet["door"]),
         "session_ids": [o.result.session_id for o in outs],
     }
+    if fleet["door"] == "otlp":
+        # help page "wrap each unit of work in a root span": the wrapper is stored, is not a decision step, and reads as one more agent, never accepted
+        expect["otlp_wrapper_agent"] = f"process_{outs[0].result.session_type}"
     if fleet.get("claims"):
         expect["calibration"] = S.expected_calibration(truth)
         expect["claims"] = len([r for r in truth if r.get("claim")])
-    expect["declares"] = sorted(k for k in (("context_max_age" if (fleet.get("declare") or {}).get("limit_days") else None), ("context_log_fields" if fleet["door"] == "log_map" else None)) if k)
+    expect["declares"] = sorted(k for k in (("context_max_age" if (fleet.get("declare") or {}).get("limit_days") and (fleet.get("declare") or {}).get("as") != "guardrails" else None), ("context_log_fields" if fleet["door"] == "log_map" else None)) if k)
     if fleet.get("extra_criteria"):
         expect["unmeasurable_condition"] = S.PACK_ROLES[pack]["extra_signal"]
     d = fleet.get("declare")

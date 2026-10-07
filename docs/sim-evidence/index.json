@@ -1,0 +1,66 @@
+[
+ {
+  "tenant": "H5",
+  "screen": "guardrails",
+  "what": "instruction changes",
+  "png": "docs/sim-evidence/H5-guardrails.png",
+  "landed": "/evals",
+  "chars": 5228
+ },
+ {
+  "tenant": "H5",
+  "screen": "usage",
+  "what": "pilot ending in 3 days",
+  "png": "docs/sim-evidence/H5-usage.png",
+  "landed": "/settings/usage",
+  "chars": 1834
+ },
+ {
+  "tenant": "H6",
+  "screen": "guardrails",
+  "what": "declared checks, one switched off",
+  "png": "docs/sim-evidence/H6-guardrails.png",
+  "landed": "/evals",
+  "chars": 5220
+ },
+ {
+  "tenant": "H7",
+  "screen": "outcomes",
+  "what": "claims and calibration, two fleets",
+  "png": "docs/sim-evidence/H7-outcomes.png",
+  "landed": "/reliability",
+  "chars": 2098
+ },
+ {
+  "tenant": "H9",
+  "screen": "agents",
+  "what": "roster with a retired and an unaccepted agent",
+  "png": "docs/sim-evidence/H9-agents.png",
+  "landed": "/agents",
+  "chars": 33
+ },
+ {
+  "tenant": "P1",
+  "screen": "usage",
+  "what": "pilot ended, not converted",
+  "png": "docs/sim-evidence/P1-usage.png",
+  "landed": "/settings/usage",
+  "chars": 1686
+ },
+ {
+  "tenant": "P2",
+  "screen": "usage",
+  "what": "pilot ended, converted",
+  "png": "docs/sim-evidence/P2-usage.png",
+  "landed": "/settings/usage",
+  "chars": 1690
+ },
+ {
+  "tenant": "P3",
+  "screen": "usage",
+  "what": "pilot extended",
+  "png": "docs/sim-evidence/P3-usage.png",
+  "landed": "/settings/usage",
+  "chars": 1821
+ }
+]

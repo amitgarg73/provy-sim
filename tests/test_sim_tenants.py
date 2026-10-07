@@ -245,7 +245,10 @@ def test_the_door_fleets_tell_one_story_and_only_the_field_map_loses_signals():
         assert p.expect["readiness"]["state"] == "ready"
     lm = base[4].expect
     assert lm["readiness"]["state"] == "thin"
-    assert sorted(k for k, v in lm["readiness"]["signals"].items() if v == "not_sent") == sorted(S.DOOR_LIMITS["log_map"])
+    sig = lm["readiness"]["signals"]
+    assert all(sig[k] == "not_sent" for k in S.DOOR_LIMITS["log_map"]), "the door's documented limit"
+    # the field map binds a retrieval to the agent's first event: for an agent that looks something up first that is the lookup, so its decision step has no record
+    assert all(sig[k] == "partly_sent" for k in ("source", "source_age", "search_result"))
     assert lm["door_limit"] == S.DOOR_LIMITS["log_map"]
 
 

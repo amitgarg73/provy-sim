@@ -103,7 +103,7 @@ def send_fleet(plan: P.FleetPlan, creds: X.Creds, tkey: str, only_phase: int | N
     if limit:
         todo = todo[:limit]
     print(f"{tkey}/{fleet['key']} via {fleet['door']}: sending {len(todo)} sessions ({len(done)} already sent)", flush=True)
-    t0, n = time.time(), [0]
+    t0, n, ok_ids = time.time(), [0], set()
     kw_ok = fleet["door"] == "rest"
 
     def one(item):
@@ -117,12 +117,13 @@ def send_fleet(plan: P.FleetPlan, creds: X.Creds, tkey: str, only_phase: int | N
             with open(sent_path, "a") as f:
                 f.write(json.dumps({"session_id": o.result.session_id, "i": i}) + "\n")
             n[0] += 1
+            ok_ids.add(o.result.session_id)
         except Exception as e:                                                     # noqa: BLE001
             print(f"  session {o.result.session_id} failed: {type(e).__name__}: {str(e)[:160]}", flush=True)
 
     with ThreadPoolExecutor(max_workers=workers) as ex:
         list(ex.map(one, todo))
-    recs = [settled_later(o, i) for i, o in todo]
+    recs = [settled_later(o, i) for i, o in todo if o.result.session_id in ok_ids]      # an outcome is posted only for a session that was accepted
     with ThreadPoolExecutor(max_workers=workers) as ex:
         res = list(ex.map(door.send_outcome, recs))
     ok = sum(1 for r in res if r.get("status") == 200)
@@ -228,14 +229,19 @@ def cmd_configure(a) -> int:
                 print("   (already at that figure: left alone)")
         if "roster" in steps:
             for f in t["fleets"]:
-                if f["scenario"] == "roster":
-                    roster(pg, tid, creds.workflow_id(t["key"], f["key"]), f)
+                roster(pg, tid, creds.workflow_id(t["key"], f["key"]), f)
     return 0
 
 
 def roster(pg: X.Pg, tenant_id: str, wf: str, fleet: dict) -> None:
     """Retire one agent and leave another unaccepted, through the same writes the product's own roster routes make."""
     now = datetime.now(timezone.utc).isoformat()
+    # provisionFleet writes the roster rows and no lifecycle event, so before this every provisioned agent read as never accepted and "Agents counting" read 0.
+    # The accept-first path (an agent accepted by provisioning before it sends data) writes `accepted` through the one database function, as the product's own routes do.
+    names = [a.name for a in __import__("packs").get_pack(fleet["pack"]).agents()]
+    accept = [n for n in names if n not in fleet.get("never_accepted", [])]
+    pg.rpc("ag_record_agent_events", {"p_events": [{"tenant_id": tenant_id, "workflow_id": wf, "agent_name": n, "event": "accepted", "path": "onboarding", "actor": "sim set"} for n in accept]})
+    print(f"roster: {len(accept)} agents accepted")
     for name in fleet.get("retire", []):
         pg.patch("ag_pipeline_agents", {"workflow_id": wf, "agent_name": name}, {"retired_at": now, "retired_reason": "Sim set: retired on purpose"})
         pg.rpc("ag_record_agent_events", {"p_events": [{"tenant_id": tenant_id, "workflow_id": wf, "agent_name": name, "event": "retired", "path": "retire", "actor": "sim set"}]})

@@ -1,0 +1,207 @@
+Contract in draft
+Provy drafted one for this fleet. It counts once you confirm it.
+Confirm it →
+Guardrails
+
+What Provy measures on Sim H6 Claims Desk, and who hears when it fails.
+
+⌕
+/
++ Add check
+?
+History
+Checks
+22
+Failure patterns
+22 watched
+Session outcomes
+1 to classify
+Alerts
+4 on, nowhere to send
+AGENTS
+All agents
+Adjudicator
+Intake
+Reviewer
+Validator
+NOT ON THE ROSTER
+Session
+Review the roster on Agent Fleets →
+All running
+22
+Failing often
+0
+Never caught anything
+11
+Partly measured
+0
+Checks with an alert
+1
+Separating nothing
+4
+Group by type ▾
+▾
+Is it running
+graded on each agent’s own steps
+4 checks
+CHECK	AGENTS	LIMIT	LAST 30 DAYS	STATUS	ALERT	
+Tool latency
+Does any tool call take longer than the limit?
+	
+Validator
+1 of 60 sessions
+	5.0s per call	1 slow session	
+Ready		···
+Tool error rate
+Do more than the limit of the agent’s tool calls fail?
+	
+Validator
+no errors in 60 sessions
+	10% of calls	0 sessions over	
+Ready		···
+Agent time
+Does the agent’s own part of a session take longer than its limit?
+	
+4 agents, no limit yet
+60 of 240 agent sessions timed, nothing graded until a normal is learned
+	—	nothing measured	
+Still calibrating		···
+LLM cost
+Does a session cost more than the agent’s normal?
+	
+4 agents, no limit yet
+240 of 240 calls costed, nothing graded until a normal is learned
+	1.5× normal	nothing measured	
+Still calibrating		···
+▾
+Quality
+judged by an AI reviewer each session
+4 separating nothing4 checks
+CHECK	AGENTS	LIMIT	LAST 30 DAYS	STATUS	ALERT	
+Decision soundness
+Judge whether the adjudicator output meets: decision soundness.
+One answer only. All 60 runs in 30 days scored 0.9.
+	
+Adjudicator
+0 of 60 sessions
+	below 0.70	
+all 60 at 0.9
+	
+Separating nothing		···
+Extraction accuracy
+Judge whether the intake output meets: extraction accuracy.
+One answer only. All 60 runs in 30 days scored 0.9.
+	
+Intake
+0 of 60 sessions
+	below 0.70	
+all 60 at 0.9
+	
+Separating nothing		···
+Limit compliance
+Judge whether the reviewer output meets: limit compliance.
+One answer only. All 60 runs in 30 days scored 0.9.
+	
+Reviewer
+0 of 60 sessions
+	below 0.70	
+all 60 at 0.9
+	
+Separating nothing		···
+Validation completeness
+Judge whether the validator output meets: validation completeness.
+One answer only. All 60 runs in 30 days scored 0.9.
+	
+Validator
+0 of 60 sessions
+	below 0.70	
+all 60 at 0.9
+	
+Separating nothing		···
+▾
+Rules
+checks the pipeline grades itself
+14 checks
+CHECK	AGENTS	LIMIT	LAST 30 DAYS	STATUS	ALERT	
+Context freshness: adjudicator	
+Adjudicator
+3 of 40 sessions
+	no older than 30 days	
+8% failing	
+Ready		···
+Context freshness: reviewer	
+Reviewer
+3 of 40 sessions
+	no older than 30 days	
+8% failing	
+Ready		···
+Context approved sources: validator	
+Validator
+4 of 60 sessions
+	only from 4 approved sources	
+7% failing	
+Ready		···
+Context approved sources: intake	
+Intake
+2 of 57 sessions
+	only from 4 approved sources	
+4% failing	
+Ready		···
+Context approved sources: adjudicator	
+Adjudicator
+2 of 60 sessions
+	only from 4 approved sources	
+3% failing	
+Ready		···
+Context freshness: validator	
+Validator
+1 of 40 sessions
+	no older than 30 days	
+3% failing	
+Ready		···
+Context approved sources: reviewer	
+Reviewer
+1 of 60 sessions
+	only from 4 approved sources	
+2% failing	
+Ready		···
+⌄ 7 checks have never failed in 30 days · context freshness (30 sessions), context freshness: intake (38 sessions), decision made (60 sessions), exit quality (60 sessions), instructions changed (232 sessions), pipeline completion (60 sessions), tool success rate (60 sessions). A check that never fails may be set too low. Show
+▾
+Context recorded on 100% of decision steps, last 30 days
+240 of 240 decision steps recorded what the agent was given
+97% of decision steps carry dates (233 of 240).
+This is what your agents said they were given. Provy did not check that it was complete. A step that sent nothing counts as no record, never as fine.
+▾
+Where context comes from
+decision steps in the last 30 days, by the route they arrived through
+ROUTE	DECISION STEPS	WITH A RECORD	SHARE
+REST	240	240	100%
+
+Steps sent by the Python SDK are counted under REST until the SDK reports itself. Steps written before routes were tracked have no route.
+
+▾
+Context checks
+what the agent was given, and how old it was · 3 running or measured, 1 switched off
+Context freshness: set by 4 rules on this tab, each for one agent. Approved sources: set by 4 rules on this tab, each for one agent. Empty retrieval: watching every agent.
+Change context settings
+CHECK	STATE	WHAT IT SAYS
+Context freshness
+Is any fact the agent was given older than its limit?
+	Measured	7 of 188 grades failed in the last 30 days, across 5 checks. A session counts once for each check that graded it.
+Switch off
+
+Source not approved
+Did the agent use a source that is not approved, or one not seen before?
+	Measured	9 of 237 grades failed in the last 30 days, across 4 checks. A session counts once for each check that graded it.
+Switch off
+
+Retrieval empty
+Did a step that usually finds documents find none?
+	Switched off	Switched off on this fleet.
+Instructions changed
+Did the instructions a step runs under change?
+	Measured	None of 232 graded sessions failed in the last 30 days.
+▸
+Not running
+1 check, 1 has never run
+Show

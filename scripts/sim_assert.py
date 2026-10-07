@@ -98,6 +98,22 @@ def tenant_checks(rows: A.Rows, key: str, exp: dict, creds: X.Creds, pg: X.Pg, a
                     rows.add(key, "-", "pilot days left in the staff headline", f"{want['daysLeft']} days left.", ((got.get("end") or {}).get("headline", "").split(": ")[-1]) if ws else None)
     else:
         rows.add(key, "-", "no order on file", True, (ws or {}).get("order") is None if ws else None)
+    # the roster, as the staff view groups it: accepted, retired, never accepted. Every fleet of the set accepts its pack's agents at setup.
+    for fk, fe in exp["fleets"].items():
+        roster = fe.get("roster") or {}
+        if ws is None:
+            rows.add(key, fk, "roster read", "readable", None)
+            continue
+        wf = creds.workflow_id(key, fk)
+        seen = {x["name"]: ("retired" if x["state"] == "retired" else "accepted" if x["accepted"]["known"] else "never accepted") for x in ws.get("agents", []) if x.get("workflowId") == wf}
+        pack_agents = sorted({t for t in roster.get("agents", [])} or [])
+        names = pack_agents or sorted(seen)
+        want = {n: ("retired" if n in roster.get("retire", []) else "never accepted" if n in roster.get("never_accepted", []) else "accepted") for n in names}
+        wrapper = fe.get("otlp_wrapper_agent")
+        if wrapper and not roster:
+            rows.add(key, fk, "roster: the OpenTelemetry wrapper span reads as one more agent, never accepted (documented in Help)", "never accepted", seen.get(wrapper))
+            seen.pop(wrapper, None)
+        rows.add(key, fk, "roster: who is accepted, retired and never accepted", want, {n: seen.get(n) for n in names}) if roster else rows.add(key, fk, "roster: every agent that sent data is accepted", True, bool(seen) and all(v == "accepted" for v in seen.values()))
     notices = exp.get("notices")
     if notices:
         named = [x.lower() for x in (((ws or {}).get("notices") or {}).get("named") or [])]

@@ -64,6 +64,7 @@
      "story": "constant"
     }
    },
+   "otlp_wrapper_agent": "process_access_change",
    "outcomes": {
     "fail": 10,
     "success": 40,

@@ -1,0 +1,10 @@
+Your agents
+
+2 agents are live. Counting starts when an agreement is recorded. 1 is retired. 1 name was seen and never accepted.
+
+Agents that are counting
+AGENT	STATE	COUNTING FROM
+intake	Steps counted	Starts when an agreement is recorded
+adjudicator	Steps counted	Starts when an agreement is recorded
+Retired (1)
+Names seen but never accepted (1)

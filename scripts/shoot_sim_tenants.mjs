@@ -28,9 +28,9 @@ const SHOTS = {
   H4: [['guardrails', '/evals', 'context checks with planted faults']],
   H5: [['guardrails', '/evals', 'instruction changes'], ['usage', '/settings/usage', 'pilot ending in 3 days']],
   H6: [['guardrails', '/evals', 'declared checks, one switched off']],
-  H7: [['outcomes', '/outcomes', 'claims and calibration, two fleets']],
+  H7: [['outcomes', '/reliability', 'claims and calibration, two fleets']],
   H8: [['fleets', '/fleets', 'five fleets, one per door']],
-  H9: [['agents', '/agents', 'roster with a retired and an unaccepted agent']],
+  H9: [['agents', '/settings/usage?view=agreement', 'roster: counting, retired and not accepted', { selector: '#us-agents' }]],
   P1: [['usage', '/settings/usage', 'pilot ended, not converted']],
   P2: [['usage', '/settings/usage', 'pilot ended, converted']],
   P3: [['usage', '/settings/usage', 'pilot extended']],
@@ -56,10 +56,10 @@ for (const [key, shots] of Object.entries(SHOTS)) {
     for (const [name, route, what, opts = {}] of shots) {
       await page.goto(`${BASE}${route}`, { waitUntil: 'domcontentloaded', timeout: 120000 });
       await page.waitForTimeout(9000);
-      if (opts.click) { await page.getByText(opts.click, { exact: false }).first().click(); await page.waitForTimeout(12000); }
+      if (opts.click) { await page.getByRole('button', { name: new RegExp(opts.click) }).first().click(); await page.waitForTimeout(12000); }
       const file = `${out}/${key}-${name}`;
       const target = opts.selector ? page.locator(opts.selector).first() : null;
-      if (target) { await target.scrollIntoViewIfNeeded(); await target.screenshot({ path: `${file}.png` }); } else await page.screenshot({ path: `${file}.png`, fullPage: true });
+      if (target) { await target.waitFor({ timeout: 90000 }); await target.scrollIntoViewIfNeeded(); await target.screenshot({ path: `${file}.png` }); } else await page.screenshot({ path: `${file}.png`, fullPage: true });
       const text = target ? await target.innerText() : await page.evaluate(() => (document.querySelector('main') || document.body).innerText);
       writeFileSync(`${file}.txt`, text);
       results.push({ tenant: key, screen: name, what, png: `${file}.png`, landed: new URL(page.url()).pathname, chars: text.length });

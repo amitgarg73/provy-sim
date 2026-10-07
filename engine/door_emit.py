@@ -428,6 +428,9 @@ class LogDoor:
 
     def send_session(self, result, occurred_at: str, agents, resend_first_step: bool = False, resend_all: bool = False) -> dict:
         r = self.w.post("/api/ingest/log", self.body(result, occurred_at), result.session_id)
+        if (r.get("status") or 0) >= 300 or not r.get("status"):
+            # The log door reads the lines with a model; a server with none answers 503. A session that was not accepted is not sent.
+            raise RuntimeError(f"log door answered {r.get('status')}: {str(r.get('json'))[:120]}")
         return {"status": r.get("status"), "reply": r.get("json")}
 
     def close_again(self, session_id: str, terminal_reason: str) -> dict:

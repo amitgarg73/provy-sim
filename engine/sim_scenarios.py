@@ -282,6 +282,16 @@ def project_for_door(manifest: Optional[dict], door: str) -> Optional[dict]:
     return {"items": items, "retrieval": {"returned": len(items)}}
 
 
+def _decision_carries(o, i: int, t, door: str) -> bool:
+    """Does the decision step itself carry its record on this door? The field map has no step type: it binds a retrieval to the agent's FIRST event of the
+    session (SPEC 4.4). An agent whose first event is a lookup (a tool call) gets its record on the lookup, so its decision step reads as no record. Every
+    other door puts the record on the decision step."""
+    if door != "log_map":
+        return True
+    first = next(j for j, x in enumerate(o.result.traces) if x.agent == t.agent)
+    return o.result.traces[first].step_type in DECISION_TYPES
+
+
 def expected_readiness(outs, door: str) -> dict:
     """The readiness report the product should give for a fleet whose planned sessions have all arrived.
 
@@ -298,7 +308,7 @@ def expected_readiness(outs, door: str) -> dict:
     window = steps[:WINDOW]
     total = len(window)
     ran = [bool(t.model or t.tokens_input or t.tokens_output or t.cost_usd) for *_, t in window]
-    manifests = [project_for_door(t.context, door) for *_, t in window]
+    manifests = [project_for_door(t.context, door) if _decision_carries(outs[si], i, t, door) else None for _, si, i, t in window]
     any_ran = any(ran)
     left_out = [(m is None) and any_ran and not r for m, r in zip(manifests, ran)]
     given = [m for m, lo in zip(manifests, left_out) if not lo]
