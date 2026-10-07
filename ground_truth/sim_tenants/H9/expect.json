@@ -1,0 +1,107 @@
+{
+ "fleets": {
+  "claims": {
+   "counted_steps": 200,
+   "declares": [],
+   "door": "rest",
+   "outcomes": {
+    "fail": 4,
+    "success": 36,
+    "work_items": 40
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "roster": {
+    "agents": [
+     "adjudicator",
+     "intake",
+     "reviewer",
+     "validator"
+    ],
+    "never_accepted": [
+     "validator"
+    ],
+    "retire": [
+     "reviewer"
+    ]
+   },
+   "scenario": "roster",
+   "session_ids": [
+    "sim-claims-CLM-650318-sh9claims100714",
+    "sim-claims-CLM-671066-sh9claims100714",
+    "sim-claims-CLM-177315-sh9claims100714",
+    "sim-claims-CLM-909010-sh9claims100714",
+    "sim-claims-CLM-810430-sh9claims100714",
+    "sim-claims-CLM-230379-sh9claims100714",
+    "sim-claims-CLM-769319-sh9claims100714",
+    "sim-claims-CLM-823052-sh9claims100714",
+    "sim-claims-CLM-142911-sh9claims100714",
+    "sim-claims-CLM-637236-sh9claims100714",
+    "sim-claims-CLM-370071-sh9claims100714",
+    "sim-claims-CLM-378779-sh9claims100714",
+    "sim-claims-CLM-118943-sh9claims100714",
+    "sim-claims-CLM-357249-sh9claims100714",
+    "sim-claims-CLM-792747-sh9claims100714",
+    "sim-claims-CLM-427435-sh9claims100714",
+    "sim-claims-CLM-281432-sh9claims100714",
+    "sim-claims-CLM-749226-sh9claims100714",
+    "sim-claims-CLM-513922-sh9claims100714",
+    "sim-claims-CLM-829219-sh9claims100714",
+    "sim-claims-CLM-886416-sh9claims100714",
+    "sim-claims-CLM-190974-sh9claims100714",
+    "sim-claims-CLM-532624-sh9claims100714",
+    "sim-claims-CLM-601139-sh9claims100714",
+    "sim-claims-CLM-157831-sh9claims100714",
+    "sim-claims-CLM-754280-sh9claims100714",
+    "sim-claims-CLM-433183-sh9claims100714",
+    "sim-claims-CLM-469884-sh9claims100714",
+    "sim-claims-CLM-984824-sh9claims100714",
+    "sim-claims-CLM-767772-sh9claims100714",
+    "sim-claims-CLM-593961-sh9claims100714",
+    "sim-claims-CLM-898156-sh9claims100714",
+    "sim-claims-CLM-519760-sh9claims100714",
+    "sim-claims-CLM-620073-sh9claims100714",
+    "sim-claims-CLM-478583-sh9claims100714",
+    "sim-claims-CLM-880471-sh9claims100714",
+    "sim-claims-CLM-431139-sh9claims100714",
+    "sim-claims-CLM-750520-sh9claims100714",
+    "sim-claims-CLM-919351-sh9claims100714",
+    "sim-claims-CLM-611337-sh9claims100714"
+   ],
+   "sessions": 40,
+   "steps": 200,
+   "stored_steps": 200,
+   "truth_file": "ground_truth/sim_tenants/H9/claims.truth.jsonl",
+   "truth_sha256": "ee24180ed69a257b6a2b526e62b2d0156f60530b64de6bf537663d89c07c1aa1"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-h9@demo.provy.ai",
+  "key": "H9",
+  "name": "Sim H9 Agent Roster",
+  "nonces": {
+   "claims": "sh9claims100714"
+  },
+  "purpose": "A roster with a retired agent and an agent that sent data and was never accepted, next to agents that count. Retries and step ids: every step is sent twice and must be stored once.",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": null,
+ "spend_ceiling_usd": null
+}

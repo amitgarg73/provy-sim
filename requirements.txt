@@ -4,6 +4,10 @@
 
 pytest>=8.0
 
+# Needed since the context and sim-tenant work: engine/door_emit.py, engine/sim_set.py and scripts/sim_set.py, sim_teardown.py and declare_context.py import it. The scheduled
+# workflows (_run.yml, tick.yml) install from this file, so it must be listed here or a merge to main would break them at import. Found 7 Oct 2026 running the suite in .venv.
+requests>=2.31
+
 # Optional: only needed to score the DETECTED side of the scoreboard (reads ag_*
 # tables read-only). The harness runs fine without it.
 # supabase>=2.0

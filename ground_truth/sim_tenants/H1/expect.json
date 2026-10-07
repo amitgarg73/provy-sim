@@ -1,0 +1,182 @@
+{
+ "fleets": {
+  "claims": {
+   "calibration": {
+    "0.5": {
+     "claims": 22,
+     "held": 7,
+     "rate": 0.318,
+     "too_few": false
+    },
+    "0.7": {
+     "claims": 20,
+     "held": 11,
+     "rate": 0.55,
+     "too_few": false
+    },
+    "0.9": {
+     "claims": 18,
+     "held": 16,
+     "rate": 0.889,
+     "too_few": false
+    }
+   },
+   "claims": 60,
+   "counted_steps": 300,
+   "declares": [],
+   "door": "rest",
+   "outcomes": {
+    "fail": 15,
+    "success": 45,
+    "work_items": 60
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "healthy",
+   "session_ids": [
+    "sim-claims-CLM-475629-sh1claims100714",
+    "sim-claims-CLM-212629-sh1claims100714",
+    "sim-claims-CLM-442420-sh1claims100714",
+    "sim-claims-CLM-992150-sh1claims100714",
+    "sim-claims-CLM-361085-sh1claims100714",
+    "sim-claims-CLM-896560-sh1claims100714",
+    "sim-claims-CLM-313534-sh1claims100714",
+    "sim-claims-CLM-515723-sh1claims100714",
+    "sim-claims-CLM-828988-sh1claims100714",
+    "sim-claims-CLM-839038-sh1claims100714",
+    "sim-claims-CLM-584259-sh1claims100714",
+    "sim-claims-CLM-186965-sh1claims100714",
+    "sim-claims-CLM-871061-sh1claims100714",
+    "sim-claims-CLM-932555-sh1claims100714",
+    "sim-claims-CLM-493730-sh1claims100714",
+    "sim-claims-CLM-347868-sh1claims100714",
+    "sim-claims-CLM-354865-sh1claims100714",
+    "sim-claims-CLM-101756-sh1claims100714",
+    "sim-claims-CLM-602784-sh1claims100714",
+    "sim-claims-CLM-184359-sh1claims100714",
+    "sim-claims-CLM-777837-sh1claims100714",
+    "sim-claims-CLM-627419-sh1claims100714",
+    "sim-claims-CLM-157373-sh1claims100714",
+    "sim-claims-CLM-262941-sh1claims100714",
+    "sim-claims-CLM-695974-sh1claims100714",
+    "sim-claims-CLM-239551-sh1claims100714",
+    "sim-claims-CLM-620307-sh1claims100714",
+    "sim-claims-CLM-832480-sh1claims100714",
+    "sim-claims-CLM-220193-sh1claims100714",
+    "sim-claims-CLM-160188-sh1claims100714",
+    "sim-claims-CLM-933854-sh1claims100714",
+    "sim-claims-CLM-809860-sh1claims100714",
+    "sim-claims-CLM-738016-sh1claims100714",
+    "sim-claims-CLM-794583-sh1claims100714",
+    "sim-claims-CLM-404692-sh1claims100714",
+    "sim-claims-CLM-642500-sh1claims100714",
+    "sim-claims-CLM-771730-sh1claims100714",
+    "sim-claims-CLM-385183-sh1claims100714",
+    "sim-claims-CLM-727145-sh1claims100714",
+    "sim-claims-CLM-932252-sh1claims100714",
+    "sim-claims-CLM-249437-sh1claims100714",
+    "sim-claims-CLM-682789-sh1claims100714",
+    "sim-claims-CLM-406388-sh1claims100714",
+    "sim-claims-CLM-345977-sh1claims100714",
+    "sim-claims-CLM-237240-sh1claims100714",
+    "sim-claims-CLM-351558-sh1claims100714",
+    "sim-claims-CLM-649853-sh1claims100714",
+    "sim-claims-CLM-373107-sh1claims100714",
+    "sim-claims-CLM-707336-sh1claims100714",
+    "sim-claims-CLM-748465-sh1claims100714",
+    "sim-claims-CLM-278239-sh1claims100714",
+    "sim-claims-CLM-549924-sh1claims100714",
+    "sim-claims-CLM-896987-sh1claims100714",
+    "sim-claims-CLM-992250-sh1claims100714",
+    "sim-claims-CLM-249475-sh1claims100714",
+    "sim-claims-CLM-264863-sh1claims100714",
+    "sim-claims-CLM-627651-sh1claims100714",
+    "sim-claims-CLM-868746-sh1claims100714",
+    "sim-claims-CLM-401272-sh1claims100714",
+    "sim-claims-CLM-492669-sh1claims100714"
+   ],
+   "sessions": 60,
+   "steps": 300,
+   "stored_steps": 300,
+   "truth_file": "ground_truth/sim_tenants/H1/claims.truth.jsonl",
+   "truth_sha256": "df08aeee9f55a3e59ce01c005d70d99a80e5ea5caee8bf903c6af9131b80d78b"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-h1@demo.provy.ai",
+  "key": "H1",
+  "name": "Sim H1 Healthy",
+  "nonces": {
+   "claims": "sh1claims100714"
+  },
+  "purpose": "Healthy, fully instrumented fleet: all six context signals on every model step, settled outcomes, a well calibrated agent claim, learned checks established, a Growth fleet plan, and a notices recipient who is not the owner.",
+  "today": "2026-10-07"
+ },
+ "notices": {
+  "notify50": true,
+  "notify75": true,
+  "people": [
+   "sim-h1-ops@demo.provy.ai"
+  ]
+ },
+ "order": {
+  "calls": [
+   {
+    "body": {
+     "paid": false,
+     "plan": "standard",
+     "reason": "Sim set: Growth fleet plan",
+     "startsOn": "2026-10-01",
+     "terms": {
+      "pricingMode": "fleet",
+      "tier": "growth"
+     }
+    },
+    "route": "/api/admin/orders"
+   }
+  ],
+  "discount_percent": null,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": null,
+    "starts_on": "2026-10-01"
+   }
+  ],
+  "pilot_as_of_build": {
+   "state": "none"
+  },
+  "plan": {
+   "fee_cents": 119900,
+   "included_steps": 150000,
+   "mode": "fleet",
+   "name": "Growth",
+   "tier": "growth"
+  },
+  "spec": {
+   "kind": "fleet",
+   "plan": "standard",
+   "reason": "Sim set: Growth fleet plan",
+   "starts_on": "2026-10-01",
+   "tier": "growth"
+  }
+ },
+ "spend_ceiling_usd": 175
+}

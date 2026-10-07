@@ -1,0 +1,289 @@
+{
+ "fleets": {
+  "log": {
+   "counted_steps": 80,
+   "declares": [],
+   "door": "log",
+   "door_limit": [],
+   "outcomes": {
+    "fail": 4,
+    "success": 12,
+    "work_items": 16
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "doors",
+   "session_ids": [
+    "sim-claims-CLM-213223-sh8log100714",
+    "sim-claims-CLM-493238-sh8log100714",
+    "sim-claims-CLM-399807-sh8log100714",
+    "sim-claims-CLM-988945-sh8log100714",
+    "sim-claims-CLM-193467-sh8log100714",
+    "sim-claims-CLM-269447-sh8log100714",
+    "sim-claims-CLM-668091-sh8log100714",
+    "sim-claims-CLM-769463-sh8log100714",
+    "sim-claims-CLM-640155-sh8log100714",
+    "sim-claims-CLM-283845-sh8log100714",
+    "sim-claims-CLM-868446-sh8log100714",
+    "sim-claims-CLM-626908-sh8log100714",
+    "sim-claims-CLM-757901-sh8log100714",
+    "sim-claims-CLM-968125-sh8log100714",
+    "sim-claims-CLM-177408-sh8log100714",
+    "sim-claims-CLM-518644-sh8log100714"
+   ],
+   "sessions": 16,
+   "steps": 80,
+   "stored_steps": 80,
+   "truth_file": "ground_truth/sim_tenants/H8/log.truth.jsonl",
+   "truth_sha256": "a84e282931d64aab08e5075e74c4cc6297b037610c933e8acea07c7391a156b9"
+  },
+  "logmap": {
+   "counted_steps": 80,
+   "declares": [
+    "context_log_fields"
+   ],
+   "door": "log_map",
+   "door_limit": [
+    "item_fingerprint",
+    "instruction_version",
+    "instruction_fingerprint"
+   ],
+   "outcomes": {
+    "fail": 4,
+    "success": 12,
+    "work_items": 16
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 15,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "not_sent",
+     "instruction_version": "not_sent",
+     "item_fingerprint": "not_sent",
+     "search_result": "partly_sent",
+     "source": "partly_sent",
+     "source_age": "partly_sent"
+    },
+    "signalsSent": 0,
+    "state": "thin",
+    "stepsCounted": 20
+   },
+   "scenario": "doors",
+   "session_ids": [
+    "sim-claims-CLM-213223-sh8logmap100714",
+    "sim-claims-CLM-493238-sh8logmap100714",
+    "sim-claims-CLM-399807-sh8logmap100714",
+    "sim-claims-CLM-988945-sh8logmap100714",
+    "sim-claims-CLM-193467-sh8logmap100714",
+    "sim-claims-CLM-269447-sh8logmap100714",
+    "sim-claims-CLM-668091-sh8logmap100714",
+    "sim-claims-CLM-769463-sh8logmap100714",
+    "sim-claims-CLM-640155-sh8logmap100714",
+    "sim-claims-CLM-283845-sh8logmap100714",
+    "sim-claims-CLM-868446-sh8logmap100714",
+    "sim-claims-CLM-626908-sh8logmap100714",
+    "sim-claims-CLM-757901-sh8logmap100714",
+    "sim-claims-CLM-968125-sh8logmap100714",
+    "sim-claims-CLM-177408-sh8logmap100714",
+    "sim-claims-CLM-518644-sh8logmap100714"
+   ],
+   "sessions": 16,
+   "steps": 80,
+   "stored_steps": 80,
+   "truth_file": "ground_truth/sim_tenants/H8/logmap.truth.jsonl",
+   "truth_sha256": "aa913323b97e3cd0d965c762f1574113ef85a87102450b8694a42e7c9f71f084"
+  },
+  "otlp": {
+   "counted_steps": 80,
+   "declares": [],
+   "door": "otlp",
+   "door_limit": [],
+   "otlp_wrapper_agent": "process_claim",
+   "outcomes": {
+    "fail": 4,
+    "success": 12,
+    "work_items": 16
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "doors",
+   "session_ids": [
+    "sim-claims-CLM-213223-sh8otlp100714",
+    "sim-claims-CLM-493238-sh8otlp100714",
+    "sim-claims-CLM-399807-sh8otlp100714",
+    "sim-claims-CLM-988945-sh8otlp100714",
+    "sim-claims-CLM-193467-sh8otlp100714",
+    "sim-claims-CLM-269447-sh8otlp100714",
+    "sim-claims-CLM-668091-sh8otlp100714",
+    "sim-claims-CLM-769463-sh8otlp100714",
+    "sim-claims-CLM-640155-sh8otlp100714",
+    "sim-claims-CLM-283845-sh8otlp100714",
+    "sim-claims-CLM-868446-sh8otlp100714",
+    "sim-claims-CLM-626908-sh8otlp100714",
+    "sim-claims-CLM-757901-sh8otlp100714",
+    "sim-claims-CLM-968125-sh8otlp100714",
+    "sim-claims-CLM-177408-sh8otlp100714",
+    "sim-claims-CLM-518644-sh8otlp100714"
+   ],
+   "sessions": 16,
+   "steps": 80,
+   "stored_steps": 96,
+   "truth_file": "ground_truth/sim_tenants/H8/otlp.truth.jsonl",
+   "truth_sha256": "860145b98c708cb168eafe3ebec31566d8668cae0d499f32f27c582d1139cee5"
+  },
+  "rest": {
+   "counted_steps": 80,
+   "declares": [],
+   "door": "rest",
+   "door_limit": [],
+   "outcomes": {
+    "fail": 4,
+    "success": 12,
+    "work_items": 16
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "doors",
+   "session_ids": [
+    "sim-claims-CLM-213223-sh8rest100714",
+    "sim-claims-CLM-493238-sh8rest100714",
+    "sim-claims-CLM-399807-sh8rest100714",
+    "sim-claims-CLM-988945-sh8rest100714",
+    "sim-claims-CLM-193467-sh8rest100714",
+    "sim-claims-CLM-269447-sh8rest100714",
+    "sim-claims-CLM-668091-sh8rest100714",
+    "sim-claims-CLM-769463-sh8rest100714",
+    "sim-claims-CLM-640155-sh8rest100714",
+    "sim-claims-CLM-283845-sh8rest100714",
+    "sim-claims-CLM-868446-sh8rest100714",
+    "sim-claims-CLM-626908-sh8rest100714",
+    "sim-claims-CLM-757901-sh8rest100714",
+    "sim-claims-CLM-968125-sh8rest100714",
+    "sim-claims-CLM-177408-sh8rest100714",
+    "sim-claims-CLM-518644-sh8rest100714"
+   ],
+   "sessions": 16,
+   "steps": 80,
+   "stored_steps": 80,
+   "truth_file": "ground_truth/sim_tenants/H8/rest.truth.jsonl",
+   "truth_sha256": "666a345e8b992ac0d81186157d54bbd1d75701cde2e4a1fd78d18b9972f29774"
+  },
+  "sdk": {
+   "counted_steps": 80,
+   "declares": [],
+   "door": "sdk",
+   "door_limit": [],
+   "outcomes": {
+    "fail": 4,
+    "success": 12,
+    "work_items": 16
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "doors",
+   "session_ids": [
+    "sim-claims-CLM-213223-sh8sdk100714",
+    "sim-claims-CLM-493238-sh8sdk100714",
+    "sim-claims-CLM-399807-sh8sdk100714",
+    "sim-claims-CLM-988945-sh8sdk100714",
+    "sim-claims-CLM-193467-sh8sdk100714",
+    "sim-claims-CLM-269447-sh8sdk100714",
+    "sim-claims-CLM-668091-sh8sdk100714",
+    "sim-claims-CLM-769463-sh8sdk100714",
+    "sim-claims-CLM-640155-sh8sdk100714",
+    "sim-claims-CLM-283845-sh8sdk100714",
+    "sim-claims-CLM-868446-sh8sdk100714",
+    "sim-claims-CLM-626908-sh8sdk100714",
+    "sim-claims-CLM-757901-sh8sdk100714",
+    "sim-claims-CLM-968125-sh8sdk100714",
+    "sim-claims-CLM-177408-sh8sdk100714",
+    "sim-claims-CLM-518644-sh8sdk100714"
+   ],
+   "sessions": 16,
+   "steps": 80,
+   "stored_steps": 80,
+   "truth_file": "ground_truth/sim_tenants/H8/sdk.truth.jsonl",
+   "truth_sha256": "7a9884c6e4440abf97278c595ab57d90df305761813f4442798feff52621e779"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-h8@demo.provy.ai",
+  "key": "H8",
+  "name": "Sim H8 Doors",
+  "nonces": {
+   "log": "sh8log100714",
+   "logmap": "sh8logmap100714",
+   "otlp": "sh8otlp100714",
+   "rest": "sh8rest100714",
+   "sdk": "sh8sdk100714"
+  },
+  "purpose": "The same planned story sent by five doors: the SDK, OpenTelemetry, direct JSON, a log line and a log field map. Readiness is identical on the first four. The field map cannot carry three of the six signals, and that is a documented limit of the door.",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": null,
+ "spend_ceiling_usd": null
+}

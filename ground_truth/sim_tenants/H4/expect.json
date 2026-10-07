@@ -1,0 +1,189 @@
+{
+ "fleets": {
+  "iam": {
+   "counted_steps": 337,
+   "declared": {
+    "approved": [
+     "access-policy-kb",
+     "role-catalog",
+     "directory-api",
+     "agent-memory"
+    ],
+    "findings": {
+     "sim-iam-AC-2124-sh4iam100714": {
+      "index": 38,
+      "stale": [
+       {
+        "age_hours": 1777.0,
+        "agent": "applier",
+        "id": "doc-789",
+        "source": "access-policy-kb"
+       }
+      ],
+      "unapproved": []
+     },
+     "sim-iam-AC-3372-sh4iam100714": {
+      "index": 41,
+      "stale": [],
+      "unapproved": [
+       {
+        "agent": "reviewer",
+        "id": "file-604",
+        "source": "shared-drive"
+       }
+      ]
+     },
+     "sim-iam-AC-4907-sh4iam100714": {
+      "index": 47,
+      "stale": [
+       {
+        "age_hours": 2568.5,
+        "agent": "applier",
+        "id": "doc-420",
+        "source": "access-policy-kb"
+       }
+      ],
+      "unapproved": []
+     },
+     "sim-iam-AC-8690-sh4iam100714": {
+      "index": 42,
+      "stale": [
+       {
+        "age_hours": 1536.3,
+        "agent": "applier",
+        "id": "doc-881",
+        "source": "access-policy-kb"
+       }
+      ],
+      "unapproved": []
+     },
+     "sim-iam-AC-9575-sh4iam100714": {
+      "index": 40,
+      "stale": [
+       {
+        "age_hours": 1776.8,
+        "agent": "applier",
+        "id": "doc-826",
+        "source": "access-policy-kb"
+       }
+      ],
+      "unapproved": []
+     }
+    },
+    "limit_hours": 720,
+    "stale_sessions": [
+     "sim-iam-AC-2124-sh4iam100714",
+     "sim-iam-AC-4907-sh4iam100714",
+     "sim-iam-AC-8690-sh4iam100714",
+     "sim-iam-AC-9575-sh4iam100714"
+    ],
+    "unapproved_sessions": [
+     "sim-iam-AC-3372-sh4iam100714"
+    ]
+   },
+   "declares": [
+    "context_max_age"
+   ],
+   "door": "sdk",
+   "outcomes": {
+    "fail": 12,
+    "success": 38,
+    "work_items": 50
+   },
+   "pack": "iam",
+   "planted": {
+    "empty": 0,
+    "stale": 4,
+    "unapproved": 1
+   },
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "faults",
+   "session_ids": [
+    "sim-iam-AC-9272-sh4iam100714",
+    "sim-iam-AC-4686-sh4iam100714",
+    "sim-iam-AC-7934-sh4iam100714",
+    "sim-iam-AC-3625-sh4iam100714",
+    "sim-iam-AC-7902-sh4iam100714",
+    "sim-iam-AC-4661-sh4iam100714",
+    "sim-iam-AC-2699-sh4iam100714",
+    "sim-iam-AC-6588-sh4iam100714",
+    "sim-iam-AC-4005-sh4iam100714",
+    "sim-iam-AC-4052-sh4iam100714",
+    "sim-iam-AC-5972-sh4iam100714",
+    "sim-iam-AC-9950-sh4iam100714",
+    "sim-iam-AC-1988-sh4iam100714",
+    "sim-iam-AC-8714-sh4iam100714",
+    "sim-iam-AC-4204-sh4iam100714",
+    "sim-iam-AC-2376-sh4iam100714",
+    "sim-iam-AC-7874-sh4iam100714",
+    "sim-iam-AC-1663-sh4iam100714",
+    "sim-iam-AC-1333-sh4iam100714",
+    "sim-iam-AC-6992-sh4iam100714",
+    "sim-iam-AC-3605-sh4iam100714",
+    "sim-iam-AC-7738-sh4iam100714",
+    "sim-iam-AC-2303-sh4iam100714",
+    "sim-iam-AC-1355-sh4iam100714",
+    "sim-iam-AC-9281-sh4iam100714",
+    "sim-iam-AC-3425-sh4iam100714",
+    "sim-iam-AC-6463-sh4iam100714",
+    "sim-iam-AC-5474-sh4iam100714",
+    "sim-iam-AC-8465-sh4iam100714",
+    "sim-iam-AC-8429-sh4iam100714",
+    "sim-iam-AC-7099-sh4iam100714",
+    "sim-iam-AC-8912-sh4iam100714",
+    "sim-iam-AC-1063-sh4iam100714",
+    "sim-iam-AC-8974-sh4iam100714",
+    "sim-iam-AC-5584-sh4iam100714",
+    "sim-iam-AC-8374-sh4iam100714",
+    "sim-iam-AC-3142-sh4iam100714",
+    "sim-iam-AC-2180-sh4iam100714",
+    "sim-iam-AC-2124-sh4iam100714",
+    "sim-iam-AC-3473-sh4iam100714",
+    "sim-iam-AC-9575-sh4iam100714",
+    "sim-iam-AC-3372-sh4iam100714",
+    "sim-iam-AC-8690-sh4iam100714",
+    "sim-iam-AC-5036-sh4iam100714",
+    "sim-iam-AC-6450-sh4iam100714",
+    "sim-iam-AC-8253-sh4iam100714",
+    "sim-iam-AC-3923-sh4iam100714",
+    "sim-iam-AC-4907-sh4iam100714",
+    "sim-iam-AC-1358-sh4iam100714",
+    "sim-iam-AC-5201-sh4iam100714"
+   ],
+   "sessions": 50,
+   "steps": 337,
+   "stored_steps": 337,
+   "truth_file": "ground_truth/sim_tenants/H4/iam.truth.jsonl",
+   "truth_sha256": "3863f8d5b049c5f9515887504a5adf8ed35fac81d75d01cc03ed9d962db958b5"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-h4@demo.provy.ai",
+  "key": "H4",
+  "name": "Sim H4 Planted Faults",
+  "nonces": {
+   "iam": "sh4iam100714"
+  },
+  "purpose": "Planted stale sources, unapproved sources and empty retrievals with a declared 30 day limit and approved list. The ground truth lists every planted fault by session. No order on file.",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": null,
+ "spend_ceiling_usd": null
+}

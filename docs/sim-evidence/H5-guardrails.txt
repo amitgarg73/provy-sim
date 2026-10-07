@@ -1,0 +1,171 @@
+Provy had trouble with 2 sends recently
+Provy could not seal the record of a settled outcome in time. What you sent is stored and nothing needs sending again. Provy support can see the detail.
+What this means →
+Guardrails
+
+What Provy measures on Sim H5 Access Desk, and who hears when it fails.
+
+⌕
+/
++ Add check
+?
+History
+Checks
+15
+Failure patterns
+22 watched
+Session outcomes
+1 to classify
+Alerts
+4 on, nowhere to send
+AGENTS
+All agents
+Access Review
+Apply Access Change
+Entitlement Lookup
+Request Intake
+NOT ON THE ROSTER
+Process Access Change
+Session
+Review the roster on Agent Fleets →
+All running
+15
+Failing often
+0
+Never caught anything
+10
+Partly measured
+0
+Checks with an alert
+1
+Separating nothing
+4
+Group by type ▾
+▾
+Is it running
+graded on each agent’s own steps
+4 checks
+CHECK	AGENTS	LIMIT	LAST 30 DAYS	STATUS	ALERT	
+Tool latency
+Does any tool call take longer than the limit?
+	
+2 of 2 agents failing
+worst: Apply Access Change, 2 of 50 graded sessions · 2 of 6 agents report this
+	5.0s per call	4 slow across 2 agents	
+Ready		···
+Tool error rate
+Do more than the limit of the agent’s tool calls fail?
+	
+2 agents, none failing
+none failed in 30 days · 2 of 6 agents report this
+	10% of calls	0 over across 2 agents	
+Ready		···
+Agent time
+Does the agent’s own part of a session take longer than its limit?
+	
+5 agents, no limit yet
+100 of 250 agent sessions timed, nothing graded until a normal is learned
+	—	nothing measured	
+Still calibrating		···
+LLM cost
+Does a session cost more than the agent’s normal?
+	
+4 agents, no limit yet
+200 of 200 calls costed, nothing graded until a normal is learned
+	1.5× normal	nothing measured	
+Still calibrating		···
+▾
+Quality
+judged by an AI reviewer each session
+4 separating nothing4 checks
+CHECK	AGENTS	LIMIT	LAST 30 DAYS	STATUS	ALERT	
+Change applied
+Judge whether the applier output meets: change applied.
+One answer only. All 50 runs in 30 days scored 0.9.
+	
+Apply Access Change
+0 of 50 sessions
+	below 0.70	
+all 50 at 0.9
+	
+Separating nothing		···
+Entitlement resolution
+Judge whether the mapper output meets: entitlement resolution.
+One answer only. All 50 runs in 30 days scored 0.9.
+	
+Entitlement Lookup
+0 of 50 sessions
+	below 0.70	
+all 50 at 0.9
+	
+Separating nothing		···
+Request match
+Judge whether the reviewer output meets: request match.
+One answer only. All 50 runs in 30 days scored 0.9.
+	
+Access Review
+0 of 50 sessions
+	below 0.70	
+all 50 at 0.9
+	
+Separating nothing		···
+Request parsed
+Judge whether the intake output meets: request parsed.
+One answer only. All 50 runs in 30 days scored 0.9.
+	
+Request Intake
+0 of 50 sessions
+	below 0.70	
+all 50 at 0.9
+	
+Separating nothing		···
+▾
+Rules
+checks the pipeline grades itself
+7 checks
+CHECK	AGENTS	LIMIT	LAST 30 DAYS	STATUS	ALERT	
+Instructions changed	
+3 of 4 agents failing
+worst: Entitlement Lookup, 3 of 44 graded sessions · 4 of 6 agents report this
+	learned from your own history	
+3% failing	
+Ready		···
+⌄ 6 checks have never failed in 30 days · context freshness (158 sessions), decision made (50 sessions), exit quality (50 sessions), pipeline completion (50 sessions), retrieval empty (128 sessions), tool success rate (100 sessions). A check that never fails may be set too low. Show
+▾
+Context recorded on 100% of decision steps, last 30 days
+200 of 200 decision steps recorded what the agent was given
+100% of decision steps carry dates (200 of 200).
+This is what your agents said they were given. Provy did not check that it was complete. A step that sent nothing counts as no record, never as fine.
+▾
+Where context comes from
+decision steps in the last 30 days, by the route they arrived through
+ROUTE	DECISION STEPS	WITH A RECORD	SHARE
+OpenTelemetry	200	200	100%
+
+Steps sent by the Python SDK are counted under REST until the SDK reports itself. Steps written before routes were tracked have no route.
+
+▾
+Context checks
+what the agent was given, and how old it was · 3 running or measured, 1 learning
+Context freshness: not set by you. Provy is using limits learned from your traffic. Approved sources: not set by you. Provy is still learning which sources your agents use. Empty retrieval: watching every agent.
+Change context settings
+CHECK	STATE	WHAT IT SAYS
+Context freshness
+Is any fact the agent was given older than its limit?
+	Measured	None of 158 graded sessions failed in the last 30 days.
+Running on limits learned from your traffic. Suggested from your traffic: access-policy-kb, no older than 37 days, from 154 readings; role-catalog, no older than 38 days, from 93 readings; directory-api, no older than 15 hours, from 80 readings; agent-memory, no older than 32 days, from 32 readings.
+Edit this rule
+Switch off
+
+Source not approved
+Did the agent use a source that is not approved, or one not seen before?
+	Learning	Learning: Provy is noting which sources your agents use during the first 30 sessions and 7 days, whichever ends later. So far 50 sessions; 1 more day to go. Nothing is checked yet.
+Edit this rule
+Switch off
+
+Retrieval empty
+Did a step that usually finds documents find none?
+	Measured	None of 128 graded sessions failed in the last 30 days.
+Instructions changed
+Did the instructions a step runs under change?
+	Measured	5 of 186 graded sessions failed in the last 30 days.

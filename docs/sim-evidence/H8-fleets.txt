@@ -1,0 +1,79 @@
+Agent Fleets
+?
+A tenant can run many fleets at once. Each is isolated: its own agents, evals, sessions, and incidents. One fleet never touches another's data.
++ Add Fleet
+Add Fleet creates a new isolated fleet and runs its setup (workflow → grading → connect). This is where the setup wizard lives now. It never re-onboards the tenant. Each fleet's Guardrails and outcome Contract are managed per fleet.
+ACTIVE FLEETS · 5
+Sim H8 via SDK
+✎
+4
+agents
+16
+sessions
+0
+open incidents
+Guardrails
+Review outcome →
+Manage ▾
+Delete
+Roster confirmed. Nothing pending.
+What Provy found →
+Sim H8 via OpenTelemetry
+✎
+5
+agents
+16
+sessions
+0
+open incidents
+Guardrails
+Review outcome →
+Manage ▾
+Delete
+Provy found 1 agent in this fleet's traces. Their runs already count in this fleet's numbers, whether or not any check has scored them yet. Confirming records which are yours, and who runs the ones that are not, so Provy stops asking and can name an owner when one is behind a failure.
+Review 1 →
+Sim H8 via JSON
+✎
+4
+agents
+16
+sessions
+0
+open incidents
+Guardrails
+Review outcome →
+Manage ▾
+Delete
+Roster confirmed. Nothing pending.
+What Provy found →
+Some of what you sent is missing. Provy refused 140 sends in the last 14 days because the model that reads logs was rate limited, which clears daily. What you sent then is not in this fleet, so the counts here are lower than yours. Resend those batches with the same idempotency_key once it clears; the same key lands on the same session.
+Sim H8 via log line
+✎
+4
+agents
+16
+sessions
+0
+open incidents
+Guardrails
+Review outcome →
+Manage ▾
+Delete
+Roster confirmed. Nothing pending.
+What Provy found →
+Some of what you sent is missing. Provy refused 156 sends in the last 14 days because the model that reads logs was rate limited, which clears daily. What you sent then is not in this fleet, so the counts here are lower than yours. Resend those batches with the same idempotency_key once it clears; the same key lands on the same session.
+Sim H8 via log field map
+✎
+4
+agents
+16
+sessions
+0
+open incidents
+Guardrails
+Review outcome →
+Manage ▾
+Delete
+Roster confirmed. Nothing pending.
+What Provy found →
+Delete is a soft delete: the fleet is hidden and excluded from metrics, data kept. Restore within 60 days; a backend job hard-purges after that. You must keep at least one fleet: when only one remains, its Delete is disabled and it can only be removed by deleting the account (Settings → Danger Zone).

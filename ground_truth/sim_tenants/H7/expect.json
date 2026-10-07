@@ -1,0 +1,257 @@
+{
+ "fleets": {
+  "calibrated": {
+   "calibration": {
+    "0.5": {
+     "claims": 14,
+     "held": 4,
+     "rate": 0.286,
+     "too_few": false
+    },
+    "0.7": {
+     "claims": 12,
+     "held": 11,
+     "rate": 0.917,
+     "too_few": false
+    },
+    "0.9": {
+     "claims": 14,
+     "held": 11,
+     "rate": 0.786,
+     "too_few": false
+    }
+   },
+   "claims": 40,
+   "counted_steps": 200,
+   "declared": {
+    "approved": [
+     "coverage-kb",
+     "claims-faq-*",
+     "claims-api",
+     "agent-memory"
+    ],
+    "findings": {},
+    "limit_hours": 720,
+    "stale_sessions": [],
+    "unapproved_sessions": []
+   },
+   "declares": [
+    "context_max_age"
+   ],
+   "door": "rest",
+   "outcomes": {
+    "fail": 5,
+    "success": 35,
+    "work_items": 40
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "outcomes",
+   "session_ids": [
+    "sim-claims-CLM-615833-sh7calibrated100714",
+    "sim-claims-CLM-556561-sh7calibrated100714",
+    "sim-claims-CLM-176747-sh7calibrated100714",
+    "sim-claims-CLM-243286-sh7calibrated100714",
+    "sim-claims-CLM-377353-sh7calibrated100714",
+    "sim-claims-CLM-375295-sh7calibrated100714",
+    "sim-claims-CLM-373637-sh7calibrated100714",
+    "sim-claims-CLM-447900-sh7calibrated100714",
+    "sim-claims-CLM-870652-sh7calibrated100714",
+    "sim-claims-CLM-266257-sh7calibrated100714",
+    "sim-claims-CLM-300572-sh7calibrated100714",
+    "sim-claims-CLM-462219-sh7calibrated100714",
+    "sim-claims-CLM-198303-sh7calibrated100714",
+    "sim-claims-CLM-748456-sh7calibrated100714",
+    "sim-claims-CLM-780446-sh7calibrated100714",
+    "sim-claims-CLM-575711-sh7calibrated100714",
+    "sim-claims-CLM-566377-sh7calibrated100714",
+    "sim-claims-CLM-896400-sh7calibrated100714",
+    "sim-claims-CLM-364861-sh7calibrated100714",
+    "sim-claims-CLM-515502-sh7calibrated100714",
+    "sim-claims-CLM-662770-sh7calibrated100714",
+    "sim-claims-CLM-882099-sh7calibrated100714",
+    "sim-claims-CLM-417213-sh7calibrated100714",
+    "sim-claims-CLM-562575-sh7calibrated100714",
+    "sim-claims-CLM-322664-sh7calibrated100714",
+    "sim-claims-CLM-979556-sh7calibrated100714",
+    "sim-claims-CLM-245632-sh7calibrated100714",
+    "sim-claims-CLM-510324-sh7calibrated100714",
+    "sim-claims-CLM-379446-sh7calibrated100714",
+    "sim-claims-CLM-644913-sh7calibrated100714",
+    "sim-claims-CLM-879216-sh7calibrated100714",
+    "sim-claims-CLM-716019-sh7calibrated100714",
+    "sim-claims-CLM-650339-sh7calibrated100714",
+    "sim-claims-CLM-923869-sh7calibrated100714",
+    "sim-claims-CLM-893363-sh7calibrated100714",
+    "sim-claims-CLM-600697-sh7calibrated100714",
+    "sim-claims-CLM-511436-sh7calibrated100714",
+    "sim-claims-CLM-502724-sh7calibrated100714",
+    "sim-claims-CLM-560271-sh7calibrated100714",
+    "sim-claims-CLM-178639-sh7calibrated100714"
+   ],
+   "sessions": 40,
+   "steps": 200,
+   "stored_steps": 200,
+   "truth_file": "ground_truth/sim_tenants/H7/calibrated.truth.jsonl",
+   "truth_sha256": "9226d518638216bb989194683c3bf94066470aa0e73e53407bd71a6176536775",
+   "unmeasurable_condition": "customer_confirmed"
+  },
+  "overconfident": {
+   "calibration": {
+    "0.9": {
+     "claims": 40,
+     "held": 21,
+     "rate": 0.525,
+     "too_few": false
+    }
+   },
+   "claims": 40,
+   "counted_steps": 200,
+   "declares": [],
+   "door": "rest",
+   "outcomes": {
+    "fail": 11,
+    "success": 29,
+    "work_items": 40
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "outcomes",
+   "session_ids": [
+    "sim-claims-CLM-539875-sh7overconfident100714",
+    "sim-claims-CLM-888941-sh7overconfident100714",
+    "sim-claims-CLM-909295-sh7overconfident100714",
+    "sim-claims-CLM-914582-sh7overconfident100714",
+    "sim-claims-CLM-417860-sh7overconfident100714",
+    "sim-claims-CLM-635007-sh7overconfident100714",
+    "sim-claims-CLM-482195-sh7overconfident100714",
+    "sim-claims-CLM-970561-sh7overconfident100714",
+    "sim-claims-CLM-500195-sh7overconfident100714",
+    "sim-claims-CLM-535255-sh7overconfident100714",
+    "sim-claims-CLM-213418-sh7overconfident100714",
+    "sim-claims-CLM-669978-sh7overconfident100714",
+    "sim-claims-CLM-702063-sh7overconfident100714",
+    "sim-claims-CLM-278718-sh7overconfident100714",
+    "sim-claims-CLM-692868-sh7overconfident100714",
+    "sim-claims-CLM-812358-sh7overconfident100714",
+    "sim-claims-CLM-268058-sh7overconfident100714",
+    "sim-claims-CLM-739921-sh7overconfident100714",
+    "sim-claims-CLM-967208-sh7overconfident100714",
+    "sim-claims-CLM-523183-sh7overconfident100714",
+    "sim-claims-CLM-246931-sh7overconfident100714",
+    "sim-claims-CLM-775194-sh7overconfident100714",
+    "sim-claims-CLM-627686-sh7overconfident100714",
+    "sim-claims-CLM-432483-sh7overconfident100714",
+    "sim-claims-CLM-380553-sh7overconfident100714",
+    "sim-claims-CLM-629377-sh7overconfident100714",
+    "sim-claims-CLM-862486-sh7overconfident100714",
+    "sim-claims-CLM-980725-sh7overconfident100714",
+    "sim-claims-CLM-169624-sh7overconfident100714",
+    "sim-claims-CLM-947574-sh7overconfident100714",
+    "sim-claims-CLM-238265-sh7overconfident100714",
+    "sim-claims-CLM-254801-sh7overconfident100714",
+    "sim-claims-CLM-641941-sh7overconfident100714",
+    "sim-claims-CLM-581732-sh7overconfident100714",
+    "sim-claims-CLM-839996-sh7overconfident100714",
+    "sim-claims-CLM-987993-sh7overconfident100714",
+    "sim-claims-CLM-197572-sh7overconfident100714",
+    "sim-claims-CLM-220913-sh7overconfident100714",
+    "sim-claims-CLM-535362-sh7overconfident100714",
+    "sim-claims-CLM-375086-sh7overconfident100714"
+   ],
+   "sessions": 40,
+   "steps": 200,
+   "stored_steps": 200,
+   "truth_file": "ground_truth/sim_tenants/H7/overconfident.truth.jsonl",
+   "truth_sha256": "1226174d500a8e8eec8904bb32776ed2adc1f4498e5ebb2e4a243f85e5594891",
+   "unmeasurable_condition": "customer_confirmed"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-h7@demo.provy.ai",
+  "key": "H7",
+  "name": "Sim H7 Outcomes Duo",
+  "nonces": {
+   "calibrated": "sh7calibrated100714",
+   "overconfident": "sh7overconfident100714"
+  },
+  "purpose": "Two fleets in one workspace. One agent states its confidence and is right about as often as it says; the other states 0.9 and is right about half the time. Each contract has a condition that can be measured and one that never can. Only the first fleet declares a 30 day limit and an approved list: proves a declaration lands on the card's own fleet (#1630).",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": {
+  "calls": [
+   {
+    "body": {
+     "paid": false,
+     "plan": "standard",
+     "reason": "Sim set: Startup fleet plan",
+     "startsOn": "2026-10-01",
+     "terms": {
+      "pricingMode": "fleet",
+      "tier": "startup"
+     }
+    },
+    "route": "/api/admin/orders"
+   }
+  ],
+  "discount_percent": null,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": null,
+    "starts_on": "2026-10-01"
+   }
+  ],
+  "pilot_as_of_build": {
+   "state": "none"
+  },
+  "plan": {
+   "fee_cents": 49900,
+   "included_steps": 50000,
+   "mode": "fleet",
+   "name": "Startup",
+   "tier": "startup"
+  },
+  "spec": {
+   "kind": "fleet",
+   "plan": "standard",
+   "reason": "Sim set: Startup fleet plan",
+   "starts_on": "2026-10-01",
+   "tier": "startup"
+  }
+ },
+ "spend_ceiling_usd": null
+}

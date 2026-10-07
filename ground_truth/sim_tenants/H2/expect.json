@@ -1,0 +1,195 @@
+{
+ "fleets": {
+  "claims": {
+   "calibration": {
+    "0.5": {
+     "claims": 19,
+     "held": 7,
+     "rate": 0.368,
+     "too_few": false
+    },
+    "0.7": {
+     "claims": 15,
+     "held": 13,
+     "rate": 0.867,
+     "too_few": false
+    },
+    "0.9": {
+     "claims": 26,
+     "held": 26,
+     "rate": 1.0,
+     "too_few": false
+    }
+   },
+   "claims": 60,
+   "counted_steps": 300,
+   "declares": [],
+   "door": "rest",
+   "outcomes": {
+    "fail": 15,
+    "success": 45,
+    "work_items": 60
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 15,
+    "manifestSteps": 15,
+    "notGivenSteps": 5,
+    "signals": {
+     "instruction_fingerprint": "not_sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "partly_sent"
+    },
+    "signalsSent": 4,
+    "state": "thin",
+    "stepsCounted": 20
+   },
+   "scenario": "thin",
+   "session_ids": [
+    "sim-claims-CLM-303239-sh2claims100714",
+    "sim-claims-CLM-133929-sh2claims100714",
+    "sim-claims-CLM-870610-sh2claims100714",
+    "sim-claims-CLM-904227-sh2claims100714",
+    "sim-claims-CLM-468137-sh2claims100714",
+    "sim-claims-CLM-588281-sh2claims100714",
+    "sim-claims-CLM-743091-sh2claims100714",
+    "sim-claims-CLM-809163-sh2claims100714",
+    "sim-claims-CLM-364900-sh2claims100714",
+    "sim-claims-CLM-885283-sh2claims100714",
+    "sim-claims-CLM-885800-sh2claims100714",
+    "sim-claims-CLM-608548-sh2claims100714",
+    "sim-claims-CLM-214118-sh2claims100714",
+    "sim-claims-CLM-968845-sh2claims100714",
+    "sim-claims-CLM-594383-sh2claims100714",
+    "sim-claims-CLM-707622-sh2claims100714",
+    "sim-claims-CLM-564879-sh2claims100714",
+    "sim-claims-CLM-113656-sh2claims100714",
+    "sim-claims-CLM-609050-sh2claims100714",
+    "sim-claims-CLM-624053-sh2claims100714",
+    "sim-claims-CLM-457720-sh2claims100714",
+    "sim-claims-CLM-744097-sh2claims100714",
+    "sim-claims-CLM-759472-sh2claims100714",
+    "sim-claims-CLM-140682-sh2claims100714",
+    "sim-claims-CLM-623651-sh2claims100714",
+    "sim-claims-CLM-302360-sh2claims100714",
+    "sim-claims-CLM-434175-sh2claims100714",
+    "sim-claims-CLM-874929-sh2claims100714",
+    "sim-claims-CLM-347701-sh2claims100714",
+    "sim-claims-CLM-652792-sh2claims100714",
+    "sim-claims-CLM-749325-sh2claims100714",
+    "sim-claims-CLM-739362-sh2claims100714",
+    "sim-claims-CLM-100725-sh2claims100714",
+    "sim-claims-CLM-241954-sh2claims100714",
+    "sim-claims-CLM-100448-sh2claims100714",
+    "sim-claims-CLM-537276-sh2claims100714",
+    "sim-claims-CLM-633893-sh2claims100714",
+    "sim-claims-CLM-409814-sh2claims100714",
+    "sim-claims-CLM-378067-sh2claims100714",
+    "sim-claims-CLM-931513-sh2claims100714",
+    "sim-claims-CLM-443010-sh2claims100714",
+    "sim-claims-CLM-780053-sh2claims100714",
+    "sim-claims-CLM-484719-sh2claims100714",
+    "sim-claims-CLM-588365-sh2claims100714",
+    "sim-claims-CLM-916243-sh2claims100714",
+    "sim-claims-CLM-705892-sh2claims100714",
+    "sim-claims-CLM-165663-sh2claims100714",
+    "sim-claims-CLM-287148-sh2claims100714",
+    "sim-claims-CLM-341664-sh2claims100714",
+    "sim-claims-CLM-641448-sh2claims100714",
+    "sim-claims-CLM-368132-sh2claims100714",
+    "sim-claims-CLM-117275-sh2claims100714",
+    "sim-claims-CLM-316630-sh2claims100714",
+    "sim-claims-CLM-636462-sh2claims100714",
+    "sim-claims-CLM-836157-sh2claims100714",
+    "sim-claims-CLM-413912-sh2claims100714",
+    "sim-claims-CLM-329705-sh2claims100714",
+    "sim-claims-CLM-228630-sh2claims100714",
+    "sim-claims-CLM-232377-sh2claims100714",
+    "sim-claims-CLM-475800-sh2claims100714"
+   ],
+   "sessions": 60,
+   "steps": 300,
+   "stored_steps": 300,
+   "truth_file": "ground_truth/sim_tenants/H2/claims.truth.jsonl",
+   "truth_sha256": "e94bf20ce629cfe99e6b661a3ef7fb496564fc350c99df55e757ee9c5cb28ff4"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-h2@demo.provy.ai",
+  "key": "H2",
+  "name": "Sim H2 Thin Context",
+  "nonces": {
+   "claims": "sh2claims100714"
+  },
+  "purpose": "Thin context like Third Eye: a record on model steps only, one agent that runs code and no model (no record, not counted), source age on some items only, no instruction fingerprint. Enterprise fleet plan with a typed fee, a tiny pool so extra usage is real, and a 100 percent internal discount.",
+  "today": "2026-10-07"
+ },
+ "notices": {
+  "notify50": true,
+  "notify75": true,
+  "people": [
+   "sim-h2-ops@demo.provy.ai"
+  ]
+ },
+ "order": {
+  "calls": [
+   {
+    "body": {
+     "paid": false,
+     "plan": "custom",
+     "reason": "Sim set: Enterprise fleet plan with an internal discount, like Third Eye",
+     "startsOn": "2026-10-01",
+     "terms": {
+      "discountLines": [
+       {
+        "kind": "all",
+        "note": "internal customer (sim)",
+        "percent": 100
+       }
+      ],
+      "fleetFee": "2500.00",
+      "fleetSteps": 40,
+      "pricingMode": "fleet",
+      "tier": "enterprise"
+     }
+    },
+    "route": "/api/admin/orders"
+   }
+  ],
+  "discount_percent": 100,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": null,
+    "starts_on": "2026-10-01"
+   }
+  ],
+  "pilot_as_of_build": {
+   "state": "none"
+  },
+  "plan": {
+   "fee_cents": 250000,
+   "included_steps": 40,
+   "mode": "fleet",
+   "name": "Enterprise",
+   "tier": "enterprise"
+  },
+  "spec": {
+   "discount_note": "internal customer (sim)",
+   "discount_percent": 100,
+   "fleet_fee": "2500.00",
+   "fleet_steps": 40,
+   "kind": "fleet",
+   "plan": "custom",
+   "reason": "Sim set: Enterprise fleet plan with an internal discount, like Third Eye",
+   "starts_on": "2026-10-01",
+   "tier": "enterprise"
+  }
+ },
+ "spend_ceiling_usd": null
+}

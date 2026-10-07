@@ -1,0 +1,165 @@
+{
+ "fleets": {
+  "claims": {
+   "calibration": {
+    "0.5": {
+     "claims": 10,
+     "held": 7,
+     "rate": 0.7,
+     "too_few": false
+    },
+    "0.7": {
+     "claims": 6,
+     "held": 5,
+     "rate": 0.833,
+     "too_few": true
+    },
+    "0.9": {
+     "claims": 4,
+     "held": 3,
+     "rate": 0.75,
+     "too_few": true
+    }
+   },
+   "claims": 20,
+   "counted_steps": 100,
+   "declares": [],
+   "door": "rest",
+   "outcomes": {
+    "fail": 6,
+    "success": 14,
+    "work_items": 20
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "healthy",
+   "session_ids": [
+    "sim-claims-CLM-856298-sp2claims100714",
+    "sim-claims-CLM-843339-sp2claims100714",
+    "sim-claims-CLM-484530-sp2claims100714",
+    "sim-claims-CLM-952082-sp2claims100714",
+    "sim-claims-CLM-791180-sp2claims100714",
+    "sim-claims-CLM-310058-sp2claims100714",
+    "sim-claims-CLM-619016-sp2claims100714",
+    "sim-claims-CLM-451083-sp2claims100714",
+    "sim-claims-CLM-391444-sp2claims100714",
+    "sim-claims-CLM-461320-sp2claims100714",
+    "sim-claims-CLM-197232-sp2claims100714",
+    "sim-claims-CLM-405332-sp2claims100714",
+    "sim-claims-CLM-250201-sp2claims100714",
+    "sim-claims-CLM-452498-sp2claims100714",
+    "sim-claims-CLM-922504-sp2claims100714",
+    "sim-claims-CLM-459209-sp2claims100714",
+    "sim-claims-CLM-823154-sp2claims100714",
+    "sim-claims-CLM-300453-sp2claims100714",
+    "sim-claims-CLM-268832-sp2claims100714",
+    "sim-claims-CLM-745385-sp2claims100714"
+   ],
+   "sessions": 20,
+   "steps": 100,
+   "stored_steps": 100,
+   "truth_file": "ground_truth/sim_tenants/P2/claims.truth.jsonl",
+   "truth_sha256": "6fa62bc35df372feeea364a9b24e7249145c511854c17aac0e7bdb603c5d2a45"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-p2@demo.provy.ai",
+  "key": "P2",
+  "name": "Sim P2 Pilot Converted",
+  "nonces": {
+   "claims": "sp2claims100714"
+  },
+  "purpose": "A pilot that ended and was converted: a later paid order with no pilot date.",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": {
+  "calls": [
+   {
+    "body": {
+     "paid": false,
+     "plan": "pilot",
+     "reason": "Sim set: pilot",
+     "startsOn": "2026-09-17",
+     "terms": {
+      "pilotEndsOn": "2026-10-02",
+      "pricingMode": "fleet",
+      "tier": "startup"
+     }
+    },
+    "route": "/api/admin/orders"
+   },
+   {
+    "body": {
+     "paid": true,
+     "plan": "standard",
+     "reason": "Sim set: pilot converted, paid",
+     "startsOn": "2026-10-03",
+     "terms": {
+      "pricingMode": "fleet",
+      "tier": "startup"
+     }
+    },
+    "route": "/api/admin/orders"
+   }
+  ],
+  "discount_percent": null,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": "2026-10-02",
+    "starts_on": "2026-09-17"
+   },
+   {
+    "has_pricing": true,
+    "paid": true,
+    "pilot_ends_on": null,
+    "starts_on": "2026-10-03"
+   }
+  ],
+  "pilot_as_of_build": {
+   "endsOn": "2026-10-02",
+   "state": "converted",
+   "via": "new_order"
+  },
+  "plan": {
+   "fee_cents": 49900,
+   "included_steps": 50000,
+   "mode": "fleet",
+   "name": "Startup",
+   "tier": "startup"
+  },
+  "spec": {
+   "kind": "fleet",
+   "pilot_offset_days": -5,
+   "plan": "pilot",
+   "reason": "Sim set: pilot",
+   "starts_on_offset_days": -20,
+   "then": {
+    "paid": true,
+    "plan": "standard",
+    "reason": "Sim set: pilot converted, paid",
+    "starts_on_offset_days": -4
+   },
+   "tier": "startup"
+  }
+ },
+ "spend_ceiling_usd": null
+}

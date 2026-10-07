@@ -1,0 +1,103 @@
+Settings > Workspace settings > Usage and limits
+
+Usage and limits
+?
+
+Sim P1 Pilot Ended. Steps this month, 1 to 31 October 2026 (UTC). Counted through 7 October 2026, 15:30 UTC.
+
+Usage
+Your agreement
+Notices and limit
+How this works
+This month
+100
+of 50,000 included steps for your whole fleet (less than 1%)
+0
+50%
+25,000
+75%
+37,500
+100%
+50,000
+
+On track.
+
+less than 1% of this month's included steps used after 7 of 31 days. Counted through 7 October 2026, 15:30 UTC. Steps are counted from 4 October 2026, the day the step meter began.
+
+Your plan
+Fleet plan, Startup. 50,000 steps shared by all your agents, however many you run.
+Agents counting
+4. See them as a table
+Extra usage
+None so far. Past 50,000 steps, extra steps are extra usage under your agreement. Nothing is turned off.
+Who is told
+Notices are not being sent yet. Your choices are kept and apply when Provy turns notices on. Change who is told
+Your own limit
+Off. There is no limit unless you set one. Set my own limit
+Window
+1 to 31 October 2026 (UTC). The count starts again on 1 November 2026 at 00:00 UTC.
+Steps by day
+
+Each day is shaded by its step count. Choose a day for its detail.
+
+Previous
+October 2026
+Next
+
+Today, 7 October: 100 steps so far. Busiest day: 7 October, 100 steps. Month total: 100 steps.
+
+Mon
+Tue
+Wed
+Thu
+Fri
+Sat
+Sun
+1
+Not counted
+2
+Not counted
+3
+Not counted
+4
+0
+5
+0
+6
+0
+7
+100
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+0
+1 to 25
+26 to 50
+51 to 75
+76 or more
+Wednesday 7 October 2026
+
+100 steps, less than 1% of the 50,000 included steps this month.
+
+The same as the daily average of 100 steps for October so far, counted from 7 October, the first day with steps.

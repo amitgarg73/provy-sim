@@ -242,6 +242,9 @@ class ProvyEmitter:
             blob[k] = v
         if blob:
             payload["payload"] = blob
+        # The context manifest rides at the top level of the trace body (SPEC 4.2), like `decision`.
+        if getattr(step, "context", None) is not None:
+            payload["context"] = step.context
         # argus#1072: a step that ran last Tuesday says so, or the server stamps it as arriving now.
         if occurred_at:
             payload["occurred_at"] = occurred_at

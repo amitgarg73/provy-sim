@@ -1,0 +1,156 @@
+{
+ "fleets": {
+  "claims": {
+   "calibration": {
+    "0.5": {
+     "claims": 4,
+     "held": 2,
+     "rate": 0.5,
+     "too_few": true
+    },
+    "0.7": {
+     "claims": 10,
+     "held": 8,
+     "rate": 0.8,
+     "too_few": false
+    },
+    "0.9": {
+     "claims": 6,
+     "held": 5,
+     "rate": 0.833,
+     "too_few": true
+    }
+   },
+   "claims": 20,
+   "counted_steps": 100,
+   "declares": [],
+   "door": "rest",
+   "outcomes": {
+    "fail": 8,
+    "success": 12,
+    "work_items": 20
+   },
+   "pack": "claims",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "healthy",
+   "session_ids": [
+    "sim-claims-CLM-898754-sp3claims100714",
+    "sim-claims-CLM-776843-sp3claims100714",
+    "sim-claims-CLM-485430-sp3claims100714",
+    "sim-claims-CLM-190887-sp3claims100714",
+    "sim-claims-CLM-744656-sp3claims100714",
+    "sim-claims-CLM-510404-sp3claims100714",
+    "sim-claims-CLM-518905-sp3claims100714",
+    "sim-claims-CLM-912826-sp3claims100714",
+    "sim-claims-CLM-958808-sp3claims100714",
+    "sim-claims-CLM-415339-sp3claims100714",
+    "sim-claims-CLM-138800-sp3claims100714",
+    "sim-claims-CLM-283104-sp3claims100714",
+    "sim-claims-CLM-542114-sp3claims100714",
+    "sim-claims-CLM-233063-sp3claims100714",
+    "sim-claims-CLM-627772-sp3claims100714",
+    "sim-claims-CLM-255149-sp3claims100714",
+    "sim-claims-CLM-216774-sp3claims100714",
+    "sim-claims-CLM-808271-sp3claims100714",
+    "sim-claims-CLM-785162-sp3claims100714",
+    "sim-claims-CLM-292678-sp3claims100714"
+   ],
+   "sessions": 20,
+   "steps": 100,
+   "stored_steps": 100,
+   "truth_file": "ground_truth/sim_tenants/P3/claims.truth.jsonl",
+   "truth_sha256": "11685afcdc897c1fe1e99cd1936685945353b8b5d3eca0ce992adc751ccde8ea"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-p3@demo.provy.ai",
+  "key": "P3",
+  "name": "Sim P3 Pilot Extended",
+  "nonces": {
+   "claims": "sp3claims100714"
+  },
+  "purpose": "A pilot that was about to end and was extended by staff: the end date moves out, the state reads running.",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": {
+  "calls": [
+   {
+    "body": {
+     "paid": false,
+     "plan": "pilot",
+     "reason": "Sim set: pilot",
+     "startsOn": "2026-09-25",
+     "terms": {
+      "pilotEndsOn": "2026-10-09",
+      "pricingMode": "fleet",
+      "tier": "startup"
+     }
+    },
+    "route": "/api/admin/orders"
+   },
+   {
+    "body": {
+     "pilotEndsOn": "2026-10-27",
+     "reason": "Sim set: pilot extended by staff"
+    },
+    "route": "/api/admin/entitlements/pilot"
+   }
+  ],
+  "discount_percent": null,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": "2026-10-09",
+    "starts_on": "2026-09-25"
+   },
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": "2026-10-27",
+    "starts_on": "2026-10-07"
+   }
+  ],
+  "pilot_as_of_build": {
+   "daysLeft": 20,
+   "endsOn": "2026-10-27",
+   "mark": null,
+   "state": "running"
+  },
+  "plan": {
+   "fee_cents": 49900,
+   "included_steps": 50000,
+   "mode": "fleet",
+   "name": "Startup",
+   "tier": "startup"
+  },
+  "spec": {
+   "extend_reason": "Sim set: pilot extended by staff",
+   "extend_to_offset_days": 20,
+   "kind": "fleet",
+   "pilot_offset_days": 2,
+   "plan": "pilot",
+   "reason": "Sim set: pilot",
+   "starts_on_offset_days": -12,
+   "tier": "startup"
+  }
+ },
+ "spend_ceiling_usd": null
+}

@@ -17,6 +17,7 @@ from datetime import timedelta
 from typing import Optional
 
 from . import contract as C
+from . import context_levers as _ctxl
 from .types import (Criterion, InjectedFault, LeverManifest, RunContext,
                     RunResult, TraceStep)
 
@@ -73,6 +74,14 @@ _PHASE_A = ["silent_wrong", "silent_staleness", "silent_unsupported", "silent_in
             "ok_but_empty", "escalation_refused", "fabricated_policy", "overliteral_constraint",
             "reversed_on_appeal", "retry_loop", "agent_paralysis", "correlation_as_cause",
             "context_truncated", "parametric_override"]
+
+# Context faults (argus#1505 test plan) fire AFTER every phase-A lever, from their own list. They are
+# exclusive like phase A (one primary cause per run) and `background_failure` is last, so it only fails
+# a run no fault claimed. They are NOT in `_PHASE_A` on purpose: tests build "every lever at 0.18" from
+# that list, and adding to it would starve the tail of the existing mix. All off at rate 0.
+_CONTEXT_PHASE = ["ctx_stale_source", "ctx_empty_retrieval", "ctx_unapproved_source",
+                  "ctx_instruction_change", "ctx_manifest_missing", "background_failure"]
+
 
 
 # ── Trace helpers ────────────────────────────────────────────────────────────
@@ -769,6 +778,12 @@ _LEVER_FNS = {
     "correlation_as_cause": _correlation_as_cause,
     "context_truncated": _context_truncated,
     "parametric_override": _parametric_override,
+    "ctx_stale_source": _ctxl.ctx_stale_source,
+    "ctx_empty_retrieval": _ctxl.ctx_empty_retrieval,
+    "ctx_unapproved_source": _ctxl.ctx_unapproved_source,
+    "ctx_instruction_change": _ctxl.ctx_instruction_change,
+    "ctx_manifest_missing": _ctxl.ctx_manifest_missing,
+    "background_failure": _ctxl.background_failure,
     "tool_latency": _tool_latency,
     "tool_errors": _tool_errors,
     "llm_cost": _llm_cost,
@@ -831,6 +846,8 @@ def apply(result: RunResult, gt, manifest: LeverManifest,
 
     for name in _PHASE_A:
         _fire(name)
+    for name in _CONTEXT_PHASE:
+        _fire(name)
 
     # The pack's own phase-A injector runs after the generic ones and defers to them:
     # it is told whether a primary already fired so it can stand down (show a clean,
@@ -856,6 +873,10 @@ def apply(result: RunResult, gt, manifest: LeverManifest,
         _fire(name, exclusive=False)
     if not primary_fired:
         _fire("tool_errors", exclusive=False)
+
+    # Manifests for every model-run step, with the context faults that fired written into them. Done
+    # last so it sees the faults. A no-op unless a context lever or `context_manifest` is configured.
+    _ctxl.attach(result, faults, config, ctx)
 
     result.faults = faults
     return faults

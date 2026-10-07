@@ -1,0 +1,211 @@
+{
+ "fleets": {
+  "iam": {
+   "counted_steps": 340,
+   "declares": [],
+   "door": "otlp",
+   "instruction_findings": [
+    {
+     "agent": "intake",
+     "from": "sha256:96798f60a6c739f9f27c80324899c74a02282e0ed1a60b962f1639db1b9849b6",
+     "kind": "changed",
+     "session_id": "sim-iam-AC-9411-sh5iam100714",
+     "session_index": 30,
+     "to": "sha256:fba635aafbdc80054853b86510ae4d577f8158da56c9be857d5166c7db8cb860"
+    },
+    {
+     "agent": "mapper",
+     "from": "sha256:1d635ed707379e2a6cdff4ff6ad7b9dc5e0d0d4e5d127010f143f79360a0b4c2",
+     "kind": "changed",
+     "session_id": "sim-iam-AC-9302-sh5iam100714",
+     "session_index": 14,
+     "to": "sha256:b18eec760cd4c1fc52f2ad70f88606a1003a743d86c5c98b86f13f4a19406677"
+    },
+    {
+     "agent": "mapper",
+     "from": "sha256:b18eec760cd4c1fc52f2ad70f88606a1003a743d86c5c98b86f13f4a19406677",
+     "kind": "went_back",
+     "session_id": "sim-iam-AC-5135-sh5iam100714",
+     "session_index": 20,
+     "to": "sha256:1d635ed707379e2a6cdff4ff6ad7b9dc5e0d0d4e5d127010f143f79360a0b4c2"
+    },
+    {
+     "agent": "mapper",
+     "from": "sha256:1d635ed707379e2a6cdff4ff6ad7b9dc5e0d0d4e5d127010f143f79360a0b4c2",
+     "kind": "back_and_forth",
+     "session_id": "sim-iam-AC-3339-sh5iam100714",
+     "session_index": 26,
+     "to": "sha256:b18eec760cd4c1fc52f2ad70f88606a1003a743d86c5c98b86f13f4a19406677"
+    },
+    {
+     "agent": "applier",
+     "from": "sha256:a138aaf7ad2ce21b793fbeae4a72fff070f3e8993f0d5de354df5c00ecf7936c",
+     "kind": "changed",
+     "session_id": "sim-iam-AC-6303-sh5iam100714",
+     "session_index": 25,
+     "to": "sha256:2e2579d43480a07d705fdcc77000a33b1475ccc8d9cc4945356713b63196b8a0"
+    }
+   ],
+   "instruction_stories": {
+    "applier": {
+     "at": 25,
+     "story": "same_label"
+    },
+    "intake": {
+     "at": 30,
+     "story": "change"
+    },
+    "mapper": {
+     "block": 6,
+     "start": 14,
+     "story": "alternate"
+    },
+    "reviewer": {
+     "story": "constant"
+    }
+   },
+   "otlp_wrapper_agent": "process_access_change",
+   "outcomes": {
+    "fail": 10,
+    "success": 40,
+    "work_items": 50
+   },
+   "pack": "iam",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 20,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "scenario": "instruction",
+   "session_ids": [
+    "sim-iam-AC-7975-sh5iam100714",
+    "sim-iam-AC-4185-sh5iam100714",
+    "sim-iam-AC-8649-sh5iam100714",
+    "sim-iam-AC-9914-sh5iam100714",
+    "sim-iam-AC-4064-sh5iam100714",
+    "sim-iam-AC-3973-sh5iam100714",
+    "sim-iam-AC-3080-sh5iam100714",
+    "sim-iam-AC-1238-sh5iam100714",
+    "sim-iam-AC-5082-sh5iam100714",
+    "sim-iam-AC-8096-sh5iam100714",
+    "sim-iam-AC-1514-sh5iam100714",
+    "sim-iam-AC-5015-sh5iam100714",
+    "sim-iam-AC-9397-sh5iam100714",
+    "sim-iam-AC-6011-sh5iam100714",
+    "sim-iam-AC-9302-sh5iam100714",
+    "sim-iam-AC-2349-sh5iam100714",
+    "sim-iam-AC-5627-sh5iam100714",
+    "sim-iam-AC-9348-sh5iam100714",
+    "sim-iam-AC-2578-sh5iam100714",
+    "sim-iam-AC-6892-sh5iam100714",
+    "sim-iam-AC-5135-sh5iam100714",
+    "sim-iam-AC-9573-sh5iam100714",
+    "sim-iam-AC-6400-sh5iam100714",
+    "sim-iam-AC-2702-sh5iam100714",
+    "sim-iam-AC-5437-sh5iam100714",
+    "sim-iam-AC-6303-sh5iam100714",
+    "sim-iam-AC-3339-sh5iam100714",
+    "sim-iam-AC-9130-sh5iam100714",
+    "sim-iam-AC-5021-sh5iam100714",
+    "sim-iam-AC-4865-sh5iam100714",
+    "sim-iam-AC-9411-sh5iam100714",
+    "sim-iam-AC-7669-sh5iam100714",
+    "sim-iam-AC-8804-sh5iam100714",
+    "sim-iam-AC-9638-sh5iam100714",
+    "sim-iam-AC-2324-sh5iam100714",
+    "sim-iam-AC-4453-sh5iam100714",
+    "sim-iam-AC-9612-sh5iam100714",
+    "sim-iam-AC-7871-sh5iam100714",
+    "sim-iam-AC-5539-sh5iam100714",
+    "sim-iam-AC-2825-sh5iam100714",
+    "sim-iam-AC-1797-sh5iam100714",
+    "sim-iam-AC-2959-sh5iam100714",
+    "sim-iam-AC-4199-sh5iam100714",
+    "sim-iam-AC-2952-sh5iam100714",
+    "sim-iam-AC-3833-sh5iam100714",
+    "sim-iam-AC-3591-sh5iam100714",
+    "sim-iam-AC-8458-sh5iam100714",
+    "sim-iam-AC-9752-sh5iam100714",
+    "sim-iam-AC-5484-sh5iam100714",
+    "sim-iam-AC-6958-sh5iam100714"
+   ],
+   "sessions": 50,
+   "steps": 340,
+   "stored_steps": 390,
+   "truth_file": "ground_truth/sim_tenants/H5/iam.truth.jsonl",
+   "truth_sha256": "08875ea9faacb8356cc88bd4f0a28c41c2c1824054ea085f2b7f19ac2055f1a7"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-h5@demo.provy.ai",
+  "key": "H5",
+  "name": "Sim H5 Instruction Change",
+  "nonces": {
+   "iam": "sh5iam100714"
+  },
+  "purpose": "Three instruction stories on three agents: a real change, an A-B-A-B alternating rollout, and a same-label fingerprint change. Pilot ending in 3 days on a Scale fleet plan.",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": {
+  "calls": [
+   {
+    "body": {
+     "paid": false,
+     "plan": "pilot",
+     "reason": "Sim set: pilot ending in 3 days",
+     "startsOn": "2026-09-26",
+     "terms": {
+      "pilotEndsOn": "2026-10-10",
+      "pricingMode": "fleet",
+      "tier": "scale"
+     }
+    },
+    "route": "/api/admin/orders"
+   }
+  ],
+  "discount_percent": null,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": "2026-10-10",
+    "starts_on": "2026-09-26"
+   }
+  ],
+  "pilot_as_of_build": {
+   "daysLeft": 3,
+   "endsOn": "2026-10-10",
+   "mark": 3,
+   "state": "running"
+  },
+  "plan": {
+   "fee_cents": 199900,
+   "included_steps": 300000,
+   "mode": "fleet",
+   "name": "Scale",
+   "tier": "scale"
+  },
+  "spec": {
+   "kind": "fleet",
+   "pilot_offset_days": 3,
+   "plan": "pilot",
+   "reason": "Sim set: pilot ending in 3 days",
+   "starts_on_offset_days": -11,
+   "tier": "scale"
+  }
+ },
+ "spend_ceiling_usd": null
+}

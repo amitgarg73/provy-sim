@@ -1,0 +1,20 @@
+Mutation checks on the L4 tree, 2 Oct 2026. Each mutation was applied to one file, `pytest tests -x` was run, and the file was restored.
+129 tests pass on the unmutated tree.
+
+M1  REST emitter stops sending context                         CAUGHT by test_every_planned_session_is_stored_exactly_as_its_route_should_carry_it[CM-A]
+M2  pre-prod allow-list switched off                           CAUGHT by test_emitter_refuses_anything_that_is_not_an_allowlisted_preprod_host[https://example.com]
+M3  convention route starts carrying `used`                    CAUGHT by test_every_planned_session_is_stored_exactly_as_its_route_should_carry_it[CM-A]
+M4  false alarm bar loosened from 5% to 50%                    CAUGHT by test_false_alarm_rate_is_failed_checks_or_incidents_over_clean_sessions_and_the_bar_is_five_percent
+M5  stale fault may sit inside the limit                       CAUGHT by test_committed_file_is_what_the_generator_makes[CM-A]
+M6  ground-truth hash comparison skipped                       CAUGHT by test_emit_set_refuses_a_file_that_is_not_the_recorded_one
+M7  map route plants faults on any agent                       CAUGHT by test_committed_file_is_what_the_generator_makes[CM-A]
+M8  key=value form written under the wrong key                 CAUGHT by test_every_planned_session_is_stored_exactly_as_its_route_should_carry_it[CM-A]
+M9  hold-out ledger not written                                CAUGHT by test_a_hold_out_needs_confirmation_is_read_once_and_a_reread_is_stamped_not_clean
+M10 content text changed so the two hash paths disagree        CAUGHT by test_every_planned_session_is_stored_exactly_as_its_route_should_carry_it[CM-A]
+
+A first version of M8 ("if wire == 'kv' and False") was not caught because it is an equivalent mutant: the else branch writes the JSON form,
+which stores the same manifest. It was replaced by the real fault above.
+
+M5 and M7 are caught by the test that regenerates a set and compares it with the committed bytes. That is the guard on the discipline: a
+generator change that alters a hold-out cannot pass quietly. The semantic tests (a stale fault is at least 3 days past the limit; nothing
+planted on the map route for an agent_message agent) would catch the same faults in a regenerated file.

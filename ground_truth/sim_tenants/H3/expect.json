@@ -1,0 +1,140 @@
+{
+ "fleets": {
+  "iam": {
+   "counted_steps": 274,
+   "declares": [],
+   "door": "rest",
+   "outcomes": {
+    "fail": 6,
+    "success": 34,
+    "work_items": 40
+   },
+   "pack": "iam",
+   "readiness": {
+    "givenSteps": 20,
+    "manifestSteps": 0,
+    "notGivenSteps": 0,
+    "signals": {
+     "instruction_fingerprint": "not_sent",
+     "instruction_version": "not_sent",
+     "item_fingerprint": "not_sent",
+     "search_result": "not_sent",
+     "source": "not_sent",
+     "source_age": "not_sent"
+    },
+    "signalsSent": 0,
+    "state": "thin",
+    "stepsCounted": 20
+   },
+   "scenario": "none",
+   "session_ids": [
+    "sim-iam-AC-9162-sh3iam100714",
+    "sim-iam-AC-9815-sh3iam100714",
+    "sim-iam-AC-3388-sh3iam100714",
+    "sim-iam-AC-6743-sh3iam100714",
+    "sim-iam-AC-2577-sh3iam100714",
+    "sim-iam-AC-2011-sh3iam100714",
+    "sim-iam-AC-1167-sh3iam100714",
+    "sim-iam-AC-1539-sh3iam100714",
+    "sim-iam-AC-7988-sh3iam100714",
+    "sim-iam-AC-4771-sh3iam100714",
+    "sim-iam-AC-8151-sh3iam100714",
+    "sim-iam-AC-8213-sh3iam100714",
+    "sim-iam-AC-5409-sh3iam100714",
+    "sim-iam-AC-6815-sh3iam100714",
+    "sim-iam-AC-8170-sh3iam100714",
+    "sim-iam-AC-2364-sh3iam100714",
+    "sim-iam-AC-4386-sh3iam100714",
+    "sim-iam-AC-6797-sh3iam100714",
+    "sim-iam-AC-5320-sh3iam100714",
+    "sim-iam-AC-1919-sh3iam100714",
+    "sim-iam-AC-7581-sh3iam100714",
+    "sim-iam-AC-9767-sh3iam100714",
+    "sim-iam-AC-7224-sh3iam100714",
+    "sim-iam-AC-6987-sh3iam100714",
+    "sim-iam-AC-1619-sh3iam100714",
+    "sim-iam-AC-3497-sh3iam100714",
+    "sim-iam-AC-4140-sh3iam100714",
+    "sim-iam-AC-8919-sh3iam100714",
+    "sim-iam-AC-7620-sh3iam100714",
+    "sim-iam-AC-5332-sh3iam100714",
+    "sim-iam-AC-3322-sh3iam100714",
+    "sim-iam-AC-5617-sh3iam100714",
+    "sim-iam-AC-3612-sh3iam100714",
+    "sim-iam-AC-3962-sh3iam100714",
+    "sim-iam-AC-2613-sh3iam100714",
+    "sim-iam-AC-6634-sh3iam100714",
+    "sim-iam-AC-2764-sh3iam100714",
+    "sim-iam-AC-2562-sh3iam100714",
+    "sim-iam-AC-4843-sh3iam100714",
+    "sim-iam-AC-5959-sh3iam100714"
+   ],
+   "sessions": 40,
+   "steps": 274,
+   "stored_steps": 274,
+   "truth_file": "ground_truth/sim_tenants/H3/iam.truth.jsonl",
+   "truth_sha256": "827235e15c33bfc42a80dfa0f3757f05b973ec0a96603e20af769513a542bd49"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T14:00:00+00:00",
+  "email": "sim-h3@demo.provy.ai",
+  "key": "H3",
+  "name": "Sim H3 No Context",
+  "nonces": {
+   "iam": "sh3iam100714"
+  },
+  "purpose": "The customer who never sent a manifest: nothing breaks, every context answer reads unknown, never a pass. Pilot ending in 14 days on a Startup fleet plan.",
+  "today": "2026-10-07"
+ },
+ "notices": null,
+ "order": {
+  "calls": [
+   {
+    "body": {
+     "paid": false,
+     "plan": "pilot",
+     "reason": "Sim set: pilot ending in 14 days",
+     "startsOn": "2026-10-06",
+     "terms": {
+      "pilotEndsOn": "2026-10-21",
+      "pricingMode": "fleet",
+      "tier": "startup"
+     }
+    },
+    "route": "/api/admin/orders"
+   }
+  ],
+  "discount_percent": null,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": "2026-10-21",
+    "starts_on": "2026-10-06"
+   }
+  ],
+  "pilot_as_of_build": {
+   "daysLeft": 14,
+   "endsOn": "2026-10-21",
+   "mark": 14,
+   "state": "running"
+  },
+  "plan": {
+   "fee_cents": 49900,
+   "included_steps": 50000,
+   "mode": "fleet",
+   "name": "Startup",
+   "tier": "startup"
+  },
+  "spec": {
+   "kind": "fleet",
+   "pilot_offset_days": 14,
+   "plan": "pilot",
+   "reason": "Sim set: pilot ending in 14 days",
+   "starts_on_offset_days": -1,
+   "tier": "startup"
+  }
+ },
+ "spend_ceiling_usd": null
+}

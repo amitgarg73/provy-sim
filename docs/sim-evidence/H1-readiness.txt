@@ -1,0 +1,15 @@
+CHECK WHAT MY FLEET SENDS
+?
+
+This is what your fleet has sent, compared with what Provy needs to run its context checks.
+
+Ingestionok
+Outcomesok
+Connected.
+Receiving traces. 4 agents across 40 sessions in the latest 200 steps.
+As of Oct 7, 15:58. Window: the latest 20 decision steps.
+Everything Provy checks is on.
+Over the latest 20 steps that were given context.
+Nothing to fix.
+Check again
+Test a fix with a sample before you send more
