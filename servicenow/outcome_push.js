@@ -11,11 +11,36 @@
 // Condition (set on the business rule record, not here):
 //   correlation_id = provy-itsm, state changes to 7
 //
+// ⛔ A PUSH THAT FAILS IS RETRIED, THEN KEPT, THEN DRIVEN AGAIN (argus#1649).
+// On 29 Sep 2026 five tickets (INC0010186, INC0010188 to INC0010191) were closed in one sweep pass and
+// every push came back "HTTP 0", which is what ServiceNow reports when it got no HTTP answer at all
+// (no connection, a reset, a timeout). The rule logged one line, gave up, and nothing ever looked at
+// those tickets again: the rule fires once, on the change to Closed, so a push that does not land is
+// lost for good and Provy keeps the work item at 'unresolved' for ever. The sixth ticket of that batch,
+// closed 20 minutes later, pushed fine, so it was a moment, not a fault in the payload.
+// Now:
+//   1. A transport failure (no answer, 408, 429, 5xx) is tried up to three times with a short pause,
+//      and the error message ServiceNow holds is logged, which the old rule never asked for.
+//   2. A push that still did not land, or that was refused for a reason a person can fix later
+//      (401, 403, a Vercel block), is written to the property provy.push.pending (a list of incident
+//      numbers) and logged as PUSH PENDING. A refusal of the payload itself (400, 404, 422) is NOT kept,
+//      because sending it again would fail the same way for ever.
+//   3. Every later run of this rule first pushes up to five of the pending tickets again, from the
+//      record as it stands now, and removes each one that lands. A push that was in fact received the
+//      first time is harmless: Provy answers already_settled to a second push.
+// Nothing here writes to an incident, so a closed ticket is never touched, reopened or counted twice.
+//
 // ES5 only: Rhino engine.
 
 (function executeRule(current, previous /*null when async*/) {
     var GENUINE = ['Solution provided', 'Resolved by change', 'Resolved by problem',
                    'Workaround provided'];
+    var MARKER = 'provy-itsm';
+    var PENDING_PROP = 'provy.push.pending';
+    var MAX_ATTEMPTS = 3;          // for a transport failure
+    var BACKOFF_MS = [2000, 6000]; // pause before attempt 2 and attempt 3
+    var DRAIN_PER_RUN = 5;         // pending tickets pushed again per run
+    var PENDING_CAP = 100;         // the list never grows past this; the oldest fall off, logged
 
     var url = gs.getProperty('provy.ingest.url', '');
     var key = gs.getProperty('provy.ingest.key', '');
@@ -34,9 +59,9 @@
         return false;
     }
 
-    function answerKey() {
+    function answerKeyOf(gr) {
         var out = {cat: '', grp: ''};
-        var parts = (current.correlation_display + '').split(';');
+        var parts = (gr.correlation_display + '').split(';');
         for (var i = 0; i < parts.length; i++) {
             var kv = parts[i].split('=');
             if (kv.length === 2) out[kv[0]] = kv[1];
@@ -44,112 +69,110 @@
         return out;
     }
 
-    var key_ = answerKey();
-    var closeCode = current.close_code + '';
-    var reopenCount = parseInt(current.reopen_count + '', 10) || 0;
-    var reassignCount = parseInt(current.reassignment_count + '', 10) || 0;
+    // The outcome body for one closed incident, built only from that record.
+    function buildPayload(gr) {
+        var key_ = answerKeyOf(gr);
+        var closeCode = gr.close_code + '';
+        var reopenCount = parseInt(gr.reopen_count + '', 10) || 0;
+        var reassignCount = parseInt(gr.reassignment_count + '', 10) || 0;
 
-    // DO NOT read current.made_sla. It looks like the obvious field and it is a trap:
-    // nothing in this instance maintains it. Stock incidents with a genuinely breached
-    // SLA still carry made_sla = true (INC0000050, INC0000060), and there is no active
-    // business rule that writes it. It is seeded demo data, not a computed result.
-    //
-    // The SLA engine's real output is task_sla, one record per attached target,
-    // carrying the has_breached the platform actually calculates. Reading it there is
-    // not a workaround: it is reading the verdict from where the platform keeps it,
-    // instead of from a mirror the platform never updates.
-    // Counted PER KIND, which is the whole point. A ticket carries a response target and a
-    // resolution target, and rolling them into one boolean meant a ticket answered in seconds but
-    // fixed three days late reported that it MISSED FIRST RESPONSE. Every such ticket has been
-    // lying since this script shipped. contract_sla.target is 'response' or 'resolution' and is set
-    // by scripts/install_servicenow_lifecycle.py, so this reads the platform's own classification
-    // rather than guessing from a name.
-    var slaTotal = 0, slaBreached = 0;
-    var respTotal = 0, respBreached = 0;
-    var resoTotal = 0, resoBreached = 0;
-    var sla = new GlideRecord('task_sla');
-    sla.addQuery('task', current.sys_id);
-    sla.query();
-    while (sla.next()) {
-        slaTotal++;
-        var breached = (sla.has_breached + '') === 'true';
-        if (breached) slaBreached++;
-        var kind = (sla.sla.target + '').toLowerCase();
-        if (kind === 'response')        { respTotal++; if (breached) respBreached++; }
-        else if (kind === 'resolution') { resoTotal++; if (breached) resoBreached++; }
-    }
-    // Kept for traceability only: the roll-up across every attached target. NOT a contract signal.
-    // Grading anything on this is the bug described above.
-    var madeSla = slaBreached === 0;
-    // A target that was never attached was never committed to, so there is no verdict to report.
-    // Omitted rather than asserted, on the same principle that keeps procedure_grounded out of the
-    // bag below: sending a value this instance cannot settle would be inventing the outcome.
-    var responseMet   = respTotal > 0 ? respBreached === 0 : null;
-    var resolutionMet = resoTotal > 0 ? resoBreached === 0 : null;
+        // DO NOT read gr.made_sla. It looks like the obvious field and it is a trap:
+        // nothing in this instance maintains it. Stock incidents with a genuinely breached
+        // SLA still carry made_sla = true (INC0000050, INC0000060), and there is no active
+        // business rule that writes it. It is seeded demo data, not a computed result.
+        //
+        // The SLA engine's real output is task_sla, one record per attached target,
+        // carrying the has_breached the platform actually calculates. Reading it there is
+        // not a workaround: it is reading the verdict from where the platform keeps it,
+        // instead of from a mirror the platform never updates.
+        // Counted PER KIND, which is the whole point. A ticket carries a response target and a
+        // resolution target, and rolling them into one boolean meant a ticket answered in seconds but
+        // fixed three days late reported that it MISSED FIRST RESPONSE. Every such ticket has been
+        // lying since this script shipped. contract_sla.target is 'response' or 'resolution' and is set
+        // by scripts/install_servicenow_lifecycle.py, so this reads the platform's own classification
+        // rather than guessing from a name.
+        var slaTotal = 0, slaBreached = 0;
+        var respTotal = 0, respBreached = 0;
+        var resoTotal = 0, resoBreached = 0;
+        var sla = new GlideRecord('task_sla');
+        sla.addQuery('task', gr.sys_id);
+        sla.query();
+        while (sla.next()) {
+            slaTotal++;
+            var breached = (sla.has_breached + '') === 'true';
+            if (breached) slaBreached++;
+            var kind = (sla.sla.target + '').toLowerCase();
+            if (kind === 'response')        { respTotal++; if (breached) respBreached++; }
+            else if (kind === 'resolution') { resoTotal++; if (breached) resoBreached++; }
+        }
+        // Kept for traceability only: the roll-up across every attached target. NOT a contract signal.
+        // Grading anything on this is the bug described above.
+        var madeSla = slaBreached === 0;
+        // A target that was never attached was never committed to, so there is no verdict to report.
+        // Omitted rather than asserted, on the same principle that keeps procedure_grounded out of the
+        // bag below: sending a value this instance cannot settle would be inventing the outcome.
+        var responseMet   = respTotal > 0 ? respBreached === 0 : null;
+        var resolutionMet = resoTotal > 0 ? resoBreached === 0 : null;
 
-    // Setting the assignment group counts as a reassignment in ServiceNow, so the
-    // agent's own routing always leaves 1. A handoff is anything beyond that.
-    var handoffs = reassignCount > 1 ? reassignCount - 1 : 0;
+        // Setting the assignment group counts as a reassignment in ServiceNow, so the
+        // agent's own routing always leaves 1. A handoff is anything beyond that.
+        var handoffs = reassignCount > 1 ? reassignCount - 1 : 0;
 
-    // Minutes of human effort recorded against the ticket. time_worked is a
-    // duration field; empty means nobody logged any, which is the normal case for a
-    // ticket the agent handled end to end.
-    var worklogMinutes = 0;
-    if (current.time_worked) {
-        var dur = new GlideDuration(current.time_worked + '');
-        worklogMinutes = Math.round(dur.getNumericValue() / 60000);
-    }
+        // Minutes of human effort recorded against the ticket. time_worked is a
+        // duration field; empty means nobody logged any, which is the normal case for a
+        // ticket the agent handled end to end.
+        var worklogMinutes = 0;
+        if (gr.time_worked) {
+            var dur = new GlideDuration(gr.time_worked + '');
+            worklogMinutes = Math.round(dur.getNumericValue() / 60000);
+        }
 
-    var routingCorrect = key_.grp ? (current.assignment_group.getDisplayValue() === key_.grp) : null;
-    var categoryCorrect = key_.cat ? ((current.category + '') === key_.cat) : null;
+        var routingCorrect = key_.grp ? (gr.assignment_group.getDisplayValue() === key_.grp) : null;
+        var categoryCorrect = key_.cat ? ((gr.category + '') === key_.cat) : null;
 
-    // The customer's own definition of a good outcome, which is what the contract
-    // in Provy grades against. Computed here because it is the customer's call, not
-    // the monitoring tool's.
-    // Resolution time now counts. A ticket fixed long after its target is not a good outcome, and
-    // leaving it out was only defensible while the two SLAs were indistinguishable. This makes the
-    // demo's success rate lower and more honest.
-    var success = (responseMet !== false) && (resolutionMet !== false) &&
-                  reopenCount === 0 && isGenuineFix(closeCode) && reassignCount <= 1;
+        // The customer's own definition of a good outcome, which is what the contract
+        // in Provy grades against. Computed here because it is the customer's call, not
+        // the monitoring tool's.
+        // Resolution time now counts. A ticket fixed long after its target is not a good outcome, and
+        // leaving it out was only defensible while the two SLAs were indistinguishable. This makes the
+        // demo's success rate lower and more honest.
+        var success = (responseMet !== false) && (resolutionMet !== false) &&
+                      reopenCount === 0 && isGenuineFix(closeCode) && reassignCount <= 1;
 
-    // The contract's own signal names, one per condition (2026-07-28). Provy grades a
-    // condition by looking up the signal it was authored against, so the push has to speak
-    // the contract's vocabulary, not just this instance's field names. The raw fields below
-    // stay in the bag: they are what makes a verdict traceable back to the records it came
-    // from, and Provy reads them for the failure-anatomy comparisons.
-    //
-    // Condition text these satisfy, verbatim from the contract:
-    //   resolution_genuine       "resolved with a genuine fix on first attempt, not reopened
-    //                             or marked cannot-reproduce"
-    //   first_response_time_met  "first response is delivered within the agreed response time target"
-    //   resolution_time_met      "the incident is resolved within the agreed resolution time target"
-    //   resolution_persists      "stays resolved and is not reopened after closure"
-    //   self_resolved            "resolves the incident without escalation or handoff to another team"
-    //
-    // The contract's fifth condition, procedure_grounded, is deliberately NOT pushed. Whether a
-    // diagnosis followed a documented procedure is a judgement about the agent's reasoning, and
-    // this instance settles no such fact. Sending a value we cannot observe would be inventing
-    // the outcome, so it stays unreported and Provy shows it as uncovered.
-    var contractSignals = {
-        resolution_genuine:      isGenuineFix(closeCode) && reopenCount === 0,
-        first_response_time_met: responseMet,
-        resolution_time_met:     resolutionMet,
-        resolution_persists:     reopenCount === 0,
-        self_resolved:           reassignCount <= 1
-    };
+        // The contract's own signal names, one per condition (2026-07-28). Provy grades a
+        // condition by looking up the signal it was authored against, so the push has to speak
+        // the contract's vocabulary, not just this instance's field names. The raw fields below
+        // stay in the bag: they are what makes a verdict traceable back to the records it came
+        // from, and Provy reads them for the failure-anatomy comparisons.
+        //
+        // Condition text these satisfy, verbatim from the contract:
+        //   resolution_genuine       "resolved with a genuine fix on first attempt, not reopened
+        //                             or marked cannot-reproduce"
+        //   first_response_time_met  "first response is delivered within the agreed response time target"
+        //   resolution_time_met      "the incident is resolved within the agreed resolution time target"
+        //   resolution_persists      "stays resolved and is not reopened after closure"
+        //   self_resolved            "resolves the incident without escalation or handoff to another
+        //                             team"
+        //
+        // The contract's fifth condition, procedure_grounded, is deliberately NOT pushed. Whether a
+        // diagnosis followed a documented procedure is a judgement about the agent's reasoning, and
+        // this instance settles no such fact. Sending a value we cannot observe would be inventing
+        // the outcome, so it stays unreported and Provy shows it as uncovered.
+        var contractSignals = {
+            resolution_genuine:      isGenuineFix(closeCode) && reopenCount === 0,
+            first_response_time_met: responseMet,
+            resolution_time_met:     resolutionMet,
+            resolution_persists:     reopenCount === 0,
+            self_resolved:           reassignCount <= 1
+        };
 
-    // THE DATE THE AGENT DID THE WORK, not the date this push fires. Those are
-    // different once a ticket sits through a reopen, and pushing "today" for work
-    // done earlier is what put 233 phantom rows in the ledger. opened_at is used
-    // rather than resolved_at because a reopened ticket gets resolved twice and
-    // only the first one was the agent's.
-    var businessDate = (current.opened_at + '').substring(0, 10);
+        // THE DATE THE AGENT DID THE WORK, not the date this push fires. Those are
+        // different once a ticket sits through a reopen, and pushing "today" for work
+        // done earlier is what put 233 phantom rows in the ledger. opened_at is used
+        // rather than resolved_at because a reopened ticket gets resolved twice and
+        // only the first one was the agent's.
+        var businessDate = (gr.opened_at + '').substring(0, 10);
 
-    var payload = {
-        entity_id: current.number + '',
-        business_date: businessDate,
-        label: success ? 'success' : 'fail',
-        source: 'confirmed',
         // ⛔ UTC, WITH THE MARKER ON IT. This was getDisplayValueInternal(), which returns the
         // INSTANCE's local time in internal format and carries no timezone. Provy stores it in a
         // timestamptz column, reads the missing offset as UTC, and every settled outcome lands
@@ -159,80 +182,197 @@
         //
         // getValue() is the UTC one. The trailing 'Z' is added so the receiver cannot repeat the
         // same assumption from the other side, and 'T' makes it ISO 8601 rather than nearly so.
-        occurred_at: new GlideDateTime().getValue().replace(' ', 'T') + 'Z',
-        signals: {
-            // Contract vocabulary first — these are what Provy actually grades. The two
-            // time-based ones are attached below, and only when a target of that kind was
-            // actually committed to.
-            resolution_genuine:      contractSignals.resolution_genuine,
-            resolution_persists:     contractSignals.resolution_persists,
-            self_resolved:           contractSignals.self_resolved,
-            // Raw instance fields, kept so a verdict can be traced to its records.
-            made_sla: madeSla,
-            sla_response_targets:   respTotal,
-            sla_response_breached:  respBreached,
-            sla_resolution_targets: resoTotal,
-            sla_resolution_breached: resoBreached,
-            // Shown alongside so the graded verdict can be traced back to the SLA
-            // records it came from, rather than being an unexplained boolean.
-            sla_targets: slaTotal,
-            sla_breached: slaBreached,
-            reopen_count: reopenCount,
-            close_code: closeCode,
-            reassignment_count: reassignCount,
-            handoffs: handoffs,
-            worklog_minutes: worklogMinutes,
-            priority: current.priority + '',
-            category: current.category + ''
+        //
+        // WHEN IT CLOSED, NOT WHEN THE PUSH RAN (argus#1649). A push driven again hours later must
+        // still carry the moment the instance settled the ticket, or the ledger would date an old
+        // closure to today. closed_at is the platform's own stamp; the clock is the fallback for a
+        // record that has none.
+        // getValue() is the stored UTC value; the display value would be the instance's local time.
+        var settledAt = new GlideDateTime().getValue();
+        var closedRaw = gr.getValue('closed_at');
+        if (closedRaw) settledAt = new GlideDateTime(closedRaw + '').getValue();
+
+        var payload = {
+            entity_id: gr.number + '',
+            business_date: businessDate,
+            label: success ? 'success' : 'fail',
+            source: 'confirmed',
+            occurred_at: (settledAt + '').replace(' ', 'T') + 'Z',
+            signals: {
+                // Contract vocabulary first — these are what Provy actually grades. The two
+                // time-based ones are attached below, and only when a target of that kind was
+                // actually committed to.
+                resolution_genuine:      contractSignals.resolution_genuine,
+                resolution_persists:     contractSignals.resolution_persists,
+                self_resolved:           contractSignals.self_resolved,
+                // Raw instance fields, kept so a verdict can be traced to its records.
+                made_sla: madeSla,
+                sla_response_targets:   respTotal,
+                sla_response_breached:  respBreached,
+                sla_resolution_targets: resoTotal,
+                sla_resolution_breached: resoBreached,
+                // Shown alongside so the graded verdict can be traced back to the SLA
+                // records it came from, rather than being an unexplained boolean.
+                sla_targets: slaTotal,
+                sla_breached: slaBreached,
+                reopen_count: reopenCount,
+                close_code: closeCode,
+                reassignment_count: reassignCount,
+                handoffs: handoffs,
+                worklog_minutes: worklogMinutes,
+                priority: gr.priority + '',
+                category: gr.category + ''
+            }
+        };
+        // Attached only when a target of that kind was actually committed to. A ticket with no
+        // resolution SLA has no resolution verdict, and asserting one would be inventing it; Provy shows
+        // the condition as uncovered instead, which is the truthful reading.
+        if (responseMet !== null) payload.signals.first_response_time_met = responseMet;
+        if (resolutionMet !== null) payload.signals.resolution_time_met = resolutionMet;
+        if (routingCorrect !== null) payload.signals.routing_correct = routingCorrect;
+        if (categoryCorrect !== null) payload.signals.category_correct = categoryCorrect;
+        return payload;
+    }
+
+    // One attempt. Returns {status, body, error}; status 0 means no HTTP answer at all.
+    function postOnce(payload) {
+        try {
+            var req = new sn_ws.RESTMessageV2();
+            req.setEndpoint(url);
+            req.setHttpMethod('POST');
+            req.setRequestHeader('Content-Type', 'application/json');
+            req.setRequestHeader('x-provy-key', key);
+            // Provy pre-prod sits behind Vercel's deployment protection, so this header
+            // is what gets the request to the route at all.
+            if (bypass) req.setRequestHeader('x-vercel-protection-bypass', bypass);
+            req.setRequestBody(JSON.stringify(payload));
+            req.setHttpTimeout(15000);
+            var resp = req.execute();
+            var err = '';
+            try { err = (resp.getErrorMessage() || '') + ''; } catch (e1) { err = ''; }
+            return {status: resp.getStatusCode(), body: (resp.getBody() + ''), error: err};
+        } catch (e) {
+            return {status: 0, body: '', error: 'threw: ' + e};
         }
-    };
-    // Attached only when a target of that kind was actually committed to. A ticket with no
-    // resolution SLA has no resolution verdict, and asserting one would be inventing it; Provy shows
-    // the condition as uncovered instead, which is the truthful reading.
-    if (responseMet !== null) payload.signals.first_response_time_met = responseMet;
-    if (resolutionMet !== null) payload.signals.resolution_time_met = resolutionMet;
-    if (routingCorrect !== null) payload.signals.routing_correct = routingCorrect;
-    if (categoryCorrect !== null) payload.signals.category_correct = categoryCorrect;
+    }
 
-    try {
-        var req = new sn_ws.RESTMessageV2();
-        req.setEndpoint(url);
-        req.setHttpMethod('POST');
-        req.setRequestHeader('Content-Type', 'application/json');
-        req.setRequestHeader('x-provy-key', key);
-        // Provy pre-prod sits behind Vercel's deployment protection, so this header
-        // is what gets the request to the route at all.
-        if (bypass) req.setRequestHeader('x-vercel-protection-bypass', bypass);
-        req.setRequestBody(JSON.stringify(payload));
-        req.setHttpTimeout(15000);
+    // ok | transient | fixable | permanent
+    function classify(r) {
+        if (r.status >= 200 && r.status < 300) return 'ok';
+        if (r.body.indexOf('Protected deployment') > -1 || r.body.indexOf('Authentication Required') > -1 ||
+            r.body.indexOf('vercel') > -1) return 'fixable';
+        if (r.status === 401 || r.status === 403) return 'fixable';
+        if (r.status === 0 || r.status === 408 || r.status === 429 || r.status >= 500) return 'transient';
+        return 'permanent';
+    }
 
-        var resp = req.execute();
-        var status = resp.getStatusCode();
-        var body = resp.getBody() + '';
-
-        if (status >= 200 && status < 300) {
-            gs.info('[provy] pushed ' + current.number + ' (' + payload.label + ', ' +
-                    businessDate + '): ' + body.substring(0, 200));
-            return;
+    // Push with the retry rule. `retries` false means one attempt (a pending ticket being driven again).
+    function pushWithRetry(number, payload, retries) {
+        var max = retries ? MAX_ATTEMPTS : 1;
+        var r = null, kind = '';
+        for (var attempt = 1; attempt <= max; attempt++) {
+            r = postOnce(payload);
+            kind = classify(r);
+            if (kind !== 'transient' || attempt === max) break;
+            gs.warn('[provy] push for ' + number + ' got no usable answer (HTTP ' + r.status +
+                    (r.error ? ', ' + r.error : '') + '), attempt ' + attempt + ' of ' + max + '; trying again');
+            try { gs.sleep(BACKOFF_MS[attempt - 1] || 6000); } catch (e2) { /* no sleep available: try at once */ }
         }
+        return {kind: kind, result: r};
+    }
 
+    // ── the pending list ────────────────────────────────────────────────────
+    function readPending() {
+        var raw = gs.getProperty(PENDING_PROP, '') + '';
+        var out = [], parts = raw.split(',');
+        for (var i = 0; i < parts.length; i++) {
+            var n = parts[i].replace(/^\s+|\s+$/g, '');
+            if (n) out.push(n);
+        }
+        return out;
+    }
+    function writePending(list) {
+        if (list.length > PENDING_CAP) {
+            gs.error('[provy] PUSH PENDING list is over ' + PENDING_CAP + '; dropping the oldest ' +
+                     (list.length - PENDING_CAP) + ': ' + list.slice(0, list.length - PENDING_CAP).join(','));
+            list = list.slice(list.length - PENDING_CAP);
+        }
+        gs.setProperty(PENDING_PROP, list.join(','));
+    }
+    function addPending(number) {
+        var list = readPending();
+        for (var i = 0; i < list.length; i++) if (list[i] === number) return;
+        list.push(number);
+        writePending(list);
+    }
+    function removePending(number) {
+        var list = readPending(), kept = [];
+        for (var i = 0; i < list.length; i++) if (list[i] !== number) kept.push(list[i]);
+        writePending(kept);
+    }
+
+    // Push tickets whose earlier push did not land, from the record as it is now.
+    function drainPending() {
+        var list = readPending(), done = 0;
+        for (var i = 0; i < list.length && done < DRAIN_PER_RUN; i++) {
+            var number = list[i];
+            if (number === current.number + '') continue;
+            var gr = new GlideRecord('incident');
+            gr.addQuery('number', number);
+            gr.addQuery('correlation_id', MARKER);
+            gr.addQuery('state', '7');
+            gr.query();
+            if (!gr.next()) {
+                gs.warn('[provy] pending push ' + number + ' is not a closed demo incident any more; dropped');
+                removePending(number);
+                continue;
+            }
+            done++;
+            var out = pushWithRetry(number, buildPayload(gr), false);
+            if (out.kind === 'ok') {
+                removePending(number);
+                gs.info('[provy] pushed again ' + number + ' (it was pending): ' + out.result.body.substring(0, 200));
+            } else if (out.kind === 'permanent') {
+                removePending(number);
+                gs.error('[provy] pending push ' + number + ' is refused for good, dropped: HTTP ' +
+                         out.result.status + ' ' + out.result.body.substring(0, 300));
+            } else {
+                gs.warn('[provy] pending push ' + number + ' still not landing: HTTP ' + out.result.status +
+                        (out.result.error ? ' ' + out.result.error : ''));
+            }
+        }
+    }
+
+    // ── this ticket ─────────────────────────────────────────────────────────
+    var payload = buildPayload(current);
+    var outcome = pushWithRetry(current.number + '', payload, true);
+    var r = outcome.result;
+
+    if (outcome.kind === 'ok') {
+        gs.info('[provy] pushed ' + current.number + ' (' + payload.label + ', ' +
+                payload.business_date + '): ' + r.body.substring(0, 200));
+    } else {
         // A rotated bypass token fails here as a VERCEL error, not a Provy-shaped
         // one, and reads like a Provy bug unless it is called out by name.
-        if (body.indexOf('Protected deployment') > -1 || body.indexOf('Authentication Required') > -1 ||
-            body.indexOf('vercel') > -1) {
+        if (outcome.kind === 'fixable' && (r.body.indexOf('Protected deployment') > -1 ||
+            r.body.indexOf('Authentication Required') > -1 || r.body.indexOf('vercel') > -1)) {
             gs.error('[provy] PUSH BLOCKED BY VERCEL, NOT BY PROVY, for ' + current.number +
                      '. The deployment-protection bypass token in the provy.vercel.bypass ' +
-                     'property is missing or has been rotated. HTTP ' + status);
-            return;
-        }
-        if (status === 401) {
+                     'property is missing or has been rotated. HTTP ' + r.status);
+        } else if (r.status === 401) {
             gs.error('[provy] push rejected for ' + current.number +
                      ': Provy did not accept the ingest key in provy.ingest.key. HTTP 401');
-            return;
+        } else {
+            gs.error('[provy] push failed for ' + current.number + ': HTTP ' + r.status + ' ' +
+                     (r.error ? r.error + ' ' : '') + r.body.substring(0, 300));
         }
-        gs.error('[provy] push failed for ' + current.number + ': HTTP ' + status + ' ' +
-                 body.substring(0, 300));
-    } catch (e) {
-        gs.error('[provy] push threw for ' + current.number + ': ' + e);
+        if (outcome.kind === 'transient' || outcome.kind === 'fixable') {
+            addPending(current.number + '');
+            gs.error('[provy] PUSH PENDING ' + current.number + ': kept in ' + PENDING_PROP +
+                     ' and pushed again on the next run of this rule');
+        }
     }
+
+    // After this ticket, so a failing endpoint cannot delay the ticket that just closed.
+    try { drainPending(); } catch (e3) { gs.error('[provy] draining pending pushes threw: ' + e3); }
 })(current, previous);
