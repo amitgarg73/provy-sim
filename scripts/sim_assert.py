@@ -46,7 +46,7 @@ def load_truth(path: str) -> list[dict]:
 
 def db_view(pg: X.Pg, wf: str, exp: dict, truth: list[dict]) -> tuple[dict, list[dict], dict, dict]:
     sess = pg.select("ag_sessions", {"select": "id,external_id", "workflow_id": f"eq.{wf}"})
-    steps = pg.select("ag_traces", {"select": "id,span_id,context,ingest_door,agent,step_type", "workflow_id": f"eq.{wf}"})
+    steps = pg.select("ag_traces", {"select": "id,span_id,context,ingest_door,agent,step_type,model,claim", "workflow_id": f"eq.{wf}"})
     evals = pg.select("ag_evals", {"select": "id,session_id,eval_name,agent,passed,layer,detail", "workflow_id": f"eq.{wf}"})
     ext_of = {s["id"]: s["external_id"] for s in sess}
     planned_ctx = sum(1 for r in truth for s in r["steps"] if s["manifest_sent"])
@@ -54,7 +54,7 @@ def db_view(pg: X.Pg, wf: str, exp: dict, truth: list[dict]) -> tuple[dict, list
           "ctx": sum(1 for s in steps if s["context"]), "expected_ctx": planned_ctx,
           "doors": sorted({s["ingest_door"] for s in steps if s["ingest_door"]}) and sorted({s["ingest_door"] for s in steps if s["ingest_door"]})[0],
           "door_tag": {exp["door"]: DOOR_TAG[exp["door"]]}}
-    return db, evals, ext_of, {s["id"]: s for s in steps}
+    return db, evals, ext_of, steps
 
 
 def tenant_checks(rows: A.Rows, key: str, exp: dict, creds: X.Creds, pg: X.Pg, adm: X.Admin | None) -> None:
@@ -128,8 +128,9 @@ def main() -> int:
     ap.add_argument("--creds", required=True)
     ap.add_argument("--only")
     ap.add_argument("--out")
+    ap.add_argument("--spec", help="a spec file other than the persistent set's (config/sim_tenants_itsm.json for the ITSM parity tenant)")
     a = ap.parse_args()
-    spec = X.load_spec()
+    spec = X.load_spec(a.spec) if a.spec else X.load_spec()
     creds = X.Creds(a.creds)
     pg = X.Pg()
     try:
@@ -149,7 +150,7 @@ def main() -> int:
             truth = load_truth(os.path.join(os.path.dirname(os.path.dirname(P.TRUTH_DIR)), fe["truth_file"]))
             wf = creds.workflow_id(t["key"], f["key"])
             o = obs.get(t["key"], {}).get(f["key"], {})
-            db, evals, ext_of, _ = db_view(pg, wf, fe, truth)
+            db, evals, ext_of, stored = db_view(pg, wf, fe, truth)
             A.compare_counts(rows, t["key"], f["key"], fe, db)
             A.compare_readiness(rows, t["key"], f["key"], fe, o.get("readiness"))
             A.compare_outcomes(rows, t["key"], f["key"], fe, o.get("outcomes"))
@@ -162,6 +163,7 @@ def main() -> int:
             A.compare_faults(rows, t["key"], f["key"], fe, truth, evals, ext_of)
             A.compare_instruction(rows, t["key"], f["key"], fe, evals, ext_of)
             A.compare_no_context(rows, t["key"], f["key"], fe, evals, ext_of)
+            A.compare_live_itsm(rows, t["key"], f["key"], fe, stored)
         tenant_checks(rows, t["key"], exp, creds, pg, adm)
     summary = {"summary": rows.summary(), "by_tenant": rows.by_tenant(), "at": datetime.now(timezone.utc).isoformat(), "rows": rows.rows}
     if a.out:

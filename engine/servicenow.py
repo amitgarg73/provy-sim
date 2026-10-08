@@ -26,7 +26,28 @@ from typing import Any, Optional
 # Marker written to correlation_id on every incident this demo creates, so the
 # generator, the agent and the reporting can all find exactly their own records
 # and leave the instance's pre-seeded filler alone.
-MARKER = "provy-itsm"
+DEFAULT_MARKER = "provy-itsm"
+
+
+def _marker_from_env(environ=None) -> str:
+    """The desk's marker. `provy-itsm` unless PROVY_ITSM_MARKER names a second, isolated desk (argus#1649).
+
+    ⛔ THE INSTANCE'S SWEEP, SLA TARGETS AND OUTCOME PUSH ARE ALL KEYED TO `provy-itsm` AND THE PUSH USES ONE INGEST KEY.
+    A ticket carrying that marker is closed by the sweep and pushed to whatever fleet the instance's key belongs to
+    (ITSM Demo's). A validation run on a throwaway workspace therefore must not use it, or its outcomes would land in the
+    protected tenant. A variant marker keeps its tickets out of all three. It must start with `provy-itsm-` and may carry
+    only lowercase letters, digits and hyphens, so an unset or stray value can never aim the desk at somebody else's tickets."""
+    import os as _os
+    import re as _re
+    v = ((environ if environ is not None else _os.environ).get("PROVY_ITSM_MARKER") or "").strip()
+    if not v:
+        return DEFAULT_MARKER
+    if not _re.fullmatch(r"provy-itsm-[a-z0-9][a-z0-9-]{0,30}", v):
+        raise ValueError("PROVY_ITSM_MARKER must look like provy-itsm-<name> (lowercase letters, digits, hyphens); got a value that does not")
+    return v
+
+
+MARKER = _marker_from_env()
 
 # The instance's real vocabulary, read off dev217748 on 2026-07-27. Everything
 # the agent writes has to come from these lists or the record will not reconcile.

@@ -1,0 +1,138 @@
+{
+ "fleets": {
+  "itsm": {
+   "counted_steps": 244,
+   "declares": [
+    "context_max_age"
+   ],
+   "door": "rest",
+   "itsm": {
+    "claim_confidences": [
+     0.64,
+     0.72,
+     0.73,
+     0.74,
+     0.76,
+     0.78,
+     0.79,
+     0.84,
+     0.85,
+     0.87,
+     0.89,
+     0.9,
+     0.92,
+     0.94,
+     0.97
+    ],
+    "claim_steps": 120,
+    "claims": 168,
+    "code_only_agents": [
+     "router"
+    ],
+    "code_only_steps": 32,
+    "marker": "provy-itsm-parity",
+    "model_steps": 100,
+    "model_steps_with_record": 100,
+    "never_posted_by_the_simulation": true,
+    "pushed_by_the_rule": 24,
+    "tag": "itsm-parity-20261007"
+   },
+   "outcomes": {
+    "fail": 9,
+    "success": 15,
+    "work_items": 24
+   },
+   "pack": "itsm",
+   "readiness": {
+    "givenSteps": 15,
+    "manifestSteps": 15,
+    "notGivenSteps": 5,
+    "signals": {
+     "instruction_fingerprint": "sent",
+     "instruction_version": "sent",
+     "item_fingerprint": "sent",
+     "search_result": "sent",
+     "source": "sent",
+     "source_age": "sent"
+    },
+    "signalsSent": 6,
+    "state": "ready",
+    "stepsCounted": 20
+   },
+   "roster": {
+    "agents": [
+     "knowledge",
+     "resolver",
+     "reviewer",
+     "router",
+     "triage",
+     "triage_v1"
+    ],
+    "never_accepted": [],
+    "retire": [
+     "triage_v1"
+    ]
+   },
+   "scenario": "live",
+   "session_ids": [
+    "sim-itsm-INC0010239",
+    "sim-itsm-INC0010240",
+    "sim-itsm-INC0010241",
+    "sim-itsm-INC0010242",
+    "sim-itsm-INC0010243",
+    "sim-itsm-INC0010244",
+    "sim-itsm-INC0010245",
+    "sim-itsm-INC0010246",
+    "sim-itsm-INC0010247",
+    "sim-itsm-INC0010248",
+    "sim-itsm-INC0010249",
+    "sim-itsm-INC0010250",
+    "sim-itsm-INC0010251",
+    "sim-itsm-INC0010252",
+    "sim-itsm-INC0010253",
+    "sim-itsm-INC0010254",
+    "sim-itsm-INC0010255",
+    "sim-itsm-INC0010256",
+    "sim-itsm-INC0010257",
+    "sim-itsm-INC0010258",
+    "sim-itsm-INC0010259",
+    "sim-itsm-INC0010260",
+    "sim-itsm-INC0010261",
+    "sim-itsm-INC0010262"
+   ],
+   "sessions": 24,
+   "steps": 244,
+   "stored_steps": 244,
+   "truth_file": "ground_truth/sim_tenants/I1/itsm.truth.jsonl",
+   "truth_sha256": "76442a5d295dd432e90e48758937cb70476f52317e2e8d6a51a57eda541d8e9a"
+  }
+ },
+ "meta": {
+  "built_at_clock": "2026-10-07T23:40:58.330837+00:00",
+  "spec": "sim_tenants_itsm.json",
+  "today": "2026-10-07"
+ },
+ "notices": {
+  "people": [
+   "sim-i1-ops@demo.provy.ai"
+  ]
+ },
+ "order": {
+  "discount_percent": null,
+  "order_rows": [
+   {
+    "has_pricing": true,
+    "paid": false,
+    "pilot_ends_on": null,
+    "starts_on": "2026-10-01"
+   }
+  ],
+  "plan": {
+   "fee_cents": 49900,
+   "included_steps": 50000,
+   "mode": "fleet",
+   "name": "Startup",
+   "tier": "startup"
+  }
+ }
+}

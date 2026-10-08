@@ -29,7 +29,10 @@ from __future__ import annotations
 
 import time
 from collections import deque
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
+
+from engine import context as C
 
 from engine.pack import BasePack
 from engine.servicenow import (CORRECT_GROUP, DEMO_RESOLUTION_TARGET_S,
@@ -88,6 +91,27 @@ KB_ARTICLE = {
 }
 
 
+# ── what each agent is GIVEN, for the context manifest (argus#1505, #1649) ──────────────────────────
+#
+# A manifest names what a model step was handed: source, id, age, fingerprint, never text. This desk's
+# agents read three things: the incident record (a tool result, as old as the ticket), the group
+# directory (a tool result) and the knowledge base (a document, as old as the article). The router's
+# routing decision is a lookup in a rules table and runs NO model, so it is sent as a code-only step
+# (no model, no tokens, no record), which the product reports as "not counted", never as a pass.
+#
+# ⛔ THE ARTICLE IN THE MANIFEST IS THE ARTICLE THE AGENT WAS ACTUALLY HANDED. When the knowledge
+# agent cites an id the knowledge base does not hold, the model was not given that id: it was given
+# the real article its search returned, which covers something else. The manifest says so (low score,
+# a different article), and the cited id stays only in the knowledge agent's own message.
+CONTEXT_SOURCES = ("incident-record", "group-directory", "itsm-knowledge-base", "agent-memory")
+# What a fleet on this desk declares as its approved list and freshness limit (docs/sim-tenants.md).
+DECLARED_APPROVED = list(CONTEXT_SOURCES)
+DECLARED_LIMIT_DAYS = 30
+# The agents whose steps run a model and are given context. The router is absent on purpose.
+CONTEXT_AGENTS = ("triage", "knowledge", "resolver", "reviewer")
+CODE_ONLY_AGENTS = ("router",)
+
+
 class WriteRejected(Exception):
     """The instance refused a write. Carries the error trace step that records it."""
 
@@ -105,6 +129,11 @@ class ItsmPack(BasePack):
     # simulation ever posted an outcome for this fleet, the demo would be back to
     # marking its own homework while looking exactly the same from outside.
     owns_outcome = False
+
+    # Forward-only parity with the current product (argus#1649). Both default on; a test or an old-shape
+    # replay can switch them off. Neither touches a contract signal, an outcome or a lever.
+    send_context = True      # a context manifest on every step that runs a model
+    code_router = True       # routing is a rules-table lookup: a step with no model
 
     def __init__(self, client: Optional[ServiceNowClient] = None):
         self._client = client
@@ -205,6 +234,16 @@ class ItsmPack(BasePack):
             Criterion("c7", "The procedure the fix followed is a real article that covers this "
                       "symptom", "trace", "kb_article_valid", "eq", True),
         ]
+
+    def retired_roster(self) -> list[AgentSpec]:
+        """Agents this desk used to run and has retired, for a workspace that shows a real roster (argus#1649).
+
+        They are NOT in agents(): the console's copy of the contract and roster (provy-sim-control lib/packs.ts) is what a fleet is
+        provisioned from, and a retired agent sends nothing. A setup script adds these to a fleet's roster and marks them retired, so
+        the roster reads as one with history next to the five agents that work."""
+        return [AgentSpec("triage_v1", "Triage (first version)",
+                          "Classified incidents with a model before triage and routing were split; replaced by triage.",
+                          "🗂️", 9)]
 
     def signal_owners(self) -> dict[str, str]:
         """Which agent's work decides each signal, and therefore who a failure is attributed to.
@@ -656,9 +695,10 @@ class ItsmPack(BasePack):
                                       sys_id, triage_patch, eid))
 
         # 2. Routing: assign the group it believes owns this.
-        r.traces.append(self.agent_step(
+        r.traces.append(self._router_step(
             ctx, A["router"], item,
             decision=f"assign to {d['recommended_group']}", entity_id=eid,
+            rule=f"category {d['category']} maps to group {d['recommended_group']}",
             payload_extra={"recommended_group": d["recommended_group"]}))
         group_id = self.client.group_sys_id(d["recommended_group"])
         route_patch = {
@@ -691,11 +731,12 @@ class ItsmPack(BasePack):
             # what the handled-without-handoff condition reads.
             fixed_group = CORRECT_GROUP[self.classify(
                 f"{item['short_description']} {item['description']}")[0]]
-            r.traces.append(self.agent_step(
+            r.traces.append(self._router_step(
                 ctx, A["router"], item,
                 decision=(f"{d['recommended_group']} did not own this; reassigned to {fixed_group} "
                           f"after it sat in their queue"),
                 entity_id=eid,
+                rule=f"{d['recommended_group']} returned the ticket; the table owner is {fixed_group}",
                 payload_extra={"reassigned_from": d["recommended_group"],
                                "reassigned_to": fixed_group,
                                "reason": "misroute" if d["misrouted"] else "misclassification"}))
@@ -873,6 +914,8 @@ class ItsmPack(BasePack):
             "outcome_source": "servicenow_push",
         }
 
+        self._attach_context(r, item, d, ctx)
+
         r.evals = [
             self.eval_pass("triage", "classification_confidence", eid,
                            f"classified as {d['category']} from the incident text",
@@ -909,6 +952,111 @@ class ItsmPack(BasePack):
 
         r.terminal_reason = "resolved"
         return r
+
+    # ── what the agents were given (the context manifest) and the code-only router ────────────
+    def _router_step(self, ctx: RunContext, agent: AgentSpec, item: Any, decision: str,
+                     entity_id: str, rule: str, payload_extra: Optional[dict] = None) -> TraceStep:
+        """The routing decision. A rules-table lookup, so it runs no model (argus#1649).
+
+        With `code_router` off it is the model step it used to be. On, it is a step with no model, no
+        tokens, no cost and no prompt, and it carries no context record: the product counts a model step
+        that was given no record as a gap, and a step that ran no model as not counted."""
+        if not self.code_router:
+            return self.agent_step(ctx, agent, item, decision=decision, entity_id=entity_id,
+                                   payload_extra=payload_extra)
+        return TraceStep(
+            agent=agent.name, step_type="agent_message", outcome=decision,
+            agent_reasoning=f"Rules table: {rule}.",
+            tool_output={"decision": decision, "detail": f"Rules table: {rule}.", "ran": "code"},
+            entity_id=entity_id, latency_ms=ctx.rng.randint(2, 40),
+            payload_extra=payload_extra or {},
+        )
+
+    @staticmethod
+    def _parse_opened(opened: str, now: datetime) -> timedelta:
+        """How old the ticket is when the agent reads it, from its own opened_at (UTC). Never negative, never over a week."""
+        try:
+            at = datetime.strptime((opened or "")[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            return min(max(now - at, timedelta(minutes=1)), timedelta(days=7))
+        except ValueError:
+            return timedelta(minutes=30)
+
+    def _attach_context(self, r: RunResult, item: dict, d: dict, ctx: RunContext) -> None:
+        """Write a context manifest on every step that ran a model. Writes TraceStep.context only.
+
+        Names, ages and fingerprints, never text. Nothing here reaches a contract signal, the outcome or
+        the session metadata, so the fleet's grading is exactly what it was. No fault is injected: this
+        desk's real signals belong to ServiceNow, and a context fault would have to settle an outcome the
+        simulation does not own."""
+        if not self.send_context:
+            return
+        now = ctx.now if ctx.now.tzinfo else ctx.now.replace(tzinfo=timezone.utc)
+        rng = ctx.rng
+        eid = r.entity_id
+        age = self._parse_opened(item.get("opened_at", ""), now)
+
+        def incident():
+            return C.make_item(rng, "incident-record", now, kind="tool_result", item_id=eid, age=age, used=True)
+
+        def directory():
+            return C.make_item(rng, "group-directory", now, kind="tool_result", item_id="assignment-groups",
+                               age=timedelta(minutes=rng.randint(5, 600)), used=True)
+
+        def article(article_id: str, score: float, used: bool):
+            it = C.make_item(rng, "itsm-knowledge-base", now, kind="document", item_id=article_id, used=used)
+            it["score"] = score
+            return it
+
+        def memory():
+            return C.make_item(rng, "agent-memory", now, kind="memory", used=rng.random() > 0.3)
+
+        kb_call = next((t for t in r.traces if t.tool_name == "kb_search"), None)
+        match = float((kb_call.tool_output or {}).get("match_score", 0.9)) if kb_call else 0.9
+        if d["article_valid"]:
+            first = KB_ARTICLE[d["category"]]
+        else:
+            # The model was handed a real article that covers something else, never the id that does not exist.
+            wrong = sorted(a for c, a in KB_ARTICLE.items() if c != d["category"] and a != KB_ARTICLE[d["category"]])
+            first = wrong[rng.randrange(len(wrong))]
+        others = sorted({a for a in KB_ARTICLE.values() if a != first})
+        rng.shuffle(others)
+        hits = [article(first, match, True)] + [article(a, round(max(0.05, match - rng.uniform(0.1, 0.3)), 4), False)
+                                                 for a in others[:rng.randint(0, 2)]]
+        given = {"triage": [incident()] + ([memory()] if rng.random() < 0.25 else []),
+                 "knowledge": hits,
+                 "resolver": [hits[0], incident()] + ([memory()] if rng.random() < 0.25 else []),
+                 "reviewer": [incident(), hits[0]]}
+        for t in r.traces:
+            if t.step_type != "agent_message" or t.model is None or t.agent not in given:
+                continue
+            items = [dict(i) for i in given[t.agent]]
+            total = t.tokens_input or 300
+            t.context = C.build_manifest(
+                items, len(items), C.instruction_for(t.agent, "v1"),
+                {"total": total, "context": min(total, sum(i.get("tokens", 0) for i in items))})
+
+    @staticmethod
+    def truth_record(result: RunResult, occurred_at: str = "") -> dict:
+        """What the pack knows it sent for one ticket: which steps ran a model and carried a record, which ran code only, the sources
+        each was given, and every claim with its stated confidence. Built from the run after the fact; never sent to Provy.
+        (Whether a claim HELD is ServiceNow's to say and is not here.)"""
+        steps = []
+        for t in result.traces:
+            if t.step_type != "agent_message":
+                continue
+            ctxm = t.context or {}
+            steps.append({"agent": t.agent, "model_run": t.model is not None, "manifest_sent": t.context is not None,
+                          "sources": sorted({i["source"] for i in ctxm.get("items", [])}),
+                          "items": len(ctxm.get("items", [])), "returned": (ctxm.get("retrieval") or {}).get("returned"),
+                          "instruction_version": (ctxm.get("instruction") or {}).get("version")})
+        claims = []
+        for t in result.traces:
+            for c in (t.payload_extra or {}).get("provy_claim", []):
+                claims.append({"agent": t.agent, "signal": c["signal"], "value": c["value"], "confidence": c["confidence"]})
+        return {"entity_id": result.entity_id, "session_id": result.session_id, "occurred_at": occurred_at,
+                "steps": steps, "claims": claims,
+                "code_only_agents": sorted({s["agent"] for s in steps if not s["model_run"]}),
+                "steps_total": len(result.traces)}
 
     # ── helpers ─────────────────────────────────────────────────────────────
     def _sn_step(self, ctx: RunContext, agent: AgentSpec, tool: str, sys_id: str,

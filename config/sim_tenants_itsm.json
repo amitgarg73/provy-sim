@@ -1,0 +1,21 @@
+{
+  "_about": "A separate, disposable spec for the ITSM parity check (argus#1649). The persistent set in sim_tenants.json refuses the ITSM pack on purpose; this one holds a single LIVE fleet: real incidents in the ServiceNow PDI, on its OWN desk marker, so the instance's sweep, SLA targets and outcome push (all keyed to the default marker, and pushing to ITSM Demo's fleet) never see them. Names start with 'Sim ' and the logins are on demo.provy.ai, so the nightly sweep (which deletes only @argustest.com users and a tenant named 'Nightly Certification') misses it. Read by scripts/itsm_parity.py and by provy-sim-control scripts/provision-sim-set.mts.",
+  "name_prefix": "Sim ",
+  "email_domain": "demo.provy.ai",
+  "tenants": [
+    {
+      "key": "I1",
+      "name": "Sim ITSM Parity Check",
+      "email": "sim-i1@demo.provy.ai",
+      "purpose": "The ITSM pack as the current product expects it: a context manifest on every step that runs a model, a code-only router, claims with a stated confidence, a retired agent in the roster, a Startup fleet plan, declared freshness limit and approved list, and a notices recipient. Outcomes are settled by ServiceNow's own rule (servicenow/outcome_push.js) and pushed to this fleet only.",
+      "extra_users": [{"email": "sim-i1-ops@demo.provy.ai", "role": "operator"}],
+      "order": {"kind": "fleet", "tier": "startup", "plan": "standard", "starts_on": "2026-10-01", "reason": "Sim set: Startup fleet plan for the ITSM parity check"},
+      "notices": {"people": ["sim-i1-ops@demo.provy.ai"], "notify50": true, "notify75": true},
+      "fleets": [
+        {"key": "itsm", "name": "Sim I1 ITSM Incident Resolution", "pack": "itsm", "door": "rest", "scenario": "live", "live": "servicenow", "marker": "provy-itsm-parity", "tag": "itsm-parity-20261007", "sessions": 24, "days": 1, "seed": 2301,
+         "declare": {"limit_days": 30, "approved": ["incident-record", "group-directory", "itsm-knowledge-base", "agent-memory"]},
+         "retire_extra": ["triage_v1"]}
+      ]
+    }
+  ]
+}

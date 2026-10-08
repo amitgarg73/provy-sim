@@ -221,3 +221,30 @@ def compare_declarations(rows: Rows, t: str, f: str, exp: dict, declared_keys: O
         rows.add(t, f, "declarations read", "readable", None)
         return
     rows.add(t, f, "declarations stored on this fleet (and only what was declared)", exp.get("declares", []), sorted(k for k in declared_keys if k in ("context_max_age", "approved_sources", "context_log_fields", "retrieval_expected", "steps_given_nothing", "sources_without_age") and k != "approved_sources"))
+
+
+def compare_live_itsm(rows: Rows, t: str, f: str, exp: dict, steps: list[dict]) -> None:
+    """The ITSM pack's own promises (argus#1649), from the stored steps. `steps` are the fleet's rows: agent, step_type, model, context, claim.
+
+    A step that ran a model carries a record; a step that ran code only carries neither a model nor a record; every ticket states claims with a
+    confidence; and the outcomes the product holds are the ones the instance's rule pushed, none posted by the simulation."""
+    i = exp.get("itsm")
+    if not i:
+        return
+    decisions = [s for s in steps if s.get("step_type") in ("agent_message", "decision")]
+    ran = [s for s in decisions if s.get("model")]
+    code = [s for s in decisions if not s.get("model")]
+    rows.add(t, f, "model-run decision steps stored", i["model_steps"], len(ran))
+    rows.add(t, f, "model-run decision steps carrying a context record", i["model_steps_with_record"], sum(1 for s in ran if s.get("context")))
+    rows.add(t, f, "code-only agents are exactly those planned", i["code_only_agents"], sorted({s["agent"] for s in code}))
+    rows.add(t, f, "code-only decision steps stored (no model)", i["code_only_steps"], len(code))
+    rows.add(t, f, "code-only steps carry no record", 0, sum(1 for s in code if s.get("context")))
+    claims = [s for s in steps if s.get("claim")]
+    rows.add(t, f, "steps carrying a claim", i["claim_steps"], len(claims))
+    conf = []
+    for s in claims:
+        for c in (s["claim"] if isinstance(s["claim"], list) else [s["claim"]]):
+            conf.append(c.get("confidence"))
+    rows.add(t, f, "claims stored", i["claims"], len(conf))
+    rows.add(t, f, "claims with no stated confidence", 0, sum(1 for c in conf if not isinstance(c, (int, float))))
+    rows.add(t, f, "the stated confidences are the ones sent", i["claim_confidences"], sorted({round(c, 4) for c in conf if isinstance(c, (int, float))}))

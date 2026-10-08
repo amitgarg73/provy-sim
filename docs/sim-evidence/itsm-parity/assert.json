@@ -1,0 +1,383 @@
+{
+ "summary": {
+  "pass": 34,
+  "FAIL": 0,
+  "info": 0,
+  "no-data": 0
+ },
+ "by_tenant": {
+  "I1": {
+   "pass": 34,
+   "FAIL": 0,
+   "info": 0,
+   "no-data": 0
+  }
+ },
+ "at": "2026-10-07T23:41:09.501556+00:00",
+ "rows": [
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "sessions stored",
+   "expected": 24,
+   "observed": 24,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "steps stored once (planned steps, plus the root span an OpenTelemetry run adds)",
+   "expected": 244,
+   "observed": 244,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "distinct span ids (a resent step is one step)",
+   "expected": 244,
+   "observed": 244,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "steps carrying a context record",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "ingest door recorded",
+   "expected": "rest",
+   "observed": "rest",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "readiness state",
+   "expected": "ready",
+   "observed": "ready",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "decision steps in window",
+   "expected": 20,
+   "observed": 20,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "steps given context (judged)",
+   "expected": 15,
+   "observed": 15,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "steps not counted (no model, no record)",
+   "expected": 5,
+   "observed": 5,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "signals sent on every step",
+   "expected": 6,
+   "observed": 6,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "signal instruction_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "signal instruction_version",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "signal item_fingerprint",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "signal search_result",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "signal source",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "signal source_age",
+   "expected": "sent",
+   "observed": "sent",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "work items settled",
+   "expected": 24,
+   "observed": 24,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "work items waiting",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "declarations stored on this fleet (and only what was declared)",
+   "expected": [
+    "context_max_age"
+   ],
+   "observed": [
+    "context_max_age"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "model-run decision steps stored",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "model-run decision steps carrying a context record",
+   "expected": 100,
+   "observed": 100,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "code-only agents are exactly those planned",
+   "expected": [
+    "router"
+   ],
+   "observed": [
+    "router"
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "code-only decision steps stored (no model)",
+   "expected": 32,
+   "observed": 32,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "code-only steps carry no record",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "steps carrying a claim",
+   "expected": 120,
+   "observed": 120,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "claims stored",
+   "expected": 168,
+   "observed": 168,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "claims with no stated confidence",
+   "expected": 0,
+   "observed": 0,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "the stated confidences are the ones sent",
+   "expected": [
+    0.64,
+    0.72,
+    0.73,
+    0.74,
+    0.76,
+    0.78,
+    0.79,
+    0.84,
+    0.85,
+    0.87,
+    0.89,
+    0.9,
+    0.92,
+    0.94,
+    0.97
+   ],
+   "observed": [
+    0.64,
+    0.72,
+    0.73,
+    0.74,
+    0.76,
+    0.78,
+    0.79,
+    0.84,
+    0.85,
+    0.87,
+    0.89,
+    0.9,
+    0.92,
+    0.94,
+    0.97
+   ],
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "-",
+   "check": "order: pricing mode",
+   "expected": "fleet",
+   "observed": "fleet",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "-",
+   "check": "order: tier",
+   "expected": "startup",
+   "observed": "startup",
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "-",
+   "check": "order: steps included for the whole fleet",
+   "expected": 50000,
+   "observed": 50000,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "-",
+   "check": "order: fee (staff only)",
+   "expected": 49900,
+   "observed": 49900,
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "itsm",
+   "check": "roster: who is accepted, retired and never accepted",
+   "expected": {
+    "knowledge": "accepted",
+    "resolver": "accepted",
+    "reviewer": "accepted",
+    "router": "accepted",
+    "triage": "accepted",
+    "triage_v1": "retired"
+   },
+   "observed": {
+    "knowledge": "accepted",
+    "resolver": "accepted",
+    "reviewer": "accepted",
+    "router": "accepted",
+    "triage": "accepted",
+    "triage_v1": "retired"
+   },
+   "verdict": "pass",
+   "note": ""
+  },
+  {
+   "tenant": "I1",
+   "fleet": "-",
+   "check": "notices go to the added recipients",
+   "expected": [
+    "sim-i1-ops@demo.provy.ai"
+   ],
+   "observed": [
+    "sim-i1-ops@demo.provy.ai"
+   ],
+   "verdict": "pass",
+   "note": ""
+  }
+ ]
+}

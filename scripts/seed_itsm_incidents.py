@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import os
 import random
+import re
 import sys
 import time
 
@@ -156,7 +157,7 @@ def pick_priority(rng: random.Random, mix: str) -> str:
     return rng.choice(pool)
 
 
-def build_incident(rng: random.Random, callers: list[dict], mix: str = "benchmark") -> dict:
+def build_incident(rng: random.Random, callers: list[dict], mix: str = "benchmark", tag: str = "") -> dict:
     category = pick_category(rng)
     short, desc = rng.choice(TEMPLATES[category])
     impact, urgency = _IMPACT_URGENCY[pick_priority(rng, mix)]
@@ -169,7 +170,7 @@ def build_incident(rng: random.Random, callers: list[dict], mix: str = "benchmar
         # The marker the agent and the reporting both filter on.
         "correlation_id": MARKER,
         # The answer key, held by the system of record. The agent never reads it.
-        "correlation_display": f"cat={category};grp={CORRECT_GROUP[category]}",
+        "correlation_display": f"cat={category};grp={CORRECT_GROUP[category]}" + (f";tag={tag}" if tag else ""),
     }
     if callers:
         payload["caller_id"] = rng.choice(callers)["sys_id"]
@@ -222,15 +223,23 @@ def main() -> int:
     ap.add_argument("--sleep", type=float, default=0.25,
                     help="seconds between creates. The PDI's rate limit is the binding "
                          "constraint on a large seed, not cost, so pace it rather than burst.")
+    ap.add_argument("--tag", default="",
+                    help="a label written into the answer key (tag=<label>) so a batch can be found, and counted, afterwards. "
+                         "Letters, digits and hyphens only.")
+    ap.add_argument("--ids-out", default="",
+                    help="write every created incident number to this file, one per line, as they are created")
     ap.add_argument("--dry-run", action="store_true", help="build the payloads, create nothing")
     args = ap.parse_args()
 
+    if args.tag and not re.fullmatch(r"[A-Za-z0-9-]{1,40}", args.tag):
+        print("error: --tag may hold letters, digits and hyphens only (40 at most)", file=sys.stderr)
+        return 2
     rng = random.Random(args.seed)
     sn = client_from_env()
 
     if args.dry_run:
         for _ in range(args.count):
-            print(build_incident(rng, [], args.priority_mix))
+            print(build_incident(rng, [], args.priority_mix, args.tag))
         return 0
 
     try:
@@ -267,7 +276,7 @@ def main() -> int:
         # opening backlog rather than alongside it.
         if gaps:
             time.sleep(gaps[i])
-        payload = build_incident(rng, callers, args.priority_mix)
+        payload = build_incident(rng, callers, args.priority_mix, args.tag)
         try:
             row = sn.create("incident", payload)
         except ServiceNowError as e:
@@ -275,6 +284,9 @@ def main() -> int:
             print(f"  created {len(created)} before failing: {', '.join(created[-5:])}")
             return 1
         created.append(row.get("number", "?"))
+        if args.ids_out:
+            with open(args.ids_out, "a") as fh:
+                fh.write(f"{created[-1]}\n")
         if gaps:
             print(f"  arrival {i + 1}/{count}: {created[-1]} (after {gaps[i]:.0f}s)", flush=True)
         elif (i + 1) % 25 == 0 or i + 1 == count:

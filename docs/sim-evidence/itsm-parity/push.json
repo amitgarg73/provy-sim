@@ -1,0 +1,338 @@
+[
+ {
+  "number": "INC0010256",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010260",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010262",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Workaround provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010241",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010255",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "fail",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": false,
+   "reopen_count": 0,
+   "close_code": "Resolved by change",
+   "reassignment_count": 2
+  }
+ },
+ {
+  "number": "INC0010243",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010240",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "fail",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": false,
+   "reopen_count": 0,
+   "close_code": "Workaround provided",
+   "reassignment_count": 2
+  }
+ },
+ {
+  "number": "INC0010245",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010259",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010246",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "fail",
+  "signals": {
+   "resolution_genuine": false,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Resolved by caller",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010261",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "fail",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": false,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 2
+  }
+ },
+ {
+  "number": "INC0010247",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010257",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "fail",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": false,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 2
+  }
+ },
+ {
+  "number": "INC0010244",
+  "status": 200,
+  "reconciliation": "diverged",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Resolved by change",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010248",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010249",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "fail",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": false,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 2
+  }
+ },
+ {
+  "number": "INC0010242",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "fail",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": false,
+   "reopen_count": 0,
+   "close_code": "Resolved by problem",
+   "reassignment_count": 2
+  }
+ },
+ {
+  "number": "INC0010250",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010253",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Resolved by change",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010254",
+  "status": 200,
+  "reconciliation": "diverged",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010239",
+  "status": 200,
+  "reconciliation": "diverged",
+  "label": "fail",
+  "signals": {
+   "resolution_genuine": false,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "No resolution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010251",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Solution provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010258",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "success",
+  "signals": {
+   "resolution_genuine": true,
+   "resolution_persists": true,
+   "self_resolved": true,
+   "reopen_count": 0,
+   "close_code": "Workaround provided",
+   "reassignment_count": 1
+  }
+ },
+ {
+  "number": "INC0010252",
+  "status": 200,
+  "reconciliation": "matched",
+  "label": "fail",
+  "signals": {
+   "resolution_genuine": false,
+   "resolution_persists": true,
+   "self_resolved": false,
+   "reopen_count": 0,
+   "close_code": "No resolution provided",
+   "reassignment_count": 2
+  }
+ }
+]
