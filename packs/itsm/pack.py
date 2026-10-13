@@ -43,6 +43,8 @@ from engine.servicenow import (CORRECT_GROUP, DEMO_RESOLUTION_TARGET_S,
 from engine.types import (AgentSpec, Criterion, LeverManifest, RunContext,
                           RunResult, TraceStep, Wait)
 
+from .pipeline import conditions, roster
+
 # How many incidents to pull per read, so a batch is not one REST call per ticket.
 _FETCH_SIZE = 25
 # How long the agent will wait for a ticket to arrive before treating the queue as genuinely empty,
@@ -155,18 +157,9 @@ class ItsmPack(BasePack):
 
     # ── pipeline ────────────────────────────────────────────────────────────
     def agents(self) -> list[AgentSpec]:
-        return [
-            AgentSpec("triage", "Triage",
-                      "Reads the incident and decides what it is and how urgent it is.", "🗂️", 0),
-            AgentSpec("router", "Routing",
-                      "Decides which support group should own the incident.", "🧭", 1),
-            AgentSpec("knowledge", "Knowledge",
-                      "Searches the knowledge base and returns the article the fix should follow.", "📚", 2),
-            AgentSpec("resolver", "Resolution",
-                      "Diagnoses the incident from the retrieved article, applies a fix, and resolves the ticket.", "🛠️", 3),
-            AgentSpec("reviewer", "Closure Check",
-                      "Checks the resolution before it is committed and records what it expects to happen.", "✅", 4),
-        ]
+        # The roster is data in pipeline.py, a small file the setup wizard's code reader can open
+        # (this file is over its 50,000-byte limit, argus#1699). One copy, here, not a third.
+        return [AgentSpec(*row) for row in roster()]
 
     # ── contract: five conditions, all settled by real ServiceNow records ───
     def contract(self) -> list[Criterion]:
@@ -211,29 +204,7 @@ class ItsmPack(BasePack):
         `procedure_followed`, the name the resolver actually writes. Nothing about the six
         ServiceNow-settled conditions changes, so outcome_push.js needs no change.
         """
-        return [
-            Criterion("c1", "Incident is resolved with a genuine fix on first attempt, not "
-                      "reopened or marked cannot-reproduce", "outcome",
-                      "resolution_genuine", "eq", True),
-            Criterion("c2", "First response is delivered within the agreed response time target",
-                      "outcome", "first_response_time_met", "eq", True),
-            Criterion("c3", "Incident stays resolved and is not reopened after closure", "outcome",
-                      "resolution_persists", "eq", True),
-            Criterion("c4", "Agent resolves the incident without escalation or handoff to another "
-                      "team", "outcome", "self_resolved", "eq", True),
-            Criterion("c5", "Diagnosis is grounded in a documented procedure and follows clear "
-                      "resolution steps", "trace", "procedure_followed", "eq", True),
-            Criterion("c6", "Incident is resolved within the agreed resolution time target",
-                      "outcome", "resolution_time_met", "eq", True),
-            # ⛔ c7 IS SIDE 'trace' AND HAS TO BE. The six above are settled by ServiceNow and are
-            # unchanged, character for character, so outcome_push.js needs no change and the live
-            # fleet's confirmed contract still grades exactly as it did. But whether the article the
-            # fix followed actually exists and covers the symptom is a property of the agent's own
-            # trace, not of the incident record: ServiceNow stores no field for it and never will.
-            # Declaring it 'outcome' to match the others is what left c5 permanently unmeasurable.
-            Criterion("c7", "The procedure the fix followed is a real article that covers this "
-                      "symptom", "trace", "kb_article_valid", "eq", True),
-        ]
+        return [Criterion(*row) for row in conditions()]
 
     def retired_roster(self) -> list[AgentSpec]:
         """Agents this desk used to run and has retired, for a workspace that shows a real roster (argus#1649).
