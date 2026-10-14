@@ -30,9 +30,13 @@ try {
         var reopens = resolutions > 1 ? resolutions - 1 : 0;
         var reassign = Number(current.ReassignmentCountGroup() || 0);
 
+        // ⛔ THE DAY THE WORK WAS DONE, IN UTC. The instance stamps CreatedOn in its own zone (+11:00 on the demo
+        // instance), so cutting the first ten characters of the string put work done at 21:27Z on the 14th onto the
+        // 15th. Read the instant and format it in UTC. Falls back to now, never to an unparsed string.
         var created = current.CreatedOn();
-        var createdIso = (created && created.toISOString) ? created.toISOString() : String(created);
-        var businessDate = createdIso.substring(0, 10);   // the day the work was done, not the day of the push
+        var createdMs = (created && created.getTime) ? created.getTime() : Date.parse(String(created));
+        var businessDate = isNaN(createdMs) ? new Date().toISOString().substring(0, 10)
+                                            : new Date(createdMs).toISOString().substring(0, 10);
 
         var resolutionGenuine = genuineCode && reopens === 0;
         var persists = reopens === 0;

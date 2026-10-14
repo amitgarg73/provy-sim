@@ -71,28 +71,47 @@ def _by(rows: list[dict], field: str) -> dict[str, dict]:
 def plan(client) -> list[tuple[str, str, str, dict]]:
     """What would change: (action, table, label, payload). Pure given the client's reads."""
     out: list[tuple[str, str, str, dict]] = []
-    trig = _by(client.query("Trigger", page_size=300), "Name")
+    # ⛔ READ EVERY PAGE AND MATCH HERE, never "the first page" and never an equality filter.
+    # The property table has 250+ rows and the API caps a page at 200, so a first-page read misses rows and the
+    # installer made duplicates (15 Oct: four property rows created twice). An equality filter on a key that
+    # contains a dot returns an empty 404 even when the row exists, which looks the same as "not there".
+    def _all(table: str) -> list[dict]:
+        rows: list[dict] = []
+        for page in range(1, 21):
+            got = client.query(table, {"page": page}, page_size=100)
+            if not got:
+                break
+            rows += got
+        return rows
+
+    cache: dict[str, list[dict]] = {}
+
+    def _one(table: str, field: str, value: str) -> dict | None:
+        rows = cache.setdefault(table, _all(table))
+        hits = [r for r in rows if str(r.get(field)) == value]
+        if len(hits) > 1:
+            raise ServicelyError(f"{table} has {len(hits)} rows with {field} = {value!r}; remove the extras first")
+        return hits[0] if hits else None
+
     for name, fname, order, desc in TRIGGERS:
         body = {"Name": name, "Table": "Incident", "TriggerWhen": "before", "OnCreate": False, "OnUpdate": True,
                 "OnDelete": False, "Order": order, "Active": True, "StopOnException": False,
                 "Application": APPLICATION, "Description": desc, "Script": _read(fname)}
-        cur = trig.get(name)
+        cur = _one("Trigger", "Name", name)
         if cur is None:
             out.append(("create", "Trigger", name, body))
         elif any(cur.get(k) != body[k] for k in ("Script", "Order", "Active", "TriggerWhen", "OnUpdate", "OnCreate")):
             out.append(("update", "Trigger", name, dict(body, id=cur["id"])))
-    jobs = _by(client.query("Job", page_size=300), "Name")
     for name, fname, cron, desc in JOBS:
         body = {"Name": name, "Schedule": cron, "Active": True, "Application": APPLICATION,
                 "Description": desc, "Script": _read(fname)}
-        cur = jobs.get(name)
+        cur = _one("Job", "Name", name)
         if cur is None:
             out.append(("create", "Job", name, body))
         elif any(cur.get(k) != body[k] for k in ("Script", "Schedule", "Active")):
             out.append(("update", "Job", name, dict(body, id=cur["id"])))
-    props = _by(client.query("ApplicationProperty", page_size=500), "Key")
     for key, value, dtype, desc in PROPERTIES:
-        cur = props.get(key)
+        cur = _one("ApplicationProperty", "Key", key)
         if cur is None:
             out.append(("create", "ApplicationProperty", key, {
                 "Key": key, "Value": value, "DataType": dtype, "Description": desc,

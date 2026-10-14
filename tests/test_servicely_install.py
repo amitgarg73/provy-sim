@@ -6,6 +6,7 @@ import subprocess
 import pytest
 
 from scripts import install_servicely_lifecycle as inst
+from engine.servicely import ServicelyError
 
 SERVICELY = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "servicely")
 
@@ -15,7 +16,9 @@ class FakeClient:
         self.tables = tables or {}
 
     def query(self, table, params=None, page_size=100):
-        return self.tables.get(table, [])
+        rows = self.tables.get(table, [])
+        page = int((params or {}).get("page", 1))
+        return rows[(page - 1) * page_size: page * page_size]
 
 
 def test_fresh_instance_gets_two_triggers_one_job_and_the_properties():
@@ -72,3 +75,9 @@ def test_the_scripts_only_act_on_marked_tickets():
 @pytest.mark.parametrize("name", ["resolve_trigger.js", "outcome_push_trigger.js", "verification_sweep_job.js"])
 def test_scripts_parse(name):
     assert subprocess.run(["node", "--check", os.path.join(SERVICELY, name)], capture_output=True).returncode == 0
+
+
+def test_duplicate_rows_stop_the_installer_instead_of_guessing():
+    tables = {"ApplicationProperty": [{"Key": "provy.marker", "id": "a"}, {"Key": "provy.marker", "id": "b"}]}
+    with pytest.raises(ServicelyError, match="remove the extras"):
+        inst.plan(FakeClient(tables))

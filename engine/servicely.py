@@ -115,6 +115,14 @@ class ServicelyClient:
                 return json.loads(body).get("data") if body else None
             except urllib.error.HTTPError as e:
                 detail = e.read().decode()[:400]
+                # ⛔ AN EMPTY RESULT IS A 404 ON THIS API ({"data": []}), not an error. Read as a failure it
+                # hides "no such row" behind an exception, and a caller that swallows it reads "nothing exists".
+                if e.code == 404 and method == "GET":
+                    try:
+                        if json.loads(detail).get("data") == []:
+                            return None
+                    except ValueError:
+                        pass
                 err = ServicelyError(f"{method} {path} -> HTTP {e.code}: {detail}")
                 if e.code not in (429, 500, 502, 503, 504):
                     raise err from None
