@@ -39,3 +39,20 @@ Not pushed because the instance does not settle them: SLA verdicts until SLAs ar
 
 - No pack.py and no console copy of the contract: the contract is defined twice (`provy-sim-control/lib/packs.ts`), and the Provy tenant does not exist yet. Build both copies together and run `tests/test_console_contract_parity.py`.
 - No transition code: `ServicelyClient.transition` raises until question 1 is answered.
+
+
+## Update 15 Oct: the mechanism exists on the instance (read from REST, nothing written yet)
+
+The state-change blocker is not a blocker for the SoR-side pattern. The instance runs server scripts, and they are REST-writable config:
+
+| Need | Servicely object (REST table) | Fields | Evidence |
+|---|---|---|---|
+| The platform applies a resolution / the "business rule" | `Trigger` (146 rows) | Name, Table, TriggerWhen (before/after/async), OnCreate/OnUpdate/OnDelete, Order, Script, Active, StopOnException | 11 Incident triggers read; syntax `current.Field()`, `previous.Field()`, `operation`, `.hasChanged()` |
+| Scheduled sweep (reopen, close) | `Job` (26 rows) | Name, Schedule (cron), Script, Active | Job API doc; Administration > Configuration > Jobs |
+| Outbound push to Provy | `HTTP.post(url).header(k,v).body(s).execute()` inside a Trigger or script library; response `getStatus()/getBody()` | | read from `SofiExport` / `SofiChat` libraries |
+| Where the ingest key and URL live | `ApplicationProperty` (244 rows), `PropertySet` (7) | | |
+| State move from a script | `Workflow.forceToActivity(name, current, explicitUpdate, enableTriggers)` | | Workflow API doc (only documented method) |
+
+Platform facts worth reusing: a before-update trigger "Incident - Resolution Count / First contact resolution behaviour" increments `ResolutionCount` when WorkflowStatus becomes resolved, so ResolutionCount is a platform-maintained resolution counter and a value above 1 means resolved, then back, then resolved again.
+
+Revised flow: the sim POSTs incidents and writes the agent's resolution fields over REST (works), an instance Trigger moves the state, a Trigger pushes the settled outcome to Provy, a Job reopens a share of resolved tickets. Still unverified: `forceToActivity` behaviour on an Incident, and the outbound call from a trigger on this instance.
