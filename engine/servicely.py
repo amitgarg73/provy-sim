@@ -131,6 +131,15 @@ class ServicelyClient:
         q.update({k: str(v) for k, v in (params or {}).items()})
         return self._call("GET", f"/v1/{table}?{urllib.parse.urlencode(q)}") or []
 
+    def create(self, table: str, payload: dict) -> dict:
+        return self._call("POST", f"/v1/{table}", payload) or {}
+
+    def update(self, table: str, record_id: str, payload: dict) -> dict:
+        return self._call("PATCH", f"/v1/{table}/{record_id}", payload) or {}
+
+    def delete(self, table: str, record_id: str) -> None:
+        self._call("DELETE", f"/v1/{table}/{record_id}")
+
     def create_incident(self, short_description: str, requestor_id: str, requested_for_id: str,
                         classification_id: str, assignment_group_id: str,
                         description: str = "", **extra: Any) -> dict:
