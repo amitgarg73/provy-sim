@@ -54,6 +54,8 @@ PROPERTIES = [
     ("provy.demo.reopen_after_min", "3", "integer", "Minutes a demo ticket stays resolved before the sweep decides."),
     ("provy.push.mode", "capture", "string", "capture writes the payload into ClosureNotes and sends nothing; live sends it."),
     ("provy.ingest.url", DEFAULT_INGEST_URL, "string", "Where the outcome push posts. Never a production host."),
+    ("provy.sweep.last_run", "never", "string", "Written by the sweep job: time and counts of its last pass."),
+    ("provy.sweep.last_error", "", "string", "Written by the sweep job: its last failure, if any."),
 ]
 
 
