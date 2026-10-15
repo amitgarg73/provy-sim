@@ -66,7 +66,7 @@ def test_which_packs_the_sim_owns_outcomes_for_is_mirrored_in_the_console():
     """
     from packs import PACKS, get_pack
     not_owned = sorted(n for n in PACKS if not getattr(get_pack(n), "owns_outcome", True))
-    assert not_owned == ["itsm"], (
+    assert not_owned == ["itsm", "servicely"], (
         f"outcome ownership changed: {not_owned}. Mirror it in provy-sim-control/lib/packs.ts."
     )
 

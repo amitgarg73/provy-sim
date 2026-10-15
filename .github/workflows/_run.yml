@@ -44,6 +44,9 @@ on:
       SERVICENOW_INSTANCE: { required: false }
       SERVICENOW_USER: { required: false }
       SERVICENOW_PASSWORD: { required: false }
+      # Servicely only. The pack raises real incidents in a Servicely instance and has no offline mode.
+      SERVICELY_INSTANCE_URL: { required: false }
+      SERVICELY_API_TOKEN: { required: false }
 
 jobs:
   run:
@@ -116,6 +119,9 @@ jobs:
           SERVICENOW_INSTANCE: ${{ secrets.SERVICENOW_INSTANCE }}
           SERVICENOW_USER: ${{ secrets.SERVICENOW_USER }}
           SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
+          # Servicely works real incidents in a real instance. No credentials, no run.
+          SERVICELY_INSTANCE_URL: ${{ secrets.SERVICELY_INSTANCE_URL }}
+          SERVICELY_API_TOKEN: ${{ secrets.SERVICELY_API_TOKEN }}
           # Post the injected-truth summary back to the console scoreboard (best-effort, offline-safe).
           CONTROL_URL: ${{ secrets.CONTROL_URL }}
           CONTROL_LEVERS_TOKEN: ${{ secrets.CONTROL_LEVERS_TOKEN }}
