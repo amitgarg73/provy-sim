@@ -81,3 +81,49 @@ def test_duplicate_rows_stop_the_installer_instead_of_guessing():
     tables = {"ApplicationProperty": [{"Key": "provy.marker", "id": "a"}, {"Key": "provy.marker", "id": "b"}]}
     with pytest.raises(ServicelyError, match="remove the extras"):
         inst.plan(FakeClient(tables))
+
+
+def test_wire_script_sets_the_key_from_the_environment_and_masks_its_output(monkeypatch, capsys):
+    from scripts import wire_servicely_fleet as wire
+
+    class C(FakeClient):
+        def __init__(self):
+            super().__init__({"ApplicationProperty": [{"Key": "provy.push.mode", "Value": "capture", "id": "m"}]})
+            self.created, self.updated = [], []
+            self.configured = True
+
+        def require(self):
+            pass
+
+        def create(self, table, body):
+            self.created.append(body)
+            self.tables["ApplicationProperty"].append(dict(body, id=str(len(self.created))))
+
+        def update(self, table, rid, body):
+            self.updated.append((rid, body))
+            for r in self.tables["ApplicationProperty"]:
+                if r["id"] == rid:
+                    r.update(body)
+
+    c = C()
+    monkeypatch.setattr(wire, "client_from_env", lambda: c)
+    monkeypatch.setenv("PROVY_INGEST_KEY", "provy_" + "a" * 32)
+    monkeypatch.setattr("sys.argv", ["wire", "--provy-url", "https://dev.provy.ai"])
+    assert wire.main() == 0
+    out = capsys.readouterr().out
+    assert "a" * 32 not in out                       # the key is never printed in full
+    assert any(b["Key"] == "provy.ingest.key" and b["ClientSideAccessible"] is False for b in c.created)
+    assert ("m", {"Value": "live"}) in c.updated
+    assert "live:" in out
+
+
+def test_wire_script_refuses_a_production_url_and_a_missing_key(monkeypatch):
+    from scripts import wire_servicely_fleet as wire
+    monkeypatch.setattr(wire, "client_from_env", lambda: type("X", (), {"require": lambda s: None,
+                                                                    "query": lambda s, *a, **k: []})())
+    monkeypatch.delenv("PROVY_INGEST_KEY", raising=False)
+    monkeypatch.setattr("sys.argv", ["wire", "--provy-url", "https://dev.provy.ai"])
+    assert wire.main() == 2
+    monkeypatch.setenv("PROVY_INGEST_KEY", "provy_x")
+    monkeypatch.setattr("sys.argv", ["wire", "--provy-url", "https://provy.ai"])
+    assert wire.main() == 2
