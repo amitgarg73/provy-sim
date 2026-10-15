@@ -17,7 +17,7 @@
             if (p) { p.Value(String(value)); p.update(); }
         } catch (e) { /* the heartbeat must never break the sweep */ }
     }
-    var seen = 0, reopened = 0, closed = 0, waiting = 0, errors = '';
+    var seen = 0, reopened = 0, closed = 0, waiting = 0, secondLine = 0, errors = '';
     try {
         var marker = ApplicationPropertyManager.getProperty('provy.marker') || '[provy-servicely]';
         var basePct = ApplicationPropertyManager.getIntegerProperty('provy.demo.reopen_pct', 6);
@@ -55,10 +55,35 @@
                 errors += ' ' + rec.Number() + ': ' + e;
             }
         }
+        // ── second line ────────────────────────────────────────────────────────────────────────────
+        // A ticket that came back belongs to a second-line engineer, not to the agent: the agent gets one
+        // shot at each incident, which is the only way "the resolution held" means anything. Without this a
+        // reopened ticket sits In progress for ever, is never closed, and never pushes its outcome.
+        var back = Table('Incident')
+            .AND(STARTS_WITH('ShortDescription', marker), EQUAL('WorkflowStatus', 'work_in_progress'),
+                 GE('ResolutionCount', 1))
+            .maxResults(25).query();
+        while (back.hasNext()) {
+            var b = back.next();
+            try {
+                var upd = b.UpdatedOn();
+                var updMs = (upd && upd.getTime) ? upd.getTime() : Date.parse(String(upd));
+                if (!isNaN(updMs) && updMs > cutoff) { waiting++; continue; }
+                var before = Number(b.ResolutionCount() || 0);
+                b.ClosureCode('Solution provided');
+                b.ClosureNotes('[second line] fixed after the incident came back.');
+                Workflow.forceToActivity('Resolved', b, true, true);
+                // The platform's own counter fires on a normal transition. If this forced one did not, count it here.
+                if (Number(b.ResolutionCount() || 0) === before) { b.ResolutionCount(before + 1); b.update(); }
+                secondLine++;
+            } catch (e2) {
+                errors += ' second line ' + b.Number() + ': ' + e2;
+            }
+        }
     } catch (e) {
         errors += ' sweep: ' + e;
     }
     setProp('provy.sweep.last_run', new Date().toISOString() + ' seen=' + seen + ' waiting=' + waiting +
-            ' closed=' + closed + ' reopened=' + reopened);
+            ' closed=' + closed + ' reopened=' + reopened + ' secondline=' + secondLine);
     if (errors) setProp('provy.sweep.last_error', new Date().toISOString() + errors);
 })();
