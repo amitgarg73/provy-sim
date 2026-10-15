@@ -198,6 +198,14 @@ class ServicelyPack(ItsmPack):
 
         # 2. Routing: a rules lookup (no model). A group the instance does not have is an error, not a guess.
         group = d["recommended_group"]
+        # ⛔ THE ROUTER HAS TO SPEAK, OR ITS READING IS CREDITED TO THE REVIEWER. A signal is stamped on the first
+        # agent_message of the agent that owns it; an owner with only tool calls "never spoke" and the signal falls
+        # back to the reviewer. The contract wizard then offered `reassignment_count` as "recorded by reviewer", so a
+        # handoff would have named the wrong step. A code-only message, like the ITSM pack's router step.
+        r.traces.append(self._router_step(
+            ctx, A["router"], item, decision=f"route to {group}", entity_id=eid,
+            rule=f"category {d['category']} looked up in the routing table",
+            payload_extra={"recommended_group": group}))
         r.traces.append(self._sv_step(ctx, A["router"], "servicely.assign_incident", rec,
                                       {"AssignmentGroup": groups[group]}, eid,
                                       extra_output={"assignment_group": group}))

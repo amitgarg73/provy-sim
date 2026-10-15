@@ -125,3 +125,15 @@ def test_a_refused_write_fails_this_ticket_and_says_so():
 
 def test_routing_is_always_between_groups_the_instance_has():
     assert set(SV_GROUP.values()) <= {"Support", "Network Operations"}
+
+
+def test_the_router_speaks_so_its_signal_is_not_credited_to_the_reviewer():
+    """reassignment_count is the router's reading. It is stamped on the router's first agent_message, and only
+    falls back to the reviewer when the router never spoke."""
+    _, _, _, _, _, r = run()
+    router_msgs = [t for t in r.traces if t.agent == "router" and t.step_type == "agent_message"]
+    assert router_msgs, "the router has no agent_message, so its signals fall to the reviewer"
+    owned = [t for t in router_msgs
+             if any(c.get("signal") == "reassignment_count"
+                    for c in (t.payload_extra or {}).get("provy_claim", []))]
+    assert owned, "reassignment_count was not stamped on the router's own message"
