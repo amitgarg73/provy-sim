@@ -16,6 +16,7 @@ overrides everything that names a ServiceNow field.
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -101,12 +102,15 @@ class ServicelyPack(ItsmPack):
                 raise ServicelyError(f"the instance has no group named {missing}: routing has nowhere to send work")
             users = [u for u in self.client.query("User", {}, page_size=100)
                      if "@example.com" in str(u.get("Email") or "")]
-            amit = [u for u in self.client.query("User", {}, page_size=100) if str(u.get("Email") or "") == "amit@provy.ai"]
+            # The user the tickets are raised as. SERVICELY_REQUESTOR_EMAIL names one; unset means the first example user.
+            want = os.environ.get("SERVICELY_REQUESTOR_EMAIL", "").strip().lower()
+            named = [u for u in self.client.query("User", {}, page_size=100)
+                     if want and str(u.get("Email") or "").lower() == want]
             cls = [c for c in self.client.query("Classification", {}, page_size=100) if c.get("Name") == "Other"]
             if not users or not cls:
                 raise ServicelyError("the instance has no example users or no 'Other' classification to raise incidents with")
             self._directory = {"groups": groups, "users": users, "classification": cls[0]["id"],
-                               "requestor": (amit or users)[0]["id"]}
+                               "requestor": (named or users)[0]["id"]}
         return self._directory
 
     def generate_work_item(self, rng) -> tuple[dict, dict]:

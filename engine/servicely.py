@@ -5,7 +5,7 @@ the outcome comes from the platform's own lifecycle, and there is NO offline fal
 tickets: unconfigured means a loud error.
 
 Credentials come from the environment, filled by `scripts/with-secrets` in the argus repo:
-  SERVICELY_INSTANCE_URL   https://demo-provy-us.servicely.ai/
+  SERVICELY_INSTANCE_URL   https://<your-instance>.servicely.ai/
   SERVICELY_API_TOKEN      an inbound System API token (Bearer). The passkey login cannot use basic auth.
 
 WHAT THE INSTANCE ALLOWS (probed 15 Oct 2026, see servicely/DESIGN.md):
