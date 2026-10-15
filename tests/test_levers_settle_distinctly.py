@@ -36,7 +36,7 @@ from engine.runner import BatchRunner
 from packs import PACKS, get_pack
 
 INVENTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settlement-inventory.json")
-NEEDS_A_LIVE_SYSTEM_OF_RECORD = {"itsm"}
+NEEDS_A_LIVE_SYSTEM_OF_RECORD = {"itsm", "servicely"}
 PACK_NAMES = sorted(set(PACKS) - NEEDS_A_LIVE_SYSTEM_OF_RECORD)
 N = 80
 SEED = 11
@@ -114,4 +114,4 @@ else:
     def test_itsm_is_excluded_on_purpose_and_stays_named():
         # If itsm ever gains an offline mode, delete it from the exclusion set rather than leaving a
         # pack permanently unguarded because nobody remembered why it was skipped.
-        assert NEEDS_A_LIVE_SYSTEM_OF_RECORD == {"itsm"}
+        assert NEEDS_A_LIVE_SYSTEM_OF_RECORD == {"itsm", "servicely"}

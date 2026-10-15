@@ -21,7 +21,7 @@ from packs import PACKS, get_pack
 # pack here is only legitimate if it declares owns_outcome = False, and
 # test_itsm_pack.py enforces exactly that so this list cannot become a way to
 # dodge a failing test.
-EXTERNAL_PACKS = {"itsm"}
+EXTERNAL_PACKS = {"itsm", "servicely"}
 
 
 @pytest.fixture(params=[p for p in PACKS if p not in EXTERNAL_PACKS])

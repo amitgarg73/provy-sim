@@ -329,6 +329,7 @@ WORKFLOWS = {
     "legal":   WorkflowConfig("legal",   "PROVY_KEY_LEGAL",   dict(_LEGAL_RATES)),
     "edwin":   WorkflowConfig("edwin",   "PROVY_KEY_EDWIN",   dict(_EDWIN_RATES)),
     "itsm":    WorkflowConfig("itsm",    "PROVY_KEY_ITSM",    dict(_ITSM_RATES)),
+    "servicely": WorkflowConfig("servicely", "PROVY_KEY_SERVICELY", dict(_ITSM_RATES)),
     "teameight": WorkflowConfig("teameight", "PROVY_KEY_TEAMEIGHT", dict(_TEAMEIGHT_RATES)),
     "claude_code": WorkflowConfig("claude_code", "PROVY_KEY_CLAUDE_CODE", dict(_CLAUDE_CODE_RATES)),
 }

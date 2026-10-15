@@ -1,0 +1,59 @@
+name: run-servicely
+
+# Dispatchable run for the Servicely fleet. Like ITSM it works real incidents in a real instance (a
+# Servicely demo instance), so it needs the SERVICELY_* secrets and it never reconciles: Servicely
+# settles the outcome and pushes it to Provy itself (servicely/outcome_push_trigger.js).
+#
+# Repository secrets to set once (never inputs: this repository is public):
+#   SERVICELY_INSTANCE_URL   the instance base URL
+#   SERVICELY_API_TOKEN      an inbound System API token with /v1/** paths
+on:
+  workflow_dispatch:
+    inputs:
+      ingest_key: { description: 'Provy ingest key (provy_...) for the Servicely fleet', required: true, type: string }
+      provy_url:  { description: 'Provy ingest base URL', required: false, type: string, default: 'https://provydev.vercel.app' }
+      count:      { description: 'Incidents to work in this run', required: false, type: string, default: '10' }
+      seed:       { description: 'RNG seed (deterministic agent behaviour)', required: false, type: string, default: '1' }
+      # 0 now: the journey provides the time. A ticket waits because it sat in the wrong team's
+      # queue or was parked on the caller, not because the loop paused between items. Pacing on top
+      # of that would put the old positional delay back alongside the modelled one.
+      pace:       { description: 'Ignored for Servicely: the journey provides the waiting', required: false, type: string, default: '0' }
+      # Wide enough that no ticket waits for a free slot. Only the wait BEFORE pickup can breach a
+      # response target, so a narrow desk would make its own saturation the reason tickets missed
+      # them, which is the artefact this whole model exists to remove. Narrow it deliberately if you
+      # ever want to demo an under-provisioned desk.
+      concurrency: { description: 'Tickets the desk works at once, so their waits overlap', required: false, type: string, default: '12' }
+      # Tickets arrive while the agent works instead of all landing at once. The gap defaults to
+      # roughly the time the agent takes per incident (pace plus about 15s of work), so the queue
+      # hovers rather than emptying or piling up, and the wait varies per ticket.
+      opening_backlog: { description: 'Incidents waiting when the run starts; the rest arrive during it', required: false, type: string, default: '2' }
+      arrival_gap:     { description: 'Average seconds between arrivals (random, not fixed)', required: false, type: string, default: '35' }
+      # spread, not benchmark: a real desk is 94% P3, which in a compressed demo means one response
+      # target for the whole batch. A spread exercises all four targets, so the same delay passes one
+      # ticket and breaches another. The benchmark figure stays quotable alongside it.
+      priority_mix:    { description: 'spread (all four targets exercised) or benchmark (94% P3, as measured)', required: false, type: string, default: 'spread' }
+      # Declared but IGNORED. The Sim Control console sends this input to every fleet, and
+      # GitHub rejects a dispatch carrying an input the workflow does not declare, so the
+      # console's Kick run button would 422 without it. The value is discarded below: this
+      # fleet's outcomes come from Servicely and the simulation has none to post.
+      reconcile:  { description: 'Ignored for Servicely: the instance settles and pushes the outcome', required: false, type: boolean, default: false }
+      workflow_id: { description: 'Fleet workflow id (for scoreboard posting)', required: false, type: string, default: '' }
+
+jobs:
+  run:
+    uses: ./.github/workflows/_run.yml
+    with:
+      pack: servicely
+      ingest_key: ${{ inputs.ingest_key }}
+      provy_url: ${{ inputs.provy_url }}
+      count: ${{ inputs.count }}
+      seed: ${{ inputs.seed }}
+      pace: ${{ inputs.pace }}
+      concurrency: ${{ inputs.concurrency }}
+      opening_backlog: ${{ inputs.opening_backlog }}
+      arrival_gap: ${{ inputs.arrival_gap }}
+      priority_mix: ${{ inputs.priority_mix }}
+      # Not an option for this fleet. The simulation has no outcome to post.
+      reconcile: false
+      workflow_id: ${{ inputs.workflow_id }}
+    secrets: inherit

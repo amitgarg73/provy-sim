@@ -9,6 +9,7 @@ from .claims_payout.pack import ClaimsPayoutPack
 from .iam.pack import IamPack
 from .legal.pack import LegalPack
 from .itsm.pack import ItsmPack
+from .servicely.pack import ServicelyPack
 from .edwin.pack import EdwinPack
 from .teameight.pack import TeameightPack
 from .claude_code.pack import ClaudeCodePack
@@ -29,6 +30,9 @@ PACKS = {
     # The only fleet whose work items and outcomes come from a system this
     # simulation does not own.
     "itsm": ItsmPack,
+    # The same desk on a second system of record: incidents, routing and resolution are real writes to a
+    # Servicely instance, and the instance settles and pushes the outcome.
+    "servicely": ServicelyPack,
 }
 
 
@@ -39,6 +43,6 @@ def get_pack(name: str):
 
 
 __all__ = ["SupportPack", "StripeSupportPack", "ClaimsPack", "CRMPack", "TravelPack",
-           "RevOpsPack", "ClaimsPayoutPack", "LegalPack", "EdwinPack", "ItsmPack",
+           "RevOpsPack", "ClaimsPayoutPack", "LegalPack", "EdwinPack", "ItsmPack", "ServicelyPack",
            "TeameightPack", "ClaudeCodePack",
            "PACKS", "get_pack"]

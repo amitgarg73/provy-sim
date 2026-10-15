@@ -31,7 +31,7 @@ from engine.llm import LLM
 from engine.types import RunContext
 from packs import PACKS, get_pack
 
-EXTERNAL = {"itsm"}          # settled by a real ServiceNow instance; cannot run offline
+EXTERNAL = {"itsm", "servicely"}  # settled by a real ServiceNow / Servicely instance; cannot run offline
 # ⛔ SIZED FOR THE RAREST LEVER, NOT FOR SPEED. revops' `duplicate_opportunity` runs at 0.02 and is
 # phase-A exclusive, so its effective rate is nearer 1.5%. At 150 runs it fails to appear about a
 # fifth of the time, which would make this test flaky and get it deleted. 500 runs puts the chance of
