@@ -25,6 +25,7 @@ from engine.servicely import ServicelyClient, ServicelyError, client_from_env
 from engine.types import AgentSpec, Criterion, RunContext, RunResult, Wait
 
 from packs.itsm.pack import ItsmPack, WriteRejected, KB_ARTICLE
+from engine.versions import prompt_hash
 
 from .pipeline import conditions, roster
 
@@ -135,6 +136,15 @@ class ServicelyPack(ItsmPack):
         return self.generate_work_item(self._rng)
 
     # ── the agent's judgement: ItsmPack's, mapped onto this instance's two groups ──
+    def agent_step(self, ctx: RunContext, agent: AgentSpec, item, decision: str, entity_id: str,
+                   tokens=(300, 60), payload_extra: dict | None = None):
+        # Every model step of this pack says which instructions it ran with: a hash of the system prompt, as the SDK's `set_prompt` would (argus#1735).
+        # Tool steps and the instance's own writes have no instructions and are left alone.
+        step = super().agent_step(ctx, agent, item, decision, entity_id, tokens=tokens, payload_extra=payload_extra)
+        if step.system:
+            step.prompt_version = prompt_hash(step.system)
+        return step
+
     def _decide(self, item: dict, ctx: RunContext) -> dict:
         d = super()._decide(item, ctx)
         right = SV_GROUP[d["category"]]
