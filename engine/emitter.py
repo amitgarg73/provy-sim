@@ -227,6 +227,7 @@ class ProvyEmitter:
         if step.tokens_output:              payload["tokens_output"] = step.tokens_output
         if step.cost_usd:                   payload["cost_usd"] = step.cost_usd
         if step.model:                      payload["model"] = step.model
+        if getattr(step, "prompt_version", None): payload["prompt_version"] = step.prompt_version
         if step.error is not None:          payload["error"] = step.error
         if step.entity_id is not None:      payload["entity_id"] = step.entity_id
 

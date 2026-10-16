@@ -72,6 +72,8 @@ class TraceStep:
     tokens_output: int = 0
     cost_usd: float = 0.0
     model: Optional[str] = None
+    # Which version of the instructions this step ran with (argus#1735). None means the pack says nothing, and nothing is sent: silence is not a statement.
+    prompt_version: Optional[str] = None
     payload_extra: dict = field(default_factory=dict)   # extra scalar payload fields (estimated signals, confidence)
     # The context manifest of this step (argus#1505 SPEC 2): names, ages and fingerprints, never text.
     # None means the step sends none, which Provy counts as a coverage gap and never as a pass.
