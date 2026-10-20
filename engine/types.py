@@ -167,6 +167,10 @@ class LeverManifest:
     # own signal. Unset means the pack cannot express that failure, and the lever falls back to
     # correctness rather than silently injecting nothing.
     escalation_signal: Optional[str] = None   # fails when a needed handoff never happened
+    # Other tool-using agents beyond `retriever_agent`: tool name -> the agent that calls it. Lets the
+    # tool levers aim at one tool of a multi-tool fleet (`tool_errors:<tool>` in the lever config, each
+    # at its own rate). Empty = the single-retriever behaviour every pack had before.
+    extra_tools: dict = field(default_factory=dict)
     drift_agent: Optional[str] = None            # defaults to resolver_agent when None
     policy_agent: Optional[str] = None           # agent that owns policy_signal; defaults to resolver_agent
 

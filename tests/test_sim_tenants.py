@@ -78,9 +78,9 @@ def test_notice_recipients_are_users_of_the_workspace():
 
 
 @pytest.mark.parametrize("key", sorted(TENANTS))
-def test_volume_per_tenant_is_bounded_to_roughly_100_to_400_steps(key):
+def test_volume_per_tenant_is_bounded_to_roughly_100_to_700_steps(key):
     total = sum(len(plan(key, f["key"]).truth) and sum(len(r["steps"]) for r in plan(key, f["key"]).truth) for f in TENANTS[key]["fleets"])
-    assert 80 <= total <= 480, (key, total)
+    assert 80 <= total <= 720, (key, total)
 
 
 # ── plans are deterministic and ground truth is never sent ───────────────────────────────────────

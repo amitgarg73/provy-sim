@@ -97,11 +97,13 @@ def _agent_message(result: RunResult, agent: str) -> Optional[TraceStep]:
     return _find_step(result, agent, "agent_message")
 
 
-def _ensure_tool_call(result: RunResult, agent: str) -> TraceStep:
-    """The agent's tool_call span, creating a placeholder one if the pack didn't emit any."""
-    step = _find_step(result, agent, "tool_call")
+def _ensure_tool_call(result: RunResult, agent: str, tool: Optional[str] = None) -> TraceStep:
+    """The agent's tool_call span, creating a placeholder one if the pack didn't emit any.
+    With `tool`, the span for that tool name (a multi-tool fleet has several per run)."""
+    step = next((t for t in result.traces if t.agent == agent and t.step_type == "tool_call"
+                 and (tool is None or t.tool_name == tool)), None)
     if step is None:
-        step = TraceStep(agent=agent, step_type="tool_call", tool_name="retrieve",
+        step = TraceStep(agent=agent, step_type="tool_call", tool_name=tool or "retrieve",
                          tool_input={}, entity_id=result.entity_id)
         result.traces.insert(0, step)
     return step
@@ -159,6 +161,12 @@ def _overt_error(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     return InjectedFault("overt_error", agent, "reliability", {"message": msg})
 
 
+def _tool_agent(m: LeverManifest, s: LeverSetting) -> str:
+    """Whose tool call a tool lever hits: the named tool's agent (`tool_errors:<tool>`), else the
+    explicit target, else the manifest's retriever."""
+    return m.extra_tools.get(s.params.get("tool")) or s.target or m.retriever_agent
+
+
 _TOOL_SHAPES = {
     "errored":  lambda now: {"error": "retriever backend 500"},
     "empty":    lambda now: {},
@@ -168,14 +176,10 @@ _TOOL_SHAPES = {
 
 
 def _tool_fault(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
-    agent = s.target or m.retriever_agent
+    agent = _tool_agent(m, s)
     shape = s.params.get("shape") or ctx.rng.choice(list(_TOOL_SHAPES))
-    step = _find_step(result, agent, "tool_call")
     bad_output = _TOOL_SHAPES[shape](ctx.now)
-    if step is None:
-        step = TraceStep(agent=agent, step_type="tool_call", tool_name="retrieve",
-                         tool_input={}, entity_id=result.entity_id)
-        result.traces.insert(0, step)
+    step = _ensure_tool_call(result, agent, s.params.get("tool"))
     step.tool_output = bad_output
     step.outcome = "error" if shape == "errored" else "ok"
     return InjectedFault("tool_fault", agent, "tool_defect", {"shape": shape})
@@ -475,9 +479,9 @@ def _tool_latency(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     """One tool call runs far slower than the latency budget (Provy L1 Tool Latency).
     Latency is not an attribution signal, so this can co-fire with a divergence
     without masking its cause."""
-    agent = s.target or m.retriever_agent
+    agent = _tool_agent(m, s)
     latency = int(s.params.get("latency_ms", 12000))
-    step = _ensure_tool_call(result, agent)
+    step = _ensure_tool_call(result, agent, s.params.get("tool"))
     step.latency_ms = max(step.latency_ms, latency)
     return InjectedFault("tool_latency", agent, "tool_latency", {"latency_ms": latency})
 
@@ -488,9 +492,9 @@ def _tool_errors(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
     a signal, so the session outcome is untouched and the run never diverges from this
     alone. apply() only fires it on runs with no outcome-shaping fault, so the errored
     span can't be mistaken for a silent divergence's culprit."""
-    agent = s.target or m.retriever_agent
+    agent = _tool_agent(m, s)
     msg = s.params.get("message", "tool backend returned 500")
-    step = _ensure_tool_call(result, agent)
+    step = _ensure_tool_call(result, agent, s.params.get("tool"))
     step.outcome = "error"
     step.error = msg
     return InjectedFault("tool_errors", agent, "tool_error_rate", {"message": msg})
@@ -838,14 +842,24 @@ def apply(result: RunResult, gt, manifest: LeverManifest,
             return
         if ctx.rng.random() >= s.rate:
             return
-        f = _LEVER_FNS[name](result, gt, manifest, contract, s, ctx)
+        # "tool_errors:<tool>" is the base lever aimed at one named tool, at its own rate.
+        base, _, tool = name.partition(":")
+        if tool:
+            s = LeverSetting(rate=s.rate, target=s.target, params={**s.params, "tool": tool})
+        f = _LEVER_FNS[base](result, gt, manifest, contract, s, ctx)
         if f is not None:
             faults.append(f)
             if exclusive:
                 primary_fired = True
 
+    def _per_tool(base: str) -> list[str]:
+        return sorted(k for k in config.settings if k.startswith(base + ":"))
+
     for name in _PHASE_A:
         _fire(name)
+        if name == "tool_fault":
+            for k in _per_tool(name):
+                _fire(k)
     for name in _CONTEXT_PHASE:
         _fire(name)
 
@@ -869,10 +883,11 @@ def apply(result: RunResult, gt, manifest: LeverManifest,
     # run without masking a cause. An errored tool span IS an attribution signal, so tool_errors
     # only fires on a run with no divergence to attribute — it still exercises the L1 error-rate
     # check on clean runs without stealing a silent culprit's blame.
-    for name in ("tool_latency", "llm_cost", "llm_tokens"):
+    for name in ("tool_latency", *_per_tool("tool_latency"), "llm_cost", "llm_tokens"):
         _fire(name, exclusive=False)
     if not primary_fired:
-        _fire("tool_errors", exclusive=False)
+        for name in ("tool_errors", *_per_tool("tool_errors")):
+            _fire(name, exclusive=False)
 
     # Manifests for every model-run step, with the context faults that fired written into them. Done
     # last so it sees the faults. A no-op unless a context lever or `context_manifest` is configured.

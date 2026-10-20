@@ -375,3 +375,59 @@ def test_non_error_overlays_cofire_with_a_silent_divergence():
         primary = [f for f in o.result.faults if f.lever in _PHASE_A_LEVERS]
         assert [f.lever for f in primary] == ["silent_wrong"]
         assert o.result.diverged() is True
+
+
+# ── Several tool-using agents in one pack (claims) ───────────────────────────────────────────────
+_CLAIMS_TOOLS = {"validator": "policy_lookup", "adjudicator": {"fetch_claim_history", "check_payout_limits"},
+                 "reviewer": "fetch_review_checklist"}
+
+
+def _tools_by_agent(o):
+    out = {}
+    for t in o.result.traces:
+        if t.step_type == "tool_call":
+            out.setdefault(t.agent, {})[t.tool_name] = t
+    return out
+
+
+def test_claims_three_agents_call_tools_on_a_clean_run():
+    pack = get_pack("claims")
+    for o in _run_with(pack, {}, n=5, seed=70):
+        got = _tools_by_agent(o)
+        assert set(got["validator"]) == {"policy_lookup"}
+        assert set(got["adjudicator"]) == {"fetch_claim_history", "check_payout_limits"}
+        assert set(got["reviewer"]) == {"fetch_review_checklist"}
+        assert all(t.outcome == "ok" for d in got.values() for t in d.values())
+
+
+def test_per_tool_levers_hit_one_tool_at_its_own_rate():
+    pack = get_pack("claims")
+    rates = {"tool_errors:check_payout_limits": 1.0,
+             "tool_latency:fetch_review_checklist": {"rate": 1.0, "params": {"latency_ms": 9000}}}
+    for o in _run_with(pack, rates, n=6, seed=71):
+        got = _tools_by_agent(o)
+        assert got["adjudicator"]["check_payout_limits"].outcome == "error"
+        assert got["adjudicator"]["fetch_claim_history"].outcome == "ok"     # sibling tool untouched
+        assert got["validator"]["policy_lookup"].outcome == "ok"
+        assert got["reviewer"]["fetch_review_checklist"].latency_ms >= 9000
+        assert got["adjudicator"]["check_payout_limits"].latency_ms < 1000
+        assert {f.lever: f.agent for f in o.result.faults} == {"tool_errors": "adjudicator",
+                                                                "tool_latency": "reviewer"}
+
+
+def test_per_tool_tool_fault_errors_only_the_named_tool():
+    pack = get_pack("claims")
+    rates = {"tool_fault:fetch_claim_history": {"rate": 1.0, "params": {"shape": "errored"}}}
+    for o in _run_with(pack, rates, n=4, seed=72):
+        got = _tools_by_agent(o)
+        assert got["adjudicator"]["fetch_claim_history"].outcome == "error"
+        assert got["adjudicator"]["check_payout_limits"].outcome == "ok"
+        assert got["reviewer"]["fetch_review_checklist"].outcome == "ok"
+
+
+def test_plain_tool_levers_still_hit_only_the_validator():
+    pack = get_pack("claims")
+    for o in _run_with(pack, {"tool_errors": 1.0}, n=6, seed=73):
+        got = _tools_by_agent(o)
+        assert got["validator"]["policy_lookup"].outcome == "error"
+        assert all(t.outcome == "ok" for a in ("adjudicator", "reviewer") for t in got[a].values())

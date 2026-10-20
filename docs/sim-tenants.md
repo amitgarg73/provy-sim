@@ -96,7 +96,7 @@ Use a local server started from the argus checkout at `provydev`, pointed at pre
 - Secrets by name, through `argus/scripts/with-secrets`. Passwords and ingest keys live in one file with mode 0600, `credentials.json` in the session scratchpad. It is never printed or committed, and a looser mode is refused.
 - Workspaces come from `provisionFleet` (provy-sim-control `scripts/provision-sim-set.mts`), not from sign-up. The 20 a day sign-up cap is not touched.
 - The ITSM pack is refused by the spec check. Another job owns it and the PDI.
-- Volume is bounded: 80 to 480 steps a tenant. This is a test bed, not a load test.
+- Volume is bounded: 80 to 720 steps a tenant (the claims pack gained three tool steps per claim on 19 Oct). This is a test bed, not a load test.
 
 ## Build, check, tear down
 

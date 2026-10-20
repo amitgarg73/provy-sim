@@ -90,6 +90,10 @@ class ClaimsPack(BasePack):
         return LeverManifest(
             resolver_agent="adjudicator",
             retriever_agent="validator",
+            # The adjudicator and reviewer call tools too, so a fleet can show several tools in
+            # different health (aim a lever at one with e.g. "tool_errors:check_payout_limits").
+            extra_tools={"fetch_claim_history": "adjudicator", "check_payout_limits": "adjudicator",
+                         "fetch_review_checklist": "reviewer"},
             reviewer_agent="reviewer",
             first_agent="intake",
             downstream_agent="adjudicator",
@@ -158,6 +162,15 @@ class ClaimsPack(BasePack):
             decision=(f"all {len(DOC_SETS[item['claim_type']])} required documents present; "
                       f"policy active"),
             entity_id=eid))
+        r.traces.append(self.tool_step(
+            ctx, A["adjudicator"], "fetch_claim_history",
+            tool_input={"claim_id": eid},
+            tool_output={"prior_claims": 0, "duplicate_found": False}, entity_id=eid))
+        r.traces.append(self.tool_step(
+            ctx, A["adjudicator"], "check_payout_limits",
+            tool_input={"claim_type": item["claim_type"], "amount": item["amount"]},
+            tool_output={"limit": item["policy_limit"], "within_limit": gt["within_limit"]},
+            entity_id=eid))
         # Cite the FACT as amount_within_limit (like support cites 'allows='), distinct from the
         # within_limit contract signal, so the trace never collides with the Estimated signal value.
         r.traces.append(self.agent_step(
@@ -170,6 +183,11 @@ class ClaimsPack(BasePack):
             payload_extra={"decision": gt["correct_decision"], "policy_limit": item["policy_limit"],
                            "amount": item["amount"], "amount_within_limit": gt["within_limit"],
                            "confidence": "HIGH"}))
+        r.traces.append(self.tool_step(
+            ctx, A["reviewer"], "fetch_review_checklist",
+            tool_input={"claim_type": item["claim_type"]},
+            tool_output={"checks": ["limit_respected", "no_duplicate", "documents_complete"]},
+            entity_id=eid))
         r.traces.append(self.agent_step(
             ctx, A["reviewer"], item, decision="approved: within policy limit, no duplicate", entity_id=eid))
 
