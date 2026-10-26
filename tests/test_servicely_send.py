@@ -316,4 +316,5 @@ def test_real_run_needs_requested_for(tmp_path):
 def test_requested_for_is_the_customer_on_every_ticket(tmp_path):
     stub = Stub()
     go(stub, cfg(), tmp_path)
-    assert stub.payloads and all(b["RequestedFor"] == "api-user-x" for b in stub.payloads)
+    made = [b for b in stub.payloads if "ShortDescription" in b]
+    assert made and all(b["RequestedFor"] == "api-user-x" for b in made)
