@@ -238,7 +238,9 @@ def scenario(kind: str, key: str) -> dict:
         topic_name, ask, answer, wrong = TEMPTING["name"], None, None, None
     else:
         t = TOPICS[key]
-        base = {"vague": t["vague"], "missing_detail": t["missing"]}.get(kind, t["clear"])
+        # the two-reply kinds start from the vague text: with a clear ticket the agent has nothing to ask, answers at once, and the customer's
+        # "answer" to a question nobody asked sends it to a person (26 Oct: five of five reply tickets did exactly that)
+        base = {"vague": t["vague"], "missing_detail": t["missing"], "reply_correct": t["vague"], "reply_wrong": t["vague"]}.get(kind, t["clear"])
         short_desc, wrong_cat, team, art = _variants(base, kind), t["wrong_category"], t["team"], t["name"]
         topic_name, ask, answer, wrong = t["name"], t["ask"], t["answer"], t["wrong"]
     desc_variants = list(short_desc)

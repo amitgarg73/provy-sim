@@ -439,3 +439,9 @@ def test_a_short_send_is_a_failure_not_a_success(tmp_path):
     assert len(lines) - 1 < 4
     assert rc == 1
     assert "only" in lines[0]["run"]["stopped"]
+
+
+def test_two_reply_kinds_start_from_a_ticket_the_agent_has_to_ask_about():
+    for kind in ("reply_correct", "reply_wrong"):
+        for topic, t in sc.TOPICS.items():
+            assert sc.scenario(kind, topic)["variants"][0] == tuple(t["vague"]), (kind, topic)
