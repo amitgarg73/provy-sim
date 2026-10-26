@@ -49,7 +49,8 @@ class Stub:
         if table == "Classification":
             return [{"Name": "Other", "id": "c1"}]
         if table == "Usage":
-            return self.usage_rows
+            off = int((params or {}).get("offset", 0))
+            return self.usage_rows[off:off + 200]
         if table == "Incident":
             return [{"ShortDescription": "[provy-servicely] x", "WorkflowStatus": "in_progress"} for _ in range(self.open_rows)]
         return []
@@ -219,7 +220,31 @@ def test_guard_refuses_when_headroom_cannot_be_computed(tmp_path):
 def test_guard_refuses_when_usage_read_may_be_truncated(tmp_path):
     from datetime import datetime, timezone
     m = datetime.now(timezone.utc).strftime("%Y-%m")
-    stub = Stub(usage_rows=[{"CreatedOn": f"{m}-01 00:00:00", "ApproximateCost": 0.01}] * ss.USAGE_PAGE)
+    stub = Stub(usage_rows=[{"CreatedOn": f"{m}-01 00:00:00", "ApproximateCost": 0.01}] * (ss.USAGE_PAGE * ss.USAGE_MAX_PAGES + 1))
+    rc, _ = go(stub, cfg(count=2), tmp_path)
+    assert rc == 2 and ("create",) not in stub.calls
+
+
+def test_guard_reads_every_page_of_the_month(tmp_path):
+    stub = Stub(usage_rows=month_rows([0.5] * 450))  # three pages; 225 USD spent
+    rc, lines = go(stub, cfg(count=2), tmp_path)
+    g = lines[0]["run"]["guard"]
+    assert rc == 0 and g["spent_usd"] == 225.0 and g["headroom_usd"] == 775.0
+
+
+def test_zero_token_row_without_cost_counts_as_zero(tmp_path):
+    from datetime import datetime, timezone
+    m = datetime.now(timezone.utc).strftime("%Y-%m")
+    rows = month_rows([1.0]) + [{"CreatedOn": f"{m}-02 10:00:00", "Model": "bge-m3", "InputTokens": "0", "OutputTokens": "0"}]
+    rc, lines = go(Stub(usage_rows=rows), cfg(count=2), tmp_path)
+    assert rc == 0 and lines[0]["run"]["guard"]["spent_usd"] == 1.0
+
+
+def test_row_with_tokens_and_no_cost_refuses(tmp_path):
+    from datetime import datetime, timezone
+    m = datetime.now(timezone.utc).strftime("%Y-%m")
+    rows = [{"CreatedOn": f"{m}-02 10:00:00", "Model": "x", "InputTokens": "120", "OutputTokens": "30"}]
+    stub = Stub(usage_rows=rows)
     rc, _ = go(stub, cfg(count=2), tmp_path)
     assert rc == 2 and ("create",) not in stub.calls
 

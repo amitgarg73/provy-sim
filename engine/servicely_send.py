@@ -55,7 +55,8 @@ AWAITING = {"awaiting_client_action", "awaiting_client", "pending_client"}
 DONE = {"resolved", "closed", "cancelled", "canceled"}
 SPEND_RULE_TABLE = "SystemAISpendRule"
 DEFAULT_MONTHLY_CAP = 1000.0
-USAGE_PAGE = 500
+USAGE_PAGE = 200   # the instance returns at most 200 rows per read, whatever page_size says (checked 26 Oct); more come with offset
+USAGE_MAX_PAGES = 25  # 5,000 rows; a month with more than that is refused, not guessed
 POLL_SECONDS = 15.0
 
 
@@ -137,9 +138,15 @@ def compute_headroom(client, cfg: dict, now: Optional[datetime] = None) -> dict:
     if not table:
         raise Refused("headroom cannot be computed: no usage_table given. Name the usage table, or pass headroom_override_usd to proceed on your own figure")
     month = (now or datetime.now(timezone.utc)).strftime("%Y-%m")
-    rows = client.query(table, {"order_desc": "CreatedOn"}, page_size=USAGE_PAGE) or []
-    if len(rows) >= USAGE_PAGE and str(rows[-1].get("CreatedOn", "")).startswith(month):
-        raise Refused("headroom cannot be computed: the usage table has more rows this month than one read returns, so the total would be too low")
+    rows: list = []
+    for page in range(USAGE_MAX_PAGES):
+        got = client.query(table, {"order_desc": "CreatedOn", "offset": page * USAGE_PAGE}, page_size=USAGE_PAGE) or []
+        rows.extend(got)
+        # newest first: stop at a short page (no more rows) or when the page already reaches back before this month
+        if len(got) < USAGE_PAGE or not str(got[-1].get("CreatedOn", "")).startswith(month):
+            break
+    else:
+        raise Refused(f"headroom cannot be computed: more than {USAGE_MAX_PAGES * USAGE_PAGE} usage rows this month, so the total would be too low")
     field = cfg.get("usage_cost_field") or "Cost"
     spent = 0.0
     for r in rows:
@@ -147,7 +154,10 @@ def compute_headroom(client, cfg: dict, now: Optional[datetime] = None) -> dict:
             continue
         v = _num(r.get(field))
         if v is None:
-            raise Refused(f"headroom cannot be computed: usage row has no numeric {field}")
+            # an embedding call carries no tokens and no cost: that is zero, not a gap. A row that used tokens and has no cost IS a gap.
+            if sum(_num(r.get(k)) or 0 for k in ("InputTokens", "OutputTokens", "ReasoningTokens", "CachedInputTokens", "CacheWriteTokens")) == 0:
+                continue
+            raise Refused(f"headroom cannot be computed: usage row used tokens but has no numeric {field}")
         spent += v
     return {"headroom_usd": round(cap - spent, 4), "cap_usd": cap, "cap_source": cap_src, "spent_usd": round(spent, 4), "basis": "usage_table"}
 
@@ -303,6 +313,7 @@ def _loop(client, cfg, plan, ids, led: Ledger, sleep, clock, poll) -> None:
             rec = led.add({"ticket_number": row.get("Number"), "ticket_id": row.get("id"), "scenario_id": item["scenario"]["id"],
                            "seed": cfg["seed"], "index": item["index"], "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                            "replies_played": [], "final_state": None, "observed_state": None})
+            print(f"CREATED {rec['ticket_number']} [{rec['scenario_id']}]", flush=True)  # the console page reads these lines from the run log
             state[rec["ticket_id"]] = {"exchanges": 0, "due": None, "need_leave": False, "plan": list(item["scenario"]["reply_plan"]),
                                        "scn": item["scenario"]}
             nxt += 1
