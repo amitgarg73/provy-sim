@@ -25,8 +25,8 @@ on:
       agent_user:       { description: 'Identifier of the front-door agent user the tickets are assigned to', required: false, type: string, default: '' }
       run_label:        { description: 'Optional label written in the run ledger', required: false, type: string, default: '' }
       headroom_override_usd: { description: 'Only if the usage table is not given: your own figure for remaining headroom', required: false, type: string, default: '' }
-      usage_table:      { description: 'Name of the model usage table, read-only, to compute spend so far', required: false, type: string, default: '' }
-      usage_cost_field: { description: 'Cost field in the usage table', required: false, type: string, default: 'Cost' }
+      usage_table:      { description: 'Name of the model usage table, read-only, to compute spend so far', required: false, type: string, default: 'SystemLLMUsage' }
+      usage_cost_field: { description: 'Cost field in the usage table', required: false, type: string, default: 'ApproximateCost' }
 
 jobs:
   send:

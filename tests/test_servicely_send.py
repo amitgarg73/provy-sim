@@ -189,7 +189,7 @@ def test_main_exits_2_on_a_refused_count(tmp_path):
 def month_rows(costs):
     from datetime import datetime, timezone
     m = datetime.now(timezone.utc).strftime("%Y-%m")
-    return [{"CreatedOn": f"{m}-01 10:00:00", "Cost": c} for c in costs]
+    return [{"CreatedOn": f"{m}-01 10:00:00", "ApproximateCost": c} for c in costs]
 
 
 def test_guard_passes_with_headroom(tmp_path):
@@ -219,7 +219,7 @@ def test_guard_refuses_when_headroom_cannot_be_computed(tmp_path):
 def test_guard_refuses_when_usage_read_may_be_truncated(tmp_path):
     from datetime import datetime, timezone
     m = datetime.now(timezone.utc).strftime("%Y-%m")
-    stub = Stub(usage_rows=[{"CreatedOn": f"{m}-01 00:00:00", "Cost": 0.01}] * ss.USAGE_PAGE)
+    stub = Stub(usage_rows=[{"CreatedOn": f"{m}-01 00:00:00", "ApproximateCost": 0.01}] * ss.USAGE_PAGE)
     rc, _ = go(stub, cfg(count=2), tmp_path)
     assert rc == 2 and ("create",) not in stub.calls
 

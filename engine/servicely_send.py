@@ -45,8 +45,8 @@ INPUT_DEFAULTS: dict[str, str] = {
     "agent_user": "",
     "run_label": "",
     "headroom_override_usd": "",
-    "usage_table": "",
-    "usage_cost_field": "Cost",
+    "usage_table": "SystemLLMUsage",
+    "usage_cost_field": "ApproximateCost",
 }
 
 DEFAULT_CAP, LARGE_CAP = 25, 150
@@ -68,8 +68,12 @@ class Stopped(RuntimeError):
 
 # ── inputs ──────────────────────────────────────────────────────────────────
 def read_inputs(env: dict) -> dict:
-    raw = {k: str(env.get(f"INPUT_{k.upper()}", d)).strip() or (d if k not in ("agent_user", "run_label", "headroom_override_usd", "usage_table") else "")
-           for k, d in INPUT_DEFAULTS.items()}
+    optional = ("agent_user", "run_label", "headroom_override_usd", "usage_table")  # an empty value means none
+    raw = {}
+    for k, d in INPUT_DEFAULTS.items():
+        v = env.get(f"INPUT_{k.upper()}")
+        v = d if v is None else str(v).strip()
+        raw[k] = v if (v or k in optional) else d
 
     def num(k: str, kind=int, lo=0):
         try:
