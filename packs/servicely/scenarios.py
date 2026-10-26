@@ -182,6 +182,26 @@ KINDS: dict[str, dict] = {
                   "expected": "Recognise a duplicate of an open ticket and link or close it against the original."},
 }
 
+# Seeded faults (attribution test). Each is an ordinary ticket with a marker in its text that a test hook on ONE step reads
+# (docs/servicely-fault-hook.md). The answer key lives here, never in the ticket: `culprit` is the step Provy should name,
+# None means the cause is outside every step and the right reading is "undetermined". Weight 0: never in the default mix.
+FAULT_TAG = "[test-fault: {id}]"
+FAULTS: dict[str, dict] = {
+    "wrong_article": {"culprit": "knowledge-helper", "what": "The knowledge helper returns a plausible article for a different problem."},
+    "wrong_team": {"culprit": "routing-helper", "what": "The routing helper recommends the wrong owning team."},
+    "wrong_category": {"culprit": "triage-helper", "what": "The triage helper labels the ticket with the wrong category."},
+    "closure_miss": {"culprit": "closure-check-helper", "what": "The closure check passes a reply that adds a step the article does not contain."},
+    "ignored_advice": {"culprit": "service-desk-agent", "what": "The service desk agent ignores the knowledge helper's right article and improvises."},
+    "outside_steps": {"culprit": None, "what": "Control: the right article is sent and the customer says it did not work. No step is at fault."},
+}
+for _fid, _f in FAULTS.items():
+    _control = _f["culprit"] is None
+    KINDS[f"fault_{_fid}"] = {
+        "tone": "polite and complete", "plan": ["reject"] if _control else ["confirm"], "weight": 0,
+        "end": "reopened" if _control else "resolved", "reopen": _control, "fault": _fid,
+        "expected": f"Seeded fault ({_fid}): {_f['what']}",
+    }
+
 NOT_WORKED_EXTRA = "I followed the steps exactly."
 
 # kinds that read from the NO_ARTICLE table, from TEMPTING, or from the topic table
@@ -248,6 +268,7 @@ def scenario(kind: str, key: str) -> dict:
             "team": team,
             "end_state": k["end"],
             "should_reopen": k["reopen"],
+            "seeded_fault": ({"id": k["fault"], "culprit": FAULTS[k["fault"]]["culprit"]} if k.get("fault") else None),
         },
     }
 
@@ -322,6 +343,9 @@ def build_plan(seed: int, count: int, mix: Optional[dict[str, float]] = None) ->
         else:
             sc = scenario(kind, next_topic())
         short, desc = rng.choice(sc["variants"])
+        sf = sc["ground_truth"].get("seeded_fault")
+        if sf and sf["culprit"]:
+            desc = f"{desc} {FAULT_TAG.format(id=sf['id'])}"
         plan.append({"index": i, "scenario": sc, "short": short, "description": desc,
                      "duplicate_of_index": prev["index"] if kind == "duplicate" else None})
     return plan

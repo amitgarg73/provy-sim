@@ -382,3 +382,51 @@ def test_ticket_resolved_by_someone_else_in_the_wait_gets_no_closure_code(tmp_pa
     stub = Stub(usage_rows=month_rows([1]), states={"seq": ["awaiting_client_action"], "resolve_after_reply": True})
     go(stub, cfg(count=1, scenario_mix="clear=1", settle_wait=10, close_delay=30), tmp_path)
     assert [k for k, _ in stub.events] == ["journal"]
+
+
+# ── seeded faults (attribution test) ────────────────────────────────────────
+def test_fault_kinds_never_enter_the_default_mix():
+    from packs.servicely import scenarios as sc
+    plan = sc.build_plan(7, 300)
+    assert not any(i["scenario"]["kind"].startswith("fault_") for i in plan)
+
+
+def test_fault_ticket_carries_a_tag_and_the_key_stays_off_the_ticket():
+    from packs.servicely import scenarios as sc
+    plan = sc.build_plan(3, 6, sc.parse_mix("fault_wrong_article=1"))
+    for item in plan:
+        assert "[test-fault: wrong_article]" in item["description"]
+        assert "knowledge-helper" not in item["description"] + item["short"]
+        assert item["scenario"]["ground_truth"]["seeded_fault"]["culprit"] == "knowledge-helper"
+
+
+def test_control_fault_has_no_tag_and_expects_no_culprit():
+    from packs.servicely import scenarios as sc
+    item = sc.build_plan(3, 1, sc.parse_mix("fault_outside_steps=1"))[0]
+    assert "test-fault" not in item["description"]
+    assert item["scenario"]["ground_truth"]["seeded_fault"] == {"id": "outside_steps", "culprit": None}
+
+
+def test_same_seed_same_fault_plan():
+    from packs.servicely import scenarios as sc
+    mix = sc.parse_mix("fault_wrong_team=2,fault_closure_miss=2,fault_outside_steps=2")
+    a = [(i["scenario"]["id"], i["description"]) for i in sc.build_plan(11, 12, mix)]
+    b = [(i["scenario"]["id"], i["description"]) for i in sc.build_plan(11, 12, mix)]
+    assert a == b
+
+
+def test_score_counts_right_wrong_undetermined_and_unread():
+    from engine.servicely_score import score
+    t = lambda n, sid: {"ticket_number": n, "scenario_id": sid}
+    tickets = [t("INC1", "fault_wrong_article.vpn"), t("INC2", "fault_wrong_article.vpn"), t("INC3", "fault_wrong_article.vpn"),
+               t("INC4", "fault_wrong_article.vpn"), t("INC5", "fault_outside_steps.vpn"), t("INC6", "fault_outside_steps.vpn"),
+               t("INC7", "clear.vpn")]
+    readings = [{"entity_id": "INC1", "culprit_agent": "Knowledge Helper", "method": "tool_defect"},
+                {"entity_id": "INC2", "culprit_agent": "Routing Helper", "method": "tool_defect"},
+                {"entity_id": "INC3", "culprit_agent": None, "method": "undetermined"},
+                {"entity_id": "INC5", "culprit_agent": "Triage Helper", "method": "tool_defect"},
+                {"entity_id": "INC6", "culprit_agent": None, "method": "undetermined"}]
+    r = score(tickets, readings)
+    assert r["wrong_article"] == {"tickets": 4, "right": 1, "wrong": 1, "undetermined": 1, "unread": 1}
+    assert r["outside_steps"] == {"tickets": 2, "right": 0, "wrong": 1, "undetermined": 1, "unread": 0}   # naming an agent for the control is wrong
+    assert "clear" not in r
