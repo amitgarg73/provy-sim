@@ -52,7 +52,7 @@ TOPICS: dict[str, dict] = {
     "licence": {
         "name": "Install or licence message on design or finance software", "team": SUPPORT, "wrong_category": "Hardware",
         "clear": ("Licence error opening the finance workbook tool",
-                  "After the operating system patch the finance reporting software shows a licence not found message when I open it. It worked last week and I have not changed anything."),
+                  "Since I moved to a new laptop the finance reporting software shows a licence expiry message when I open it. It worked on my old laptop and I have not changed anything."),
         "vague": ("Software will not work", "The software will not work properly."),
         "missing": ("Install fails", "The install of the design software stops part way."),
         "ask": "which software, which version and the exact text of the message",
@@ -91,12 +91,12 @@ TOPICS: dict[str, dict] = {
     },
     "battery": {
         "name": "Laptop battery will not charge", "team": SUPPORT, "wrong_category": "Software",
-        "clear": ("Laptop battery stays at 20 percent while plugged in",
-                  "My laptop battery will not charge. It sits at 20 percent with the charger plugged in and the charger light is on. I have tried another wall socket."),
+        "clear": ("Laptop battery shows 0 percent while plugged in",
+                  "My laptop battery will not charge. The battery icon shows 0 percent with the charger plugged in and the charger light is on. I have tried another wall socket."),
         "vague": ("Laptop power", "Something is wrong with the laptop power."),
         "missing": ("Laptop dies fast", "My laptop dies very fast."),
         "ask": "whether it charges with the charger plugged in and what the battery level shows",
-        "answer": "It stays at 20 percent even when plugged in.",
+        "answer": "It shows 0 percent even when plugged in.",
         "wrong": "The screen is also a bit dim but that has always been the case.",
     },
     "peripherals": {

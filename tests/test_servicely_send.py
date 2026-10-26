@@ -324,6 +324,10 @@ def test_workflow_declares_exactly_the_inputs_the_runner_reads():
     assert declared == set(ss.INPUT_DEFAULTS)
     for name, default in ss.INPUT_DEFAULTS.items():
         m = re.search(rf"^      {name}:.*default: '([^']*)'", block, re.M)
+        if name in ("agent_user", "requested_for"):
+            # The two demo user ids live ONLY as workflow defaults (the repository is private), so the console never handles ids.
+            assert m and re.fullmatch(r"[0-9a-f]{32}", m.group(1)), name
+            continue
         assert m and m.group(1) == default, name
     env_names = set(re.findall(r"INPUT_([A-Z_]+):", text))
     assert env_names == {n.upper() for n in ss.INPUT_DEFAULTS}
