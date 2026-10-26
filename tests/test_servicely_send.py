@@ -430,3 +430,12 @@ def test_score_counts_right_wrong_undetermined_and_unread():
     assert r["wrong_article"] == {"tickets": 4, "right": 1, "wrong": 1, "undetermined": 1, "unread": 1}
     assert r["outside_steps"] == {"tickets": 2, "right": 0, "wrong": 1, "undetermined": 1, "unread": 0}   # naming an agent for the control is wrong
     assert "clear" not in r
+
+
+def test_a_short_send_is_a_failure_not_a_success(tmp_path):
+    # concurrency 1 and a ticket that never settles on its own: the rest are never raised, and the run must say so
+    stub = Stub(usage_rows=month_rows([1]), states={"seq": ["awaiting_client_action"]})
+    rc, lines = go(stub, cfg(count=4, scenario_mix="abandon=1", settle_wait=1, concurrency=1), tmp_path)
+    assert len(lines) - 1 < 4
+    assert rc == 1
+    assert "only" in lines[0]["run"]["stopped"]

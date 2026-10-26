@@ -281,6 +281,14 @@ def run(cfg: dict, out_path: str, client: Optional[ServicelyClient] = None,
         print(f"STOPPED: {e}. Created {len(led.tickets)} of {cfg['count']}; see the ledger.", file=sys.stderr)
         return 1
     header["finished_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    if len(led.tickets) < len(plan):
+        # Never report success on a short send (26 Oct: 9 of 25 went out and the run said "done"). Tickets that never settle on
+        # their own (abandoned, reopened) hold their slot until the time limit, so the rest were never raised.
+        header["stopped"] = f"only {len(led.tickets)} of {len(plan)} tickets were raised"
+        led.write()
+        print(f"STOPPED: only {len(led.tickets)} of {len(plan)} tickets were raised: earlier tickets that do not settle on their own held "
+              f"every in-flight slot until the time limit. Raise concurrency to the count, or send fewer kinds that wait.", file=sys.stderr)
+        return 1
     led.write()
     print(f"done: created {len(led.tickets)}, ledger {out_path}")
     return 0
