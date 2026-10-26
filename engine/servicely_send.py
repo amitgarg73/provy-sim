@@ -42,6 +42,7 @@ INPUT_DEFAULTS: dict[str, str] = {
     "max_open": "15",
     "min_headroom_usd": "100",
     "max_exchanges": "2",
+    "close_delay": "45",
     "agent_user": "",
     "requested_for": "",
     "run_label": "",
@@ -91,6 +92,7 @@ def read_inputs(env: dict) -> dict:
         "concurrency": num("concurrency", int, 1), "arrival_gap": num("arrival_gap", float, 0),
         "settle_wait": num("settle_wait", float, 0), "max_open": num("max_open", int, 0),
         "min_headroom_usd": num("min_headroom_usd", float, 0), "max_exchanges": num("max_exchanges", int, 0),
+        "close_delay": num("close_delay", float, 0),
         "confirm_large": raw["confirm_large"].lower() == "yes",
         "dry_run": raw["dry_run"].lower() not in ("false", "no", "0"),
         "scenario_mix": raw["scenario_mix"], "agent_user": raw["agent_user"], "requested_for": raw["requested_for"], "run_label": raw["run_label"],
@@ -350,6 +352,12 @@ def _watch(client, cfg, rec: dict, st: dict, rng: random.Random, clock, led: Led
         st["need_leave"] = False
     if status in DONE:
         rec["final_state"] = status
+        st["close_due"] = None
+        led.write()
+        return
+    if st.get("close_due") is not None and clock() >= st["close_due"]:
+        st["close_due"] = None
+        _guarded(client.update, "Incident", rec["ticket_id"], {"ClosureCode": "Solution provided"})
         led.write()
         return
     # the planned reply, if the ticket is waiting on the customer and the budget allows
@@ -364,7 +372,13 @@ def _watch(client, cfg, rec: dict, st: dict, rng: random.Random, clock, led: Led
             text = rng.choice(st["scn"]["replies"][step] or [""])
             _guarded(client.update, "Incident", rec["ticket_id"], {"ClientJournal": text})
             if step == "confirm":
-                _guarded(client.update, "Incident", rec["ticket_id"], {"ClosureCode": "Solution provided"})
+                # 26 Oct: the reply and the closure code used to be written back to back. Servicely's agent runtime wakes the agent on the
+                # reply and moves the ticket 'Continue work' (resolved -> in progress) one second later, so the ticket was resolved twice.
+                # A person who confirms does not close the ticket in the same second: hold the closure code until the agent has reacted.
+                if cfg["close_delay"] <= 0:
+                    _guarded(client.update, "Incident", rec["ticket_id"], {"ClosureCode": "Solution provided"})
+                else:
+                    st["close_due"] = clock() + cfg["close_delay"]
             st["exchanges"] += 1
             st["due"], st["need_leave"] = None, True
             rec["replies_played"].append({"kind": step, "at": datetime.now(timezone.utc).isoformat(timespec="seconds")})

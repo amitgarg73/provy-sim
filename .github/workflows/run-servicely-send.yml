@@ -22,6 +22,7 @@ on:
       settle_wait:      { description: 'Minutes to keep watching after the last ticket for customer replies', required: false, type: string, default: '30' }
       max_open:         { description: 'Refuse to start if more than this many tickets from this tool are still open', required: false, type: string, default: '15' }
       min_headroom_usd: { description: 'Refuse to start if remaining model spend headroom is under this', required: false, type: string, default: '100' }
+      close_delay:      { description: 'Seconds between a confirming customer reply and the closure code, so the agent reacts first', required: false, type: string, default: '45' }
       max_exchanges:    { description: 'Most customer replies played per ticket', required: false, type: string, default: '2' }
       agent_user:       { description: 'Identifier of the front-door agent user the tickets are assigned to', required: false, type: string, default: 'ee31ce1ed0e711f1955ceabb4d032819' }
       requested_for:    { description: 'Identifier of the user the tickets are raised for and replies are played as (the API user itself, so a reply moves the ticket)', required: false, type: string, default: '646027f0c78f11f18eeb8eca53a5b406' }
@@ -54,6 +55,7 @@ jobs:
           INPUT_MAX_OPEN: ${{ inputs.max_open }}
           INPUT_MIN_HEADROOM_USD: ${{ inputs.min_headroom_usd }}
           INPUT_MAX_EXCHANGES: ${{ inputs.max_exchanges }}
+          INPUT_CLOSE_DELAY: ${{ inputs.close_delay }}
           INPUT_AGENT_USER: ${{ inputs.agent_user }}
           INPUT_REQUESTED_FOR: ${{ inputs.requested_for }}
           INPUT_RUN_LABEL: ${{ inputs.run_label }}

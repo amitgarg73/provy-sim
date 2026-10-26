@@ -34,6 +34,7 @@ class Stub:
         self.states = states or {}
         self.tickets = {}
         self.payloads = []
+        self.events = []
 
     def require(self):
         pass
@@ -78,6 +79,8 @@ class Stub:
         t["state"] = t["state"] if t["state"] in ("resolved",) else seq[min(t["polls"] - 1, len(seq) - 1)]
         if t["journal"] and self.states.get("resolve_after_reply"):
             t["state"] = "resolved"
+        if t["closure"] and self.states.get("resolve_on_closure"):
+            t["state"] = "resolved"
         return {"WorkflowStatus": {"value": t["state"]}}
 
     def update(self, table, rid, payload):
@@ -86,14 +89,16 @@ class Stub:
         t = self.tickets[rid]
         if "ClientJournal" in payload:
             t["journal"].append(payload["ClientJournal"])
+            self.events.append(("journal", len(self.calls)))
         if "ClosureCode" in payload:
             t["closure"] = payload["ClosureCode"]
+            self.events.append(("closure", len(self.calls)))
         return {}
 
 
 def cfg(**over):
     env = {"INPUT_AGENT_USER": "agent-x", "INPUT_REQUESTED_FOR": "api-user-x", "INPUT_DRY_RUN": "false", "INPUT_USAGE_TABLE": "Usage", "INPUT_COUNT": "4",
-           "INPUT_SETTLE_WAIT": "5", "INPUT_ARRIVAL_GAP": "1"}
+           "INPUT_SETTLE_WAIT": "5", "INPUT_ARRIVAL_GAP": "1", "INPUT_CLOSE_DELAY": "0"}
     env.update({f"INPUT_{k.upper()}": str(v) for k, v in over.items()})
     return ss.read_inputs(env)
 
@@ -354,3 +359,26 @@ def test_ten_clear_tickets_cover_ten_different_topics():
     plan = sc.build_plan(7, 10, sc.parse_mix("clear=1"))
     assert len({p["scenario"]["topic_key"] for p in plan}) == 10
     assert plan == sc.build_plan(7, 10, sc.parse_mix("clear=1"))   # still deterministic for a seed
+
+
+# ── the closure code waits for the agent to react (26 Oct) ───────────────────
+def test_closure_code_is_held_back_after_a_confirming_reply(tmp_path):
+    stub = Stub(usage_rows=month_rows([1]), states={"seq": ["awaiting_client_action"], "resolve_on_closure": True})
+    rc, lines = go(stub, cfg(count=1, scenario_mix="clear=1", settle_wait=10, close_delay=30), tmp_path)
+    kinds = [k for k, _ in stub.events]
+    assert rc == 0 and kinds == ["journal", "closure"]
+    gap = stub.events[1][1] - stub.events[0][1]
+    assert gap >= 5, f"only {gap} calls between the reply and the closure code"  # polled for the whole delay (30 s at 5 s a poll), not written in the same breath
+    assert lines[1]["final_state"] == "resolved"
+
+
+def test_no_delay_keeps_the_old_back_to_back_behaviour(tmp_path):
+    stub = Stub(usage_rows=month_rows([1]), states={"seq": ["awaiting_client_action"], "resolve_on_closure": True})
+    go(stub, cfg(count=1, scenario_mix="clear=1", settle_wait=10, close_delay=0), tmp_path)
+    assert [k for k, _ in stub.events] == ["journal", "closure"] and stub.events[1][1] - stub.events[0][1] <= 1
+
+
+def test_ticket_resolved_by_someone_else_in_the_wait_gets_no_closure_code(tmp_path):
+    stub = Stub(usage_rows=month_rows([1]), states={"seq": ["awaiting_client_action"], "resolve_after_reply": True})
+    go(stub, cfg(count=1, scenario_mix="clear=1", settle_wait=10, close_delay=30), tmp_path)
+    assert [k for k, _ in stub.events] == ["journal"]
