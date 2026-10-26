@@ -91,7 +91,7 @@ class Stub:
 
 
 def cfg(**over):
-    env = {"INPUT_AGENT_USER": "agent-x", "INPUT_DRY_RUN": "false", "INPUT_USAGE_TABLE": "Usage", "INPUT_COUNT": "4",
+    env = {"INPUT_AGENT_USER": "agent-x", "INPUT_REQUESTED_FOR": "api-user-x", "INPUT_DRY_RUN": "false", "INPUT_USAGE_TABLE": "Usage", "INPUT_COUNT": "4",
            "INPUT_SETTLE_WAIT": "5", "INPUT_ARRIVAL_GAP": "1"}
     env.update({f"INPUT_{k.upper()}": str(v) for k, v in over.items()})
     return ss.read_inputs(env)
@@ -304,3 +304,16 @@ def test_workflow_declares_exactly_the_inputs_the_runner_reads():
     assert env_names == {n.upper() for n in ss.INPUT_DEFAULTS}
     assert "dry_run" in declared and ss.INPUT_DEFAULTS["dry_run"] == "true"
     assert "upload-artifact" in text
+
+
+def test_real_run_needs_requested_for(tmp_path):
+    stub = Stub()
+    rc, _ = go(stub, cfg(requested_for=""), tmp_path)
+    assert rc == 2
+    assert stub.tickets == {}
+
+
+def test_requested_for_is_the_customer_on_every_ticket(tmp_path):
+    stub = Stub()
+    go(stub, cfg(), tmp_path)
+    assert stub.payloads and all(b["RequestedFor"] == "api-user-x" for b in stub.payloads)

@@ -43,6 +43,7 @@ INPUT_DEFAULTS: dict[str, str] = {
     "min_headroom_usd": "100",
     "max_exchanges": "2",
     "agent_user": "",
+    "requested_for": "",
     "run_label": "",
     "headroom_override_usd": "",
     "usage_table": "SystemLLMUsage",
@@ -68,7 +69,7 @@ class Stopped(RuntimeError):
 
 # ── inputs ──────────────────────────────────────────────────────────────────
 def read_inputs(env: dict) -> dict:
-    optional = ("agent_user", "run_label", "headroom_override_usd", "usage_table")  # an empty value means none
+    optional = ("agent_user", "requested_for", "run_label", "headroom_override_usd", "usage_table")  # an empty value means none
     raw = {}
     for k, d in INPUT_DEFAULTS.items():
         v = env.get(f"INPUT_{k.upper()}")
@@ -91,7 +92,7 @@ def read_inputs(env: dict) -> dict:
         "min_headroom_usd": num("min_headroom_usd", float, 0), "max_exchanges": num("max_exchanges", int, 0),
         "confirm_large": raw["confirm_large"].lower() == "yes",
         "dry_run": raw["dry_run"].lower() not in ("false", "no", "0"),
-        "scenario_mix": raw["scenario_mix"], "agent_user": raw["agent_user"], "run_label": raw["run_label"],
+        "scenario_mix": raw["scenario_mix"], "agent_user": raw["agent_user"], "requested_for": raw["requested_for"], "run_label": raw["run_label"],
         "usage_table": raw["usage_table"], "usage_cost_field": raw["usage_cost_field"],
         "headroom_override_usd": None,
     }
@@ -198,8 +199,10 @@ class Ledger:
 # ── the run ─────────────────────────────────────────────────────────────────
 def _payload(item: dict, cfg: dict, ids: dict) -> dict:
     """The only thing that ever leaves for the instance: text, people, routing. No scenario id, no answer key."""
-    return {"short": item["short"], "description": item["description"], "requestor_id": ids["requestor"],
-            "requested_for_id": ids["requestor"], "classification_id": ids["classification"],
+    # The customer is the API user itself: a reply only moves a ticket when the person replying is the ticket's RequestedFor.
+    who = cfg.get("requested_for") or ids["requestor"]
+    return {"short": item["short"], "description": item["description"], "requestor_id": who,
+            "requested_for_id": who, "classification_id": ids["classification"],
             "assignment_group_id": ids["group"], "extra": {"Assignee": cfg["agent_user"], "Impact": "medium", "Urgency": "medium"}}
 
 
@@ -237,9 +240,9 @@ def run(cfg: dict, out_path: str, client: Optional[ServicelyClient] = None,
         print(f"DRY RUN: {len(plan)} tickets listed, none created, no network call made.")
         return 0
 
-    if not cfg["agent_user"]:
-        print("REFUSED: agent_user is required for a real run", file=sys.stderr)
-        header["refused"] = "agent_user is required for a real run"
+    if not cfg["agent_user"] or not cfg["requested_for"]:
+        print("REFUSED: agent_user and requested_for are required for a real run", file=sys.stderr)
+        header["refused"] = "agent_user and requested_for are required for a real run"
         led.write()
         return 2
     client = client or ServicelyClient()
