@@ -318,3 +318,10 @@ def test_requested_for_is_the_customer_on_every_ticket(tmp_path):
     go(stub, cfg(), tmp_path)
     made = [b for b in stub.payloads if "ShortDescription" in b]
     assert made and all(b["RequestedFor"] == "api-user-x" for b in made)
+
+
+def test_ten_clear_tickets_cover_ten_different_topics():
+    from packs.servicely import scenarios as sc
+    plan = sc.build_plan(7, 10, sc.parse_mix("clear=1"))
+    assert len({p["scenario"]["topic_key"] for p in plan}) == 10
+    assert plan == sc.build_plan(7, 10, sc.parse_mix("clear=1"))   # still deterministic for a seed

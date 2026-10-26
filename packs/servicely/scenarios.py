@@ -299,6 +299,15 @@ def build_plan(seed: int, count: int, mix: Optional[dict[str, float]] = None) ->
     rng = random.Random(f"servicely-send:{seed}")
     kinds, weights = list(mix), [mix[k] for k in mix]
     plan: list[dict] = []
+    deck: list[str] = []   # topics are dealt from a seeded shuffled deck, so ten tickets cover ten topics before any repeats
+
+    def next_topic() -> str:
+        if not deck:
+            keys = list(TOPICS)
+            rng.shuffle(keys)
+            deck.extend(keys)
+        return deck.pop()
+
     for i in range(count):
         kind = rng.choices(kinds, weights=weights)[0]
         prev = plan[-1] if plan else None
@@ -311,7 +320,7 @@ def build_plan(seed: int, count: int, mix: Optional[dict[str, float]] = None) ->
         elif kind in _TEMPTING_KINDS:
             sc = scenario(kind, "planted")
         else:
-            sc = scenario(kind, rng.choice(list(TOPICS)))
+            sc = scenario(kind, next_topic())
         short, desc = rng.choice(sc["variants"])
         plan.append({"index": i, "scenario": sc, "short": short, "description": desc,
                      "duplicate_of_index": prev["index"] if kind == "duplicate" else None})
