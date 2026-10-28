@@ -88,7 +88,7 @@ Use a local server started from the argus checkout at `provydev`, pointed at pre
       'WAITLIST_ADMIN_KEY="$WAITLIST_ADMIN_KEY_PREVIEW" ADMIN_SECRET="$ADMIN_SECRET_PREVIEW" RESEND_API_KEY= R2_ACCOUNT_ID= R2_ACCESS_KEY_ID= R2_SECRET_ACCESS_KEY= R2_BUCKET= PORT=3100 npm run dev'
     # when done: git switch provydev, and confirm git status is clean
 
-(Port 3000 is the Sales OS front end on this machine.) Teardown is the one call that goes to `dev.provy.ai`, because only that deployment holds the R2 names.
+(Port 3000 is the Sales OS front end on this machine.) Teardown is the one call that goes to `dev.provy.ai`, because only that deployment holds the R2 names. Pre-prod fleets keep their objects in the dev bucket, `provy-dev`, not the production one (#1900), and the teardown's before and after counts read that bucket.
 
 ## Rules
 

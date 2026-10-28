@@ -31,7 +31,9 @@ WITH_SECRETS = os.path.expanduser("~/Claude Projects/argus/scripts/with-secrets"
 
 
 def r2_counts(ids: list[str]) -> dict:
-    p = subprocess.run([WITH_SECRETS, "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET", "--", "node", os.path.join(HERE, "r2_count.mjs"), *ids],
+    # The DEV bucket (provy-dev): pre-prod fleets store their objects there since #1900. Counting in the production bucket would read zero for
+    # every pre-prod fleet and call a teardown clean whatever it left behind.
+    p = subprocess.run([WITH_SECRETS, "R2_ACCOUNT_ID", "R2_DEV_ACCESS_KEY_ID", "R2_DEV_SECRET_ACCESS_KEY", "R2_DEV_BUCKET", "--", "node", os.path.join(HERE, "r2_count.mjs"), *ids],
                        capture_output=True, text=True, timeout=300)
     if p.returncode != 0:
         raise SystemExit("could not count R2 objects: " + p.stderr[-300:])
