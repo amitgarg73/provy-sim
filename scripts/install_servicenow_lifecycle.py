@@ -38,6 +38,7 @@ SN_DIR = os.path.join(HERE, "servicenow")
 
 SWEEP_NAME = "Provy demo - verification sweep"
 PUSH_NAME = "Provy demo - outcome push"
+CHECK_NAME = "Provy demo - connection check"
 
 # Properties the demo reads. Created blank where a value is a secret: the installer
 # never writes a credential into the instance, that is a deliberate one-time manual
@@ -197,6 +198,7 @@ def main() -> int:
     ap.add_argument("--run-sweep", action="store_true",
                     help="execute the verification sweep once, now, instead of waiting for the schedule")
     ap.add_argument("--interval-min", type=int, default=5, help="how often the sweep runs")
+    ap.add_argument("--check-interval-min", type=int, default=15, help="how often the connection check calls Provy")
     args = ap.parse_args()
 
     sn = client_from_env()
@@ -234,6 +236,14 @@ def main() -> int:
         "run_type": "periodically",
         "run_period": f"1970-01-01 00:{args.interval_min:02d}:00",
         "script": read_script("verification_sweep.js"),
+    }, args.dry_run))
+
+    # The scheduled job that calls Provy's test-connection door (writes nothing there).
+    print("  " + upsert(sn, "sysauto_script", CHECK_NAME, {
+        "active": "true",
+        "run_type": "periodically",
+        "run_period": f"1970-01-01 00:{args.check_interval_min:02d}:00",
+        "script": read_script("connection_check.js"),
     }, args.dry_run))
 
     if args.run_sweep and not args.dry_run:
