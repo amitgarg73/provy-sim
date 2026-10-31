@@ -51,6 +51,14 @@ MARKER = _marker_from_env()
 
 # The instance's real vocabulary, read off dev217748 on 2026-07-27. Everything
 # the agent writes has to come from these lists or the record will not reconcile.
+#
+# ⛔ STALE ON THE BRAZIL PDI (dev465097, rebuilt 31 Oct 2026, argus#1646). Brazil's active choices
+# differ: password_reset is an inactive category (now a subcategory of access), most subcategories
+# below were renamed, and "Solution provided", "Resolved by change", "No resolution provided",
+# "User error" and "Resolved by request" are no longer close-code choices. The Table API still
+# stores these strings (the fields are "dropdown with none"), so nothing fails, but the instance
+# shows them as raw values. The full Brazil lists are in argus servicenow/pdi-backup/README.md.
+# Changing the genuine-fix set changes the contract, so it waits for a decision.
 CATEGORIES = ["inquiry", "software", "hardware", "network", "database", "password_reset"]
 
 SUBCATEGORIES = {
