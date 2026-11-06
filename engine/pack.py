@@ -12,14 +12,16 @@ from __future__ import annotations
 from typing import Any, Protocol, runtime_checkable
 
 from . import levers as L
+from .llm import GROQ_MODEL
 from .types import (AgentSpec, Criterion, EvalResult, LeverManifest,
                     RunContext, RunResult, TraceStep)
 
-# llama-3.3-70b-versatile list price (per token): ~$0.59/M input, $0.79/M output. A clean
-# agent call runs a fraction of a cent, so the L2 LLM Cost check sits far under its budget
-# until the llm_cost lever inflates a run. Keeps the "LLM Calls" tile showing real dollars.
-_PRICE_IN_PER_TOK = 0.59e-6
-_PRICE_OUT_PER_TOK = 0.79e-6
+# Per-token price of the model engine/llm.py calls (GROQ_MODEL, default openai/gpt-oss-120b): $0.15 per million input tokens, $0.60 per million output tokens, from Groq's
+# model page (console.groq.com/docs/model/openai/gpt-oss-120b, read 6 Nov 2026; Groq warns some cached pages are dated). The TOKEN COUNTS are simulated, so the dollars are a
+# realistic demo figure, not a bill. A clean agent call runs a fraction of a cent, so the L2 LLM Cost check sits far under its budget until the llm_cost lever inflates a
+# run. Keeps the "LLM Calls" tile showing real dollars. If GROQ_MODEL is changed, change these with it.
+_PRICE_IN_PER_TOK = 0.15e-6
+_PRICE_OUT_PER_TOK = 0.60e-6
 
 
 def llm_cost_usd(tokens_in: int, tokens_out: int) -> float:
@@ -226,7 +228,7 @@ class BasePack:
             agent_reasoning=reasoning, system=system, user=user,
             tool_output={"decision": decision, "detail": reasoning},
             entity_id=entity_id,
-            tokens_input=tokens[0], tokens_output=tokens[1], model="llama-3.3-70b-versatile",
+            tokens_input=tokens[0], tokens_output=tokens[1], model=GROQ_MODEL,
             cost_usd=llm_cost_usd(tokens[0], tokens[1]),
             latency_ms=ctx.rng.randint(400, 1800),
             payload_extra=payload_extra or {},
