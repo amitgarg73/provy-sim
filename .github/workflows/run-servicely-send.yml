@@ -1,0 +1,73 @@
+name: run-servicely-send
+run-name: send ${{ inputs.run_label || 'unlabelled' }} / ${{ inputs.dry_run == 'true' && 'dry run' || 'real' }} / ${{ inputs.count }} / ${{ inputs.scenario_mix }}
+
+# Send mode for the Servicely desk. It only raises tickets and plays the customer; the instance's OWN agents do
+# the work. None of our simulated agents run, nothing is posted to Provy, no ingest key is needed.
+#
+# Safe by default: dry_run is true, so a dispatch with no changes lists the tickets it would create and makes no
+# call to the instance. A real send needs dry_run=false, agent_user and requested_for. Count is capped at 25 unless confirm_large=yes
+# (then 150). Cancel the run to stop it; tickets already raised carry the desk marker and are listed in the ledger artifact.
+#
+# Repository secrets (never inputs): SERVICELY_INSTANCE_URL, SERVICELY_API_TOKEN.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:          { description: 'true lists the tickets and creates none, with no network call', required: false, type: string, default: 'true' }
+      count:            { description: 'Tickets to send (max 25, or 150 with confirm_large=yes)', required: false, type: string, default: '10' }
+      confirm_large:    { description: 'yes allows a count above 25', required: false, type: string, default: 'no' }
+      seed:             { description: 'RNG seed (same seed, same tickets and same reply timing)', required: false, type: string, default: '1' }
+      scenario_mix:     { description: 'default, or kind=weight pairs such as clear=3,no_article=1', required: false, type: string, default: 'default' }
+      concurrency:      { description: 'Most tickets in flight at once before the next is sent', required: false, type: string, default: '5' }
+      arrival_gap:      { description: 'Seconds between tickets being created', required: false, type: string, default: '30' }
+      settle_wait:      { description: 'Minutes to keep watching after the last ticket for customer replies', required: false, type: string, default: '30' }
+      max_open:         { description: 'Refuse to start if more than this many tickets from this tool are still open', required: false, type: string, default: '15' }
+      min_headroom_usd: { description: 'Refuse to start if remaining model spend headroom is under this', required: false, type: string, default: '100' }
+      close_delay:      { description: 'Seconds between a confirming customer reply and the closure code, so the agent reacts first', required: false, type: string, default: '45' }
+      max_exchanges:    { description: 'Most customer replies played per ticket', required: false, type: string, default: '2' }
+      agent_user:       { description: 'Identifier of the front-door agent user the tickets are assigned to', required: false, type: string, default: 'ee31ce1ed0e711f1955ceabb4d032819' }
+      requested_for:    { description: 'Identifier of the user the tickets are raised for and replies are played as (the API user itself, so a reply moves the ticket)', required: false, type: string, default: '646027f0c78f11f18eeb8eca53a5b406' }
+      run_label:        { description: 'Optional label written in the run ledger', required: false, type: string, default: '' }
+      headroom_override_usd: { description: 'Only if the usage table is not given: your own figure for remaining headroom', required: false, type: string, default: '' }
+      usage_table:      { description: 'Name of the model usage table, read-only, to compute spend so far', required: false, type: string, default: 'SystemLLMUsage' }
+      usage_cost_field: { description: 'Cost field in the usage table', required: false, type: string, default: 'ApproximateCost' }
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Send
+        env:
+          SERVICELY_INSTANCE_URL: ${{ secrets.SERVICELY_INSTANCE_URL }}
+          SERVICELY_API_TOKEN: ${{ secrets.SERVICELY_API_TOKEN }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_COUNT: ${{ inputs.count }}
+          INPUT_CONFIRM_LARGE: ${{ inputs.confirm_large }}
+          INPUT_SEED: ${{ inputs.seed }}
+          INPUT_SCENARIO_MIX: ${{ inputs.scenario_mix }}
+          INPUT_CONCURRENCY: ${{ inputs.concurrency }}
+          INPUT_ARRIVAL_GAP: ${{ inputs.arrival_gap }}
+          INPUT_SETTLE_WAIT: ${{ inputs.settle_wait }}
+          INPUT_MAX_OPEN: ${{ inputs.max_open }}
+          INPUT_MIN_HEADROOM_USD: ${{ inputs.min_headroom_usd }}
+          INPUT_MAX_EXCHANGES: ${{ inputs.max_exchanges }}
+          INPUT_CLOSE_DELAY: ${{ inputs.close_delay }}
+          INPUT_AGENT_USER: ${{ inputs.agent_user }}
+          INPUT_REQUESTED_FOR: ${{ inputs.requested_for }}
+          INPUT_RUN_LABEL: ${{ inputs.run_label }}
+          INPUT_HEADROOM_OVERRIDE_USD: ${{ inputs.headroom_override_usd }}
+          INPUT_USAGE_TABLE: ${{ inputs.usage_table }}
+          INPUT_USAGE_COST_FIELD: ${{ inputs.usage_cost_field }}
+        run: python -m engine.servicely_send servicely-send-ledger.jsonl
+      # always: a stopped or cancelled-after-start run still leaves a ledger for clean-up
+      - name: Upload the run ledger
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: servicely-send-ledger
+          path: servicely-send-ledger.jsonl
+          if-no-files-found: warn
