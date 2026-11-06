@@ -12,9 +12,9 @@
  */
 var ProvyIamAgents = Class.create();
 ProvyIamAgents.prototype = {
-  APPLIER: 'estate_applier',
-  VERIFIER: 'estate_verifier',
-  WORKER: 'estate_worker',
+  APPLIER: 'access_applier',
+  VERIFIER: 'access_verifier',
+  WORKER: 'access_worker',
 
   initialize: function () {
     this.estate = new global.ProvyIamEstate();
@@ -65,12 +65,22 @@ ProvyIamAgents.prototype = {
     return { applied: applied, failed: failed };
   },
 
+  /**
+   * The per-system verdicts as they go into the trace. NO KEY HERE MAY REPEAT A TOP-LEVEL NAME OF THE STEP: Provy reads a step's fields by leaf name at any depth and the last one wins,
+   * so a nested `held` overwrote the step's own `held` and a failed run was read as "estimated held yes" (6 Nov 2026). Per system the field is `ended`.
+   */
+  _forTrace: function (systems) {
+    var out = {};
+    for (var n in systems) if (systems.hasOwnProperty(n)) out[n] = { ended: !!systems[n].held, detail: systems[n].detail };
+    return out;
+  },
+
   _verify: function (subject, params, trace) {
     var reading = this.estate.read(params.person);
     var verdict = this.plan.verdict(subject, params, reading);
     var wording = this.model.complete('State in one plain sentence what this reading means for the access change. Reading: ' + JSON.stringify(verdict.systems), 'finding', { stub: verdict.summary, system: 'You word a finding in one sentence. Do not change the facts.' });
     var finding = (wording.ok && wording.text) ? String(wording.text).substring(0, 400) : verdict.summary;
-    trace.step(this.VERIFIER, 'message', 'success', { phase: 'verify', held: verdict.held, checked: verdict.checked, systems: verdict.systems, finding: finding, summary: verdict.summary },
+    trace.step(this.VERIFIER, 'message', 'success', { phase: 'verify', held: verdict.held, checked: verdict.checked, systems: this._forTrace(verdict.systems), finding: finding, summary: verdict.summary },
       { model: this.model.label() });
     return { held: verdict.held, systems: verdict.systems, checked: verdict.checked, summary: verdict.summary, finding: finding, reading: reading };
   },

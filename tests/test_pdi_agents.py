@@ -83,3 +83,14 @@ def test_the_outcome_is_sent_after_the_session_closes_and_only_from_the_built_bo
     assert src.index("trace.close(verification.summary") < src.index("this.plan.outcomeBody(") < src.index("trace.outcome(outcome)")
     block = src[src.index("this.plan.outcomeBody("):src.index("trace.outcome(outcome)")]
     assert "finding" not in block and "wording" not in block
+
+
+def test_the_verify_step_never_repeats_a_top_level_name_inside_its_systems():
+    """Provy reads a step's fields by leaf name at any depth and the last wins, so a nested `held` made a failed run read as estimated held. The trace carries `ended` per system."""
+    import re
+    src = open(os.path.join(HERE, "..", "multi_vendor", "pdi", "src", "ProvyIamAgents.js")).read()
+    step = next(l for l in src.splitlines() if "phase: 'verify'" in l)
+    assert "systems: this._forTrace(verdict.systems)" in step and "systems: verdict.systems" not in step
+    helper = src[src.index("_forTrace: function"):src.index("_verify: function")]
+    assert "ended:" in helper and not re.search(r"\bheld\s*:", helper.split("function (systems)")[1])
+    assert "estate_" not in src
