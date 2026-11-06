@@ -33,6 +33,8 @@ def _run_python(v):
         return _subset(v["expect"], ref.verdict(v["command"], v["params"], v["reading"]))
     if v["kind"] == "parsePlan":
         return ref.parse_plan(v["text"]) == v["expect"]
+    if v["kind"] == "outcomeBody":
+        return ref.outcome_body(v["command"], v["verdict"], v["correlation"], v["businessDate"], v["occurredAt"]) == v["expect"]
     raise AssertionError(v["kind"])
 
 
@@ -73,3 +75,11 @@ def test_a_refused_plan_falls_back_to_the_tasks_own_plan_which_is_always_valid()
                         ("provy-iam-grant", {"person": "provy.iam.a", "system": "vpn", "level": "write", "expires_minutes": 30})]:
         plan = ref.task_plan(cmd, params)
         assert ref.validate(plan, {"command": cmd, "params": params}) == {"ok": True}, (cmd, ref.validate(plan, {"command": cmd, "params": params}))
+
+
+def test_the_outcome_is_sent_after_the_session_closes_and_only_from_the_built_body():
+    """The wiring, read from the deployed file: the outcome goes out after trace.close, built by ProvyIamPlan.outcomeBody from the verifier's verdict, never from model wording."""
+    src = open(os.path.join(HERE, "..", "multi_vendor", "pdi", "src", "ProvyIamAgents.js")).read()
+    assert src.index("trace.close(verification.summary") < src.index("this.plan.outcomeBody(") < src.index("trace.outcome(outcome)")
+    block = src[src.index("this.plan.outcomeBody("):src.index("trace.outcome(outcome)")]
+    assert "finding" not in block and "wording" not in block

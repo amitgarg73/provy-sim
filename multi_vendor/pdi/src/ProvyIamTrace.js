@@ -83,5 +83,14 @@ ProvyIamTrace.prototype = {
     return this._send('/api/ingest/session/close', { session_id: this.sid, result_summary: summary, terminal_reason: reason, ended_at: new GlideDateTime().getValue().replace(' ', 'T') + 'Z' });
   },
 
+  /**
+   * Settle the work item: ONE post of the outcome body that ProvyIamPlan.outcomeBody builds from the estate's own reading (the verifier's verdict, computed, never modelled).
+   * Door: POST /api/ingest/outcome with the workflow's key, keyed on entity_id (the correlation id). Sent after the session is closed. Same rules as every send here: never throws, never sends a secret.
+   */
+  outcome: function (body) {
+    if (!body || !this.enabled()) return false;
+    return this._send('/api/ingest/outcome', body);
+  },
+
   type: 'ProvyIamTrace'
 };

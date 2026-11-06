@@ -151,5 +151,26 @@ ProvyIamPlan.prototype = {
     return { held: all, systems: systems, checked: names, summary: all ? 'every system checked is as asked' : 'not as asked in: ' + bad.join(', ') };
   },
 
+  /**
+   * The outcome Provy's contract is settled with, built ONLY from the verdict, which is computed from the estate's own reading. Returns null when it does not apply:
+   * no correlation (no work item to settle), a grant, or a command that did not check every system (a directory-only change does not answer "off-boarded from all systems").
+   * One boolean per system (`<system>_ended`), the count, `offboarded_all`, and a `reason_code` when it failed so Provy can tell kinds of failure apart.
+   */
+  outcomeBody: function (command, verdict, correlation, businessDate, occurredAt) {
+    if (!correlation || command === 'provy-iam-grant' || !verdict || !verdict.checked || !verdict.systems) return null;
+    if (verdict.checked.length !== this.SYSTEMS.length) return null;
+    var signals = { offboarded_all: !!verdict.held, systems_checked: verdict.checked.length };
+    var ended = 0, bad = [];
+    for (var i = 0; i < verdict.checked.length; i++) {
+      var n = verdict.checked[i];
+      var ok = !!(verdict.systems[n] && verdict.systems[n].held);
+      signals[n + '_ended'] = ok;
+      if (ok) ended++; else bad.push(n);
+    }
+    signals.systems_ended = ended;
+    if (bad.length) signals.reason_code = 'access_left_in_' + bad.join('_and_');
+    return { entity_id: String(correlation), business_date: businessDate, label: verdict.held ? 'success' : 'fail', source: 'confirmed', occurred_at: occurredAt, signals: signals };
+  },
+
   type: 'ProvyIamPlan'
 };

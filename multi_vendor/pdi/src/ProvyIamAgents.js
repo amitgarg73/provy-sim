@@ -91,6 +91,12 @@ ProvyIamAgents.prototype = {
       verification = this._verify(subject, p, trace);
       trace.step(this.WORKER, 'tool_call', result.status === 'ok' ? 'success' : 'error', { phase: 'reply', replied: result.status === 'ok' ? 'success' : 'fail', applied: (result.payload && result.payload.applied) || [] });
       trace.close(verification.summary, verification.held ? 'as_asked' : 'not_as_asked');
+      // the system of record settles the work item: one outcome per run, from the estate's own reading, keyed on the request number
+      try {
+        var nowIso = new GlideDateTime().getValue().replace(' ', 'T') + 'Z';
+        var outcome = this.plan.outcomeBody(subject, { held: verification.held, systems: verification.systems, checked: verification.checked }, p.correlation, nowIso.substring(0, 10), nowIso);
+        if (outcome) trace.outcome(outcome);
+      } catch (e3) { gs.warn('provy_iam agents: the outcome was not sent: ' + String(e3).substring(0, 100)); }
     } catch (e) {
       gs.warn('provy_iam agents: ' + String(e).substring(0, 160));
       if (!result) result = { status: 'error', payload: { error: 'the agents failed: ' + String(e).substring(0, 120) } };

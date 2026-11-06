@@ -1,981 +1,1196 @@
 [
- {
-  "kind": "validate",
-  "name": "all four applied by apply-change",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-apply-change",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "directory",
-       "sso",
-       "vpn",
-       "saas_token"
+  {
+    "kind": "validate",
+    "name": "all four applied by apply-change",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
       ]
-     }
+    },
+    "task": {
+      "command": "provy-iam-apply-change",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ]
+      }
+    },
+    "expect": {
+      "ok": true
     }
-   ]
   },
-  "task": {
-   "command": "provy-iam-apply-change",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "directory",
-     "sso",
-     "vpn",
-     "saas_token"
-    ]
-   }
-  },
-  "expect": {
-   "ok": true
-  }
- },
- {
-  "kind": "validate",
-  "name": "a subset the task named",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
+  {
+    "kind": "validate",
+    "name": "a subset the task named",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        }
       ]
-     }
+    },
+    "task": {
+      "command": "provy-iam-revoke",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "vpn",
+          "sso"
+        ]
+      }
+    },
+    "expect": {
+      "ok": true
     }
-   ]
   },
-  "task": {
-   "command": "provy-iam-revoke",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "vpn",
-     "sso"
-    ]
-   }
+  {
+    "kind": "validate",
+    "name": "two steps, directory then the rest",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-disable-account",
+          "params": {
+            "person": "provy.iam.spike01"
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-apply-change",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ]
+      }
+    },
+    "expect": {
+      "ok": true
+    }
   },
-  "expect": {
-   "ok": true
-  }
- },
- {
-  "kind": "validate",
-  "name": "two steps, directory then the rest",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-disable-account",
-     "params": {
+  {
+    "kind": "validate",
+    "name": "disable-account when the task names no systems",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-disable-account",
+          "params": {
+            "person": "provy.iam.spike01"
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-disable-account",
+      "params": {
+        "person": "provy.iam.spike01"
+      }
+    },
+    "expect": {
+      "ok": true
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "a grant that is allowed",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-grant",
+          "params": {
+            "person": "provy.iam.spike01",
+            "system": "saas_token",
+            "level": "read",
+            "expires_minutes": 30
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-grant",
+      "params": {
+        "person": "provy.iam.spike01",
+        "system": "saas_token",
+        "level": "read"
+      }
+    },
+    "expect": {
+      "ok": true
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "a different person",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.other",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-apply-change",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "step 1 names a different person"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "a command that is not allowed",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-delete-everything",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-apply-change",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "step 1 uses a command that is not allowed"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "a system the task did not name",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn",
+              "sso"
+            ]
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-revoke",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "vpn"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "step 1 names a system the task did not name"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "an unknown system",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "mainframe"
+            ]
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-revoke",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "vpn"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "step 1 names an unknown system"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "a person who is not a provy.iam person",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "alice",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-apply-change",
+      "params": {
+        "person": "alice",
+        "systems": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "the task person is not a provy.iam.* person"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "more than ten steps",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn"
+            ]
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-revoke",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "vpn"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "the plan has more than 10 steps"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "no steps",
+    "plan": {
+      "steps": []
+    },
+    "task": {
+      "command": "provy-iam-apply-change",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "the plan has no steps"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "not a plan",
+    "plan": {
+      "foo": 1
+    },
+    "task": {
+      "command": "provy-iam-apply-change",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "the plan has no steps list"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "a grant at a level that is not allowed",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-grant",
+          "params": {
+            "person": "provy.iam.spike01",
+            "system": "saas_token",
+            "level": "root"
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-grant",
+      "params": {
+        "person": "provy.iam.spike01",
+        "system": "saas_token"
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "step 1 grants a level that is not allowed"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "a grant with a huge expiry",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-grant",
+          "params": {
+            "person": "provy.iam.spike01",
+            "system": "saas_token",
+            "level": "read",
+            "expires_minutes": 99999
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-grant",
+      "params": {
+        "person": "provy.iam.spike01",
+        "system": "saas_token"
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "step 1 has an expiry outside 1 to 1440 minutes"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "a grant on the directory",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-grant",
+          "params": {
+            "person": "provy.iam.spike01",
+            "system": "directory",
+            "level": "read"
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-grant",
+      "params": {
+        "person": "provy.iam.spike01",
+        "system": "saas_token"
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "step 1 grants on a system that is not allowed"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "apply-change with no systems",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.spike01"
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-apply-change",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "step 1 names no systems"
+    }
+  },
+  {
+    "kind": "validate",
+    "name": "disable-account when the task named only vpn",
+    "plan": {
+      "steps": [
+        {
+          "command": "provy-iam-disable-account",
+          "params": {
+            "person": "provy.iam.spike01"
+          }
+        }
+      ]
+    },
+    "task": {
+      "command": "provy-iam-revoke",
+      "params": {
+        "person": "provy.iam.spike01",
+        "systems": [
+          "vpn"
+        ]
+      }
+    },
+    "expect": {
+      "ok": false,
+      "reason": "step 1 touches the directory, which the task did not name"
+    }
+  },
+  {
+    "kind": "taskPlan",
+    "name": "apply-change with no systems means all four",
+    "command": "provy-iam-apply-change",
+    "params": {
       "person": "provy.iam.spike01"
-     }
     },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "taskPlan",
+    "name": "revoke keeps the named order and drops unknown systems",
+    "command": "provy-iam-revoke",
+    "params": {
       "person": "provy.iam.spike01",
       "systems": [
-       "sso",
-       "vpn",
-       "saas_token"
+        "vpn",
+        "mainframe",
+        "sso",
+        "vpn"
       ]
-     }
+    },
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.spike01",
+            "systems": [
+              "vpn",
+              "sso"
+            ]
+          }
+        }
+      ]
     }
-   ]
   },
-  "task": {
-   "command": "provy-iam-apply-change",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "directory",
-     "sso",
-     "vpn",
-     "saas_token"
-    ]
-   }
+  {
+    "kind": "taskPlan",
+    "name": "disable-account takes no system list",
+    "command": "provy-iam-disable-account",
+    "params": {
+      "person": "provy.iam.spike01",
+      "systems": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ]
+    },
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-disable-account",
+          "params": {
+            "person": "provy.iam.spike01"
+          }
+        }
+      ]
+    }
   },
-  "expect": {
-   "ok": true
-  }
- },
- {
-  "kind": "validate",
-  "name": "disable-account when the task names no systems",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-disable-account",
-     "params": {
+  {
+    "kind": "taskPlan",
+    "name": "grant defaults",
+    "command": "provy-iam-grant",
+    "params": {
       "person": "provy.iam.spike01"
-     }
+    },
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-grant",
+          "params": {
+            "person": "provy.iam.spike01",
+            "system": "saas_token",
+            "level": "read"
+          }
+        }
+      ]
     }
-   ]
   },
-  "task": {
-   "command": "provy-iam-disable-account",
-   "params": {
-    "person": "provy.iam.spike01"
-   }
+  {
+    "kind": "verdict",
+    "name": "a clean leaver is held",
+    "command": "provy-iam-apply-change",
+    "params": {
+      "person": "provy.iam.spike01",
+      "systems": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ]
+    },
+    "reading": {
+      "account_active": false,
+      "groups_held": 0,
+      "roles_held": 0,
+      "estate": {
+        "sso": 0,
+        "vpn": 0,
+        "saas_token": 0
+      }
+    },
+    "expect": {
+      "held": true,
+      "systems": {
+        "directory": true,
+        "sso": true,
+        "vpn": true,
+        "saas_token": true
+      },
+      "summary": "every system checked is as asked"
+    }
   },
-  "expect": {
-   "ok": true
-  }
- },
- {
-  "kind": "validate",
-  "name": "a grant that is allowed",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-grant",
-     "params": {
+  {
+    "kind": "verdict",
+    "name": "vpn kept its access",
+    "command": "provy-iam-apply-change",
+    "params": {
+      "person": "provy.iam.spike01",
+      "systems": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ]
+    },
+    "reading": {
+      "account_active": false,
+      "groups_held": 0,
+      "roles_held": 0,
+      "estate": {
+        "sso": 0,
+        "vpn": 1,
+        "saas_token": 0
+      }
+    },
+    "expect": {
+      "held": false,
+      "systems": {
+        "directory": true,
+        "sso": true,
+        "vpn": false,
+        "saas_token": true
+      },
+      "summary": "not as asked in: vpn"
+    }
+  },
+  {
+    "kind": "verdict",
+    "name": "the account is still active",
+    "command": "provy-iam-apply-change",
+    "params": {
+      "person": "provy.iam.spike01",
+      "systems": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ]
+    },
+    "reading": {
+      "account_active": true,
+      "groups_held": 1,
+      "roles_held": 0,
+      "estate": {
+        "sso": 0,
+        "vpn": 0,
+        "saas_token": 0
+      }
+    },
+    "expect": {
+      "held": false,
+      "systems": {
+        "directory": false,
+        "sso": true,
+        "vpn": true,
+        "saas_token": true
+      },
+      "summary": "not as asked in: directory"
+    }
+  },
+  {
+    "kind": "verdict",
+    "name": "an unknown directory state is not held",
+    "command": "provy-iam-disable-account",
+    "params": {
+      "person": "provy.iam.spike01"
+    },
+    "reading": {
+      "estate": {}
+    },
+    "expect": {
+      "held": false,
+      "systems": {
+        "directory": false
+      }
+    }
+  },
+  {
+    "kind": "verdict",
+    "name": "a missing estate key is not read as ended",
+    "command": "provy-iam-revoke",
+    "params": {
+      "person": "provy.iam.spike01",
+      "systems": [
+        "vpn"
+      ]
+    },
+    "reading": {
+      "account_active": false,
+      "groups_held": 0,
+      "roles_held": 0,
+      "estate": {}
+    },
+    "expect": {
+      "held": false,
+      "systems": {
+        "vpn": false
+      }
+    }
+  },
+  {
+    "kind": "verdict",
+    "name": "only the named systems are judged",
+    "command": "provy-iam-revoke",
+    "params": {
+      "person": "provy.iam.spike01",
+      "systems": [
+        "sso"
+      ]
+    },
+    "reading": {
+      "account_active": false,
+      "groups_held": 0,
+      "roles_held": 0,
+      "estate": {
+        "sso": 0,
+        "vpn": 5,
+        "saas_token": 5
+      }
+    },
+    "expect": {
+      "held": true,
+      "systems": {
+        "sso": true
+      }
+    }
+  },
+  {
+    "kind": "verdict",
+    "name": "a grant that took",
+    "command": "provy-iam-grant",
+    "params": {
       "person": "provy.iam.spike01",
       "system": "saas_token",
-      "level": "read",
-      "expires_minutes": 30
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-grant",
-   "params": {
-    "person": "provy.iam.spike01",
-    "system": "saas_token",
-    "level": "read"
-   }
-  },
-  "expect": {
-   "ok": true
-  }
- },
- {
-  "kind": "validate",
-  "name": "a different person",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-apply-change",
-     "params": {
-      "person": "provy.iam.other",
-      "systems": [
-       "directory",
-       "sso",
-       "vpn",
-       "saas_token"
-      ]
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-apply-change",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "directory",
-     "sso",
-     "vpn",
-     "saas_token"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "step 1 names a different person"
-  }
- },
- {
-  "kind": "validate",
-  "name": "a command that is not allowed",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-delete-everything",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "directory",
-       "sso",
-       "vpn",
-       "saas_token"
-      ]
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-apply-change",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "directory",
-     "sso",
-     "vpn",
-     "saas_token"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "step 1 uses a command that is not allowed"
-  }
- },
- {
-  "kind": "validate",
-  "name": "a system the task did not name",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn",
-       "sso"
-      ]
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-revoke",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "vpn"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "step 1 names a system the task did not name"
-  }
- },
- {
-  "kind": "validate",
-  "name": "an unknown system",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "mainframe"
-      ]
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-revoke",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "vpn"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "step 1 names an unknown system"
-  }
- },
- {
-  "kind": "validate",
-  "name": "a person who is not a provy.iam person",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-apply-change",
-     "params": {
-      "person": "alice",
-      "systems": [
-       "directory",
-       "sso",
-       "vpn",
-       "saas_token"
-      ]
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-apply-change",
-   "params": {
-    "person": "alice",
-    "systems": [
-     "directory",
-     "sso",
-     "vpn",
-     "saas_token"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "the task person is not a provy.iam.* person"
-  }
- },
- {
-  "kind": "validate",
-  "name": "more than ten steps",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    },
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn"
-      ]
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-revoke",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "vpn"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "the plan has more than 10 steps"
-  }
- },
- {
-  "kind": "validate",
-  "name": "no steps",
-  "plan": {
-   "steps": []
-  },
-  "task": {
-   "command": "provy-iam-apply-change",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "directory",
-     "sso",
-     "vpn",
-     "saas_token"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "the plan has no steps"
-  }
- },
- {
-  "kind": "validate",
-  "name": "not a plan",
-  "plan": {
-   "foo": 1
-  },
-  "task": {
-   "command": "provy-iam-apply-change",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "directory",
-     "sso",
-     "vpn",
-     "saas_token"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "the plan has no steps list"
-  }
- },
- {
-  "kind": "validate",
-  "name": "a grant at a level that is not allowed",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-grant",
-     "params": {
-      "person": "provy.iam.spike01",
-      "system": "saas_token",
-      "level": "root"
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-grant",
-   "params": {
-    "person": "provy.iam.spike01",
-    "system": "saas_token"
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "step 1 grants a level that is not allowed"
-  }
- },
- {
-  "kind": "validate",
-  "name": "a grant with a huge expiry",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-grant",
-     "params": {
-      "person": "provy.iam.spike01",
-      "system": "saas_token",
-      "level": "read",
-      "expires_minutes": 99999
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-grant",
-   "params": {
-    "person": "provy.iam.spike01",
-    "system": "saas_token"
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "step 1 has an expiry outside 1 to 1440 minutes"
-  }
- },
- {
-  "kind": "validate",
-  "name": "a grant on the directory",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-grant",
-     "params": {
-      "person": "provy.iam.spike01",
-      "system": "directory",
       "level": "read"
-     }
+    },
+    "reading": {
+      "account_active": false,
+      "groups_held": 0,
+      "roles_held": 0,
+      "estate": {
+        "sso": 0,
+        "vpn": 0,
+        "saas_token": 1
+      }
+    },
+    "expect": {
+      "held": true,
+      "systems": {
+        "saas_token": true
+      }
     }
-   ]
   },
-  "task": {
-   "command": "provy-iam-grant",
-   "params": {
-    "person": "provy.iam.spike01",
-    "system": "saas_token"
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "step 1 grants on a system that is not allowed"
-  }
- },
- {
-  "kind": "validate",
-  "name": "apply-change with no systems",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-apply-change",
-     "params": {
-      "person": "provy.iam.spike01"
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-apply-change",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "directory",
-     "sso",
-     "vpn",
-     "saas_token"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "step 1 names no systems"
-  }
- },
- {
-  "kind": "validate",
-  "name": "disable-account when the task named only vpn",
-  "plan": {
-   "steps": [
-    {
-     "command": "provy-iam-disable-account",
-     "params": {
-      "person": "provy.iam.spike01"
-     }
-    }
-   ]
-  },
-  "task": {
-   "command": "provy-iam-revoke",
-   "params": {
-    "person": "provy.iam.spike01",
-    "systems": [
-     "vpn"
-    ]
-   }
-  },
-  "expect": {
-   "ok": false,
-   "reason": "step 1 touches the directory, which the task did not name"
-  }
- },
- {
-  "kind": "taskPlan",
-  "name": "apply-change with no systems means all four",
-  "command": "provy-iam-apply-change",
-  "params": {
-   "person": "provy.iam.spike01"
-  },
-  "expect": {
-   "steps": [
-    {
-     "command": "provy-iam-apply-change",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "directory",
-       "sso",
-       "vpn",
-       "saas_token"
-      ]
-     }
-    }
-   ]
-  }
- },
- {
-  "kind": "taskPlan",
-  "name": "revoke keeps the named order and drops unknown systems",
-  "command": "provy-iam-revoke",
-  "params": {
-   "person": "provy.iam.spike01",
-   "systems": [
-    "vpn",
-    "mainframe",
-    "sso",
-    "vpn"
-   ]
-  },
-  "expect": {
-   "steps": [
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "provy.iam.spike01",
-      "systems": [
-       "vpn",
-       "sso"
-      ]
-     }
-    }
-   ]
-  }
- },
- {
-  "kind": "taskPlan",
-  "name": "disable-account takes no system list",
-  "command": "provy-iam-disable-account",
-  "params": {
-   "person": "provy.iam.spike01",
-   "systems": [
-    "directory",
-    "sso",
-    "vpn",
-    "saas_token"
-   ]
-  },
-  "expect": {
-   "steps": [
-    {
-     "command": "provy-iam-disable-account",
-     "params": {
-      "person": "provy.iam.spike01"
-     }
-    }
-   ]
-  }
- },
- {
-  "kind": "taskPlan",
-  "name": "grant defaults",
-  "command": "provy-iam-grant",
-  "params": {
-   "person": "provy.iam.spike01"
-  },
-  "expect": {
-   "steps": [
-    {
-     "command": "provy-iam-grant",
-     "params": {
+  {
+    "kind": "verdict",
+    "name": "a grant that did not take",
+    "command": "provy-iam-grant",
+    "params": {
       "person": "provy.iam.spike01",
       "system": "saas_token",
       "level": "read"
-     }
+    },
+    "reading": {
+      "account_active": false,
+      "groups_held": 0,
+      "roles_held": 0,
+      "estate": {
+        "sso": 0,
+        "vpn": 0,
+        "saas_token": 0
+      }
+    },
+    "expect": {
+      "held": false,
+      "systems": {
+        "saas_token": false
+      }
     }
-   ]
-  }
- },
- {
-  "kind": "verdict",
-  "name": "a clean leaver is held",
-  "command": "provy-iam-apply-change",
-  "params": {
-   "person": "provy.iam.spike01",
-   "systems": [
-    "directory",
-    "sso",
-    "vpn",
-    "saas_token"
-   ]
   },
-  "reading": {
-   "account_active": false,
-   "groups_held": 0,
-   "roles_held": 0,
-   "estate": {
-    "sso": 0,
-    "vpn": 0,
-    "saas_token": 0
-   }
-  },
-  "expect": {
-   "held": true,
-   "systems": {
-    "directory": true,
-    "sso": true,
-    "vpn": true,
-    "saas_token": true
-   },
-   "summary": "every system checked is as asked"
-  }
- },
- {
-  "kind": "verdict",
-  "name": "vpn kept its access",
-  "command": "provy-iam-apply-change",
-  "params": {
-   "person": "provy.iam.spike01",
-   "systems": [
-    "directory",
-    "sso",
-    "vpn",
-    "saas_token"
-   ]
-  },
-  "reading": {
-   "account_active": false,
-   "groups_held": 0,
-   "roles_held": 0,
-   "estate": {
-    "sso": 0,
-    "vpn": 1,
-    "saas_token": 0
-   }
-  },
-  "expect": {
-   "held": false,
-   "systems": {
-    "directory": true,
-    "sso": true,
-    "vpn": false,
-    "saas_token": true
-   },
-   "summary": "not as asked in: vpn"
-  }
- },
- {
-  "kind": "verdict",
-  "name": "the account is still active",
-  "command": "provy-iam-apply-change",
-  "params": {
-   "person": "provy.iam.spike01",
-   "systems": [
-    "directory",
-    "sso",
-    "vpn",
-    "saas_token"
-   ]
-  },
-  "reading": {
-   "account_active": true,
-   "groups_held": 1,
-   "roles_held": 0,
-   "estate": {
-    "sso": 0,
-    "vpn": 0,
-    "saas_token": 0
-   }
-  },
-  "expect": {
-   "held": false,
-   "systems": {
-    "directory": false,
-    "sso": true,
-    "vpn": true,
-    "saas_token": true
-   },
-   "summary": "not as asked in: directory"
-  }
- },
- {
-  "kind": "verdict",
-  "name": "an unknown directory state is not held",
-  "command": "provy-iam-disable-account",
-  "params": {
-   "person": "provy.iam.spike01"
-  },
-  "reading": {
-   "estate": {}
-  },
-  "expect": {
-   "held": false,
-   "systems": {
-    "directory": false
-   }
-  }
- },
- {
-  "kind": "verdict",
-  "name": "a missing estate key is not read as ended",
-  "command": "provy-iam-revoke",
-  "params": {
-   "person": "provy.iam.spike01",
-   "systems": [
-    "vpn"
-   ]
-  },
-  "reading": {
-   "account_active": false,
-   "groups_held": 0,
-   "roles_held": 0,
-   "estate": {}
-  },
-  "expect": {
-   "held": false,
-   "systems": {
-    "vpn": false
-   }
-  }
- },
- {
-  "kind": "verdict",
-  "name": "only the named systems are judged",
-  "command": "provy-iam-revoke",
-  "params": {
-   "person": "provy.iam.spike01",
-   "systems": [
-    "sso"
-   ]
-  },
-  "reading": {
-   "account_active": false,
-   "groups_held": 0,
-   "roles_held": 0,
-   "estate": {
-    "sso": 0,
-    "vpn": 5,
-    "saas_token": 5
-   }
-  },
-  "expect": {
-   "held": true,
-   "systems": {
-    "sso": true
-   }
-  }
- },
- {
-  "kind": "verdict",
-  "name": "a grant that took",
-  "command": "provy-iam-grant",
-  "params": {
-   "person": "provy.iam.spike01",
-   "system": "saas_token",
-   "level": "read"
-  },
-  "reading": {
-   "account_active": false,
-   "groups_held": 0,
-   "roles_held": 0,
-   "estate": {
-    "sso": 0,
-    "vpn": 0,
-    "saas_token": 1
-   }
-  },
-  "expect": {
-   "held": true,
-   "systems": {
-    "saas_token": true
-   }
-  }
- },
- {
-  "kind": "verdict",
-  "name": "a grant that did not take",
-  "command": "provy-iam-grant",
-  "params": {
-   "person": "provy.iam.spike01",
-   "system": "saas_token",
-   "level": "read"
-  },
-  "reading": {
-   "account_active": false,
-   "groups_held": 0,
-   "roles_held": 0,
-   "estate": {
-    "sso": 0,
-    "vpn": 0,
-    "saas_token": 0
-   }
-  },
-  "expect": {
-   "held": false,
-   "systems": {
-    "saas_token": false
-   }
-  }
- },
- {
-  "kind": "parsePlan",
-  "name": "json with prose around it",
-  "text": "Here is the plan:\n{\"steps\":[{\"command\":\"provy-iam-revoke\",\"params\":{\"person\":\"p\",\"systems\":[\"vpn\"]}}]}\nHope that helps.",
-  "expect": {
-   "steps": [
-    {
-     "command": "provy-iam-revoke",
-     "params": {
-      "person": "p",
-      "systems": [
-       "vpn"
+  {
+    "kind": "parsePlan",
+    "name": "json with prose around it",
+    "text": "Here is the plan:\n{\"steps\":[{\"command\":\"provy-iam-revoke\",\"params\":{\"person\":\"p\",\"systems\":[\"vpn\"]}}]}\nHope that helps.",
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "p",
+            "systems": [
+              "vpn"
+            ]
+          }
+        }
       ]
-     }
     }
-   ]
+  },
+  {
+    "kind": "parsePlan",
+    "name": "no json at all",
+    "text": "I would revoke the vpn.",
+    "expect": null
+  },
+  {
+    "kind": "parsePlan",
+    "name": "broken json then a good block",
+    "text": "{oops} then {\"steps\":[]}",
+    "expect": {
+      "steps": []
+    }
+  },
+  {
+    "kind": "outcomeBody",
+    "name": "outcome: a clean leaver settles as success with a flag per system",
+    "command": "provy-iam-apply-change",
+    "verdict": {
+      "held": true,
+      "systems": {
+        "directory": {
+          "held": true
+        },
+        "sso": {
+          "held": true
+        },
+        "vpn": {
+          "held": true
+        },
+        "saas_token": {
+          "held": true
+        }
+      },
+      "checked": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ]
+    },
+    "correlation": "REQ0000030",
+    "businessDate": "2026-11-06",
+    "occurredAt": "2026-11-06T19:00:00Z",
+    "expect": {
+      "entity_id": "REQ0000030",
+      "business_date": "2026-11-06",
+      "label": "success",
+      "source": "confirmed",
+      "occurred_at": "2026-11-06T19:00:00Z",
+      "signals": {
+        "offboarded_all": true,
+        "systems_checked": 4,
+        "directory_ended": true,
+        "sso_ended": true,
+        "vpn_ended": true,
+        "saas_token_ended": true,
+        "systems_ended": 4
+      }
+    }
+  },
+  {
+    "kind": "outcomeBody",
+    "name": "outcome: vpn kept its access settles as fail with a reason",
+    "command": "provy-iam-apply-change",
+    "verdict": {
+      "held": false,
+      "systems": {
+        "directory": {
+          "held": true
+        },
+        "sso": {
+          "held": true
+        },
+        "vpn": {
+          "held": false
+        },
+        "saas_token": {
+          "held": true
+        }
+      },
+      "checked": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ]
+    },
+    "correlation": "REQ0000030",
+    "businessDate": "2026-11-06",
+    "occurredAt": "2026-11-06T19:00:00Z",
+    "expect": {
+      "entity_id": "REQ0000030",
+      "business_date": "2026-11-06",
+      "label": "fail",
+      "source": "confirmed",
+      "occurred_at": "2026-11-06T19:00:00Z",
+      "signals": {
+        "offboarded_all": false,
+        "systems_checked": 4,
+        "directory_ended": true,
+        "sso_ended": true,
+        "vpn_ended": false,
+        "saas_token_ended": true,
+        "systems_ended": 3,
+        "reason_code": "access_left_in_vpn"
+      }
+    }
+  },
+  {
+    "kind": "outcomeBody",
+    "name": "outcome: two systems left names both in the reason",
+    "command": "provy-iam-apply-change",
+    "verdict": {
+      "held": false,
+      "systems": {
+        "directory": {
+          "held": false
+        },
+        "sso": {
+          "held": true
+        },
+        "vpn": {
+          "held": false
+        },
+        "saas_token": {
+          "held": true
+        }
+      },
+      "checked": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ]
+    },
+    "correlation": "REQ0000030",
+    "businessDate": "2026-11-06",
+    "occurredAt": "2026-11-06T19:00:00Z",
+    "expect": {
+      "entity_id": "REQ0000030",
+      "business_date": "2026-11-06",
+      "label": "fail",
+      "source": "confirmed",
+      "occurred_at": "2026-11-06T19:00:00Z",
+      "signals": {
+        "offboarded_all": false,
+        "systems_checked": 4,
+        "directory_ended": false,
+        "sso_ended": true,
+        "vpn_ended": false,
+        "saas_token_ended": true,
+        "systems_ended": 2,
+        "reason_code": "access_left_in_directory_and_vpn"
+      }
+    }
+  },
+  {
+    "kind": "outcomeBody",
+    "name": "outcome: no correlation means no work item and nothing is sent",
+    "command": "provy-iam-apply-change",
+    "verdict": {
+      "held": true,
+      "systems": {
+        "directory": {
+          "held": true
+        },
+        "sso": {
+          "held": true
+        },
+        "vpn": {
+          "held": true
+        },
+        "saas_token": {
+          "held": true
+        }
+      },
+      "checked": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ]
+    },
+    "correlation": null,
+    "businessDate": "2026-11-06",
+    "occurredAt": "2026-11-06T19:00:00Z",
+    "expect": null
+  },
+  {
+    "kind": "outcomeBody",
+    "name": "outcome: a grant is never an off-boarding outcome",
+    "command": "provy-iam-grant",
+    "verdict": {
+      "held": true,
+      "systems": {
+        "vpn": {
+          "held": true
+        }
+      },
+      "checked": [
+        "vpn"
+      ]
+    },
+    "correlation": "REQ0000030",
+    "businessDate": "2026-11-06",
+    "occurredAt": "2026-11-06T19:00:00Z",
+    "expect": null
+  },
+  {
+    "kind": "outcomeBody",
+    "name": "outcome: a directory-only command does not answer all systems",
+    "command": "provy-iam-disable-account",
+    "verdict": {
+      "held": true,
+      "systems": {
+        "directory": {
+          "held": true
+        }
+      },
+      "checked": [
+        "directory"
+      ]
+    },
+    "correlation": "REQ0000030",
+    "businessDate": "2026-11-06",
+    "occurredAt": "2026-11-06T19:00:00Z",
+    "expect": null
   }
- },
- {
-  "kind": "parsePlan",
-  "name": "no json at all",
-  "text": "I would revoke the vpn.",
-  "expect": null
- },
- {
-  "kind": "parsePlan",
-  "name": "broken json then a good block",
-  "text": "{oops} then {\"steps\":[]}",
-  "expect": {
-   "steps": []
-  }
- }
 ]

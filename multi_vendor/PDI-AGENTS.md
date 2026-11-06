@@ -61,3 +61,11 @@ The PDI cannot run a server script from outside, so the rule that decides what m
 3. The copy deployed on the instance, through the plan-check door: `scripts/verify_pdi_agents.py`.
 
 If the three ever disagree, the vectors name the case. Not covered by a test, because it needs a key: a live model's plan and a live Provy ingest. The stub and the log mode cover the shapes.
+
+## The outcome the estate settles with (6 Nov)
+
+After the verifier reads the estate back and the session is closed, the agentic path posts ONE outcome to Provy: `POST /api/ingest/outcome` with the workflow's key (`provy.iam.trace.key`), keyed on `entity_id` = the correlation id (the root request number). The body is built by `ProvyIamPlan.outcomeBody` from the verifier's verdict, which is computed from the estate's own reading and never from model wording (a test enforces it):
+
+`{entity_id, business_date, label: success|fail, source: "confirmed", occurred_at, signals: {offboarded_all, systems_checked, systems_ended, directory_ended, sso_ended, vpn_ended, saas_token_ended, reason_code?}}`
+
+Sent only when there is a correlation id, the command is not a grant, and every system was checked (a directory-only command does not answer "off-boarded from all systems"). `provy.iam.trace.mode=log` shows the body in the system log and sends nothing. In Provy the contract's condition is mapped to `offboarded_all`, held when true. Mapping needs the readings to have arrived once, and work that settled before the mapping is not graded.

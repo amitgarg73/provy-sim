@@ -20,6 +20,7 @@
     else if (v.kind === 'taskPlan') { got = P.taskPlan(v.command, v.params); ok = JSON.stringify(got) === JSON.stringify(v.expect); }
     else if (v.kind === 'verdict') { got = P.verdict(v.command, v.params, v.reading); ok = subset(v.expect, got); }
     else if (v.kind === 'parsePlan') { got = P.parsePlan(v.text); ok = JSON.stringify(got) === JSON.stringify(v.expect); }
+    else if (v.kind === 'outcomeBody') { got = P.outcomeBody(v.command, v.verdict, v.correlation, v.businessDate, v.occurredAt); ok = JSON.stringify(got) === JSON.stringify(v.expect); }
     else { got = null; ok = false; }
     out.push(ok ? { name: v.name, kind: v.kind, ok: true } : { name: v.name, kind: v.kind, ok: false, got: got });
   }

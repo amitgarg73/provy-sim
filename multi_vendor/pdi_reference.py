@@ -167,3 +167,25 @@ def verdict(command: str, params: Optional[dict], reading: Optional[dict]) -> di
     bad = [n for n in names if not systems[n]["held"]]
     return {"held": not bad, "systems": systems, "checked": names,
             "summary": "every system checked is as asked" if not bad else "not as asked in: " + ", ".join(bad)}
+
+
+def outcome_body(command: str, verdict: Optional[dict], correlation: Optional[str], business_date: str, occurred_at: str) -> Optional[dict]:
+    """The outcome Provy's contract is settled with, from the verdict only. None when it does not apply (no work item, a grant, or not every system checked)."""
+    if not correlation or command == "provy-iam-grant" or not verdict or not verdict.get("checked") or not verdict.get("systems"):
+        return None
+    if len(verdict["checked"]) != len(SYSTEMS):
+        return None
+    signals: dict = {"offboarded_all": bool(verdict["held"]), "systems_checked": len(verdict["checked"])}
+    ended, bad = 0, []
+    for n in verdict["checked"]:
+        ok = bool(verdict["systems"].get(n, {}).get("held"))
+        signals[f"{n}_ended"] = ok
+        if ok:
+            ended += 1
+        else:
+            bad.append(n)
+    signals["systems_ended"] = ended
+    if bad:
+        signals["reason_code"] = "access_left_in_" + "_and_".join(bad)
+    return {"entity_id": str(correlation), "business_date": business_date, "label": "success" if verdict["held"] else "fail",
+            "source": "confirmed", "occurred_at": occurred_at, "signals": signals}
