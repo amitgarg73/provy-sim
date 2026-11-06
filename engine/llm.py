@@ -6,17 +6,19 @@ levers, never by what the model says. So when GROQ_API_KEY is absent (dry-run,
 tests, CI without a key), we return a deterministic templated string and the
 pipeline still runs end to end.
 
-Groq is free. Model: llama-3.3-70b-versatile. Endpoint:
+Groq is free. Model: openai/gpt-oss-120b (checked against Groq's model list on 6 Nov 2026; the earlier default, llama-3.3-70b-versatile, no
+longer exists there and answers 404, which this helper's blanket except turned into the stub silently). Endpoint:
 https://api.groq.com/openai/v1/chat/completions.
 """
 from __future__ import annotations
 
 import json
 import os
+import sys
 import urllib.request
 
 GROQ_BASE = os.environ.get("GROQ_BASE_URL", "https://api.groq.com/openai/v1").rstrip("/")
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
 
 class LLM:
@@ -46,11 +48,21 @@ class LLM:
                 user=prompt,
                 max_tokens=120,
             )
-            return text.strip() or self._stub(agent, role, context, decision)
-        except Exception:
+            if text.strip():
+                return text.strip()
+            self._say_once("the model returned empty text")
+            return self._stub(agent, role, context, decision)
+        except Exception as e:
+            self._say_once(f"{type(e).__name__}: {str(e)[:80]}")
             return self._stub(agent, role, context, decision)
 
     # ── internals ────────────────────────────────────────────────────────────
+
+    def _say_once(self, why: str) -> None:
+        """A live call failed and the stub was used. Said ONCE per helper (stderr), never per call: the stub is the right fallback, silence about it was the bug."""
+        if not getattr(self, "_said", False):
+            self._said = True
+            sys.stderr.write(f"[llm] live call failed, using the offline stub from here on ({why})\n")
 
     def _stub(self, agent: str, role: str, context: str, decision: str) -> str:
         ctx = context.replace("\n", " ").strip()
@@ -59,7 +71,7 @@ class LLM:
         return f"[{agent}] As the {role}, I reviewed the item ({ctx}) and concluded: {decision}."
 
     def _complete(self, system: str, user: str, max_tokens: int = 120) -> str:
-        body = json.dumps({
+        payload = {
             "model": GROQ_MODEL,
             "messages": [
                 {"role": "system", "content": system},
@@ -67,13 +79,21 @@ class LLM:
             ],
             "max_tokens": max_tokens,
             "temperature": 0.4,
-        }).encode()
+        }
+        # ⛔ gpt-oss IS A REASONING MODEL. Under a tight max_tokens it spends the whole budget on reasoning and returns EMPTY text (finish_reason "length"), which `reason` then
+        # turns into the stub without a word. A low reasoning effort keeps it short. Only for this family: a model that does not know the field answers 400.
+        if GROQ_MODEL.startswith("openai/gpt-oss"):
+            payload["reasoning_effort"] = "low"
+        body = json.dumps(payload).encode()
         req = urllib.request.Request(
             f"{GROQ_BASE}/chat/completions",
             data=body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
+                # ⛔ Groq sits behind Cloudflare, which rejects Python's default urllib identity with a 403 (error 1010). Without a User-Agent EVERY call failed
+                # and `reason` swallowed it into the stub, so the "live" reasoning was never live.
+                "User-Agent": "provy-sim/1.0",
             },
             method="POST",
         )
