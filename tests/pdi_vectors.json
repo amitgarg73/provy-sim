@@ -1333,5 +1333,773 @@
     "expect": {
       "fields": {}
     }
+  },
+  {
+    "kind": "call",
+    "name": "violating plan: other person",
+    "fn": "violatingPlan",
+    "args": [
+      "other_person",
+      {
+        "command": "provy-iam-apply-change",
+        "params": {
+          "person": "provy.iam.b001"
+        }
+      }
+    ],
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.bystander.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "call",
+    "name": "violating plan: extra system on a narrow task",
+    "fn": "violatingPlan",
+    "args": [
+      "extra_system",
+      {
+        "command": "provy-iam-revoke",
+        "params": {
+          "person": "provy.iam.b001",
+          "systems": [
+            "vpn"
+          ]
+        }
+      }
+    ],
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "vpn"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-revoke",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "call",
+    "name": "violating plan: extra system when the task named everything",
+    "fn": "violatingPlan",
+    "args": [
+      "extra_system",
+      {
+        "command": "provy-iam-apply-change",
+        "params": {
+          "person": "provy.iam.b001"
+        }
+      }
+    ],
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "call",
+    "name": "violating plan: bad command",
+    "fn": "violatingPlan",
+    "args": [
+      "bad_command",
+      {
+        "command": "provy-iam-apply-change",
+        "params": {
+          "person": "provy.iam.b001"
+        }
+      }
+    ],
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-delete-everything",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "call",
+    "name": "violating plan: too many steps",
+    "fn": "violatingPlan",
+    "args": [
+      "too_many_steps",
+      {
+        "command": "provy-iam-apply-change",
+        "params": {
+          "person": "provy.iam.b001"
+        }
+      }
+    ],
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        },
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "call",
+    "name": "violating plan: unknown kind",
+    "fn": "violatingPlan",
+    "args": [
+      "nonsense",
+      {
+        "command": "provy-iam-apply-change",
+        "params": {
+          "person": "provy.iam.b001"
+        }
+      }
+    ],
+    "expect": {
+      "steps": [
+        {
+          "command": "provy-iam-apply-change",
+          "params": {
+            "person": "provy.iam.b001",
+            "systems": [
+              "directory",
+              "sso",
+              "vpn",
+              "saas_token"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "call",
+    "name": "claim: an honest verifier claims what it computed",
+    "fn": "claimOf",
+    "args": [
+      {
+        "held": false,
+        "systems": {
+          "directory": {
+            "held": false,
+            "detail": "the account is still active, 0 group(s) and 0 role(s) held"
+          },
+          "sso": {
+            "held": true,
+            "detail": "sso holds no access"
+          },
+          "vpn": {
+            "held": false,
+            "detail": "vpn still holds 1 access item(s)"
+          },
+          "saas_token": {
+            "held": true,
+            "detail": "saas_token holds no access"
+          }
+        },
+        "checked": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ],
+        "summary": "not as asked in: directory, vpn"
+      },
+      false
+    ],
+    "expect": {
+      "held": false,
+      "systems": {
+        "directory": {
+          "held": false,
+          "detail": "the account is still active, 0 group(s) and 0 role(s) held"
+        },
+        "sso": {
+          "held": true,
+          "detail": "sso holds no access"
+        },
+        "vpn": {
+          "held": false,
+          "detail": "vpn still holds 1 access item(s)"
+        },
+        "saas_token": {
+          "held": true,
+          "detail": "saas_token holds no access"
+        }
+      },
+      "checked": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ],
+      "summary": "not as asked in: directory, vpn"
+    }
+  },
+  {
+    "kind": "call",
+    "name": "claim: an optimistic verifier claims held whatever the estate shows",
+    "fn": "claimOf",
+    "args": [
+      {
+        "held": false,
+        "systems": {
+          "directory": {
+            "held": false,
+            "detail": "the account is still active, 0 group(s) and 0 role(s) held"
+          },
+          "sso": {
+            "held": true,
+            "detail": "sso holds no access"
+          },
+          "vpn": {
+            "held": false,
+            "detail": "vpn still holds 1 access item(s)"
+          },
+          "saas_token": {
+            "held": true,
+            "detail": "saas_token holds no access"
+          }
+        },
+        "checked": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ],
+        "summary": "not as asked in: directory, vpn"
+      },
+      true
+    ],
+    "expect": {
+      "held": true,
+      "systems": {
+        "directory": {
+          "held": true,
+          "detail": "directory reported as done"
+        },
+        "sso": {
+          "held": true,
+          "detail": "sso reported as done"
+        },
+        "vpn": {
+          "held": true,
+          "detail": "vpn reported as done"
+        },
+        "saas_token": {
+          "held": true,
+          "detail": "saas_token reported as done"
+        }
+      },
+      "checked": [
+        "directory",
+        "sso",
+        "vpn",
+        "saas_token"
+      ],
+      "summary": "every system checked is as asked"
+    }
+  },
+  {
+    "kind": "verdict",
+    "name": "expiry sweep: nothing past expiry is held",
+    "command": "provy-iam-expire-grants",
+    "params": {},
+    "reading": {
+      "expired_grants_active": 0
+    },
+    "expect": {
+      "held": true,
+      "checked": [
+        "grants"
+      ]
+    }
+  },
+  {
+    "kind": "verdict",
+    "name": "expiry sweep: a grant past expiry and still active is not held",
+    "command": "provy-iam-expire-grants",
+    "params": {},
+    "reading": {
+      "expired_grants_active": 2
+    },
+    "expect": {
+      "held": false,
+      "checked": [
+        "grants"
+      ]
+    }
+  },
+  {
+    "kind": "verdict",
+    "name": "expiry sweep: an unknown state is not held",
+    "command": "provy-iam-expire-grants",
+    "params": {},
+    "reading": {},
+    "expect": {
+      "held": false
+    }
+  },
+  {
+    "kind": "call",
+    "name": "outcome: the target ended but another person changed is a failure",
+    "fn": "outcomeBody",
+    "args": [
+      "provy-iam-apply-change",
+      {
+        "held": true,
+        "systems": {
+          "directory": {
+            "held": true,
+            "detail": "the account is off and no group or role is held"
+          },
+          "sso": {
+            "held": true,
+            "detail": "sso holds no access"
+          },
+          "vpn": {
+            "held": true,
+            "detail": "vpn holds no access"
+          },
+          "saas_token": {
+            "held": true,
+            "detail": "saas_token holds no access"
+          }
+        },
+        "checked": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ],
+        "summary": "every system checked is as asked"
+      },
+      "REQ1",
+      "2026-11-06",
+      "2026-11-06T19:00:00Z",
+      {
+        "others_changed": 1
+      }
+    ],
+    "expect": {
+      "entity_id": "REQ1",
+      "business_date": "2026-11-06",
+      "label": "fail",
+      "source": "confirmed",
+      "occurred_at": "2026-11-06T19:00:00Z",
+      "signals": {
+        "offboarded_all": true,
+        "systems_checked": 4,
+        "directory_ended": true,
+        "sso_ended": true,
+        "vpn_ended": true,
+        "saas_token_ended": true,
+        "systems_ended": 4,
+        "others_changed": 1,
+        "no_collateral": false,
+        "reason_code": "collateral_changes"
+      }
+    }
+  },
+  {
+    "kind": "call",
+    "name": "outcome: the target ended and no one else changed is a success with the count",
+    "fn": "outcomeBody",
+    "args": [
+      "provy-iam-apply-change",
+      {
+        "held": true,
+        "systems": {
+          "directory": {
+            "held": true,
+            "detail": "the account is off and no group or role is held"
+          },
+          "sso": {
+            "held": true,
+            "detail": "sso holds no access"
+          },
+          "vpn": {
+            "held": true,
+            "detail": "vpn holds no access"
+          },
+          "saas_token": {
+            "held": true,
+            "detail": "saas_token holds no access"
+          }
+        },
+        "checked": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ],
+        "summary": "every system checked is as asked"
+      },
+      "REQ1",
+      "2026-11-06",
+      "2026-11-06T19:00:00Z",
+      {
+        "others_changed": 0
+      }
+    ],
+    "expect": {
+      "entity_id": "REQ1",
+      "business_date": "2026-11-06",
+      "label": "success",
+      "source": "confirmed",
+      "occurred_at": "2026-11-06T19:00:00Z",
+      "signals": {
+        "offboarded_all": true,
+        "systems_checked": 4,
+        "directory_ended": true,
+        "sso_ended": true,
+        "vpn_ended": true,
+        "saas_token_ended": true,
+        "systems_ended": 4,
+        "others_changed": 0,
+        "no_collateral": true
+      }
+    }
+  },
+  {
+    "kind": "call",
+    "name": "outcome: access left AND a bystander changed names the access first",
+    "fn": "outcomeBody",
+    "args": [
+      "provy-iam-apply-change",
+      {
+        "held": false,
+        "systems": {
+          "directory": {
+            "held": false,
+            "detail": "the account is still active, 0 group(s) and 0 role(s) held"
+          },
+          "sso": {
+            "held": true,
+            "detail": "sso holds no access"
+          },
+          "vpn": {
+            "held": false,
+            "detail": "vpn still holds 1 access item(s)"
+          },
+          "saas_token": {
+            "held": true,
+            "detail": "saas_token holds no access"
+          }
+        },
+        "checked": [
+          "directory",
+          "sso",
+          "vpn",
+          "saas_token"
+        ],
+        "summary": "not as asked in: directory, vpn"
+      },
+      "REQ1",
+      "2026-11-06",
+      "2026-11-06T19:00:00Z",
+      {
+        "others_changed": 2
+      }
+    ],
+    "expect": {
+      "entity_id": "REQ1",
+      "business_date": "2026-11-06",
+      "label": "fail",
+      "source": "confirmed",
+      "occurred_at": "2026-11-06T19:00:00Z",
+      "signals": {
+        "offboarded_all": false,
+        "systems_checked": 4,
+        "directory_ended": false,
+        "sso_ended": true,
+        "vpn_ended": false,
+        "saas_token_ended": true,
+        "systems_ended": 2,
+        "others_changed": 2,
+        "no_collateral": false,
+        "reason_code": "access_left_in_directory_and_vpn"
+      }
+    }
+  },
+  {
+    "kind": "call",
+    "name": "outcome: a grant that did not expire settles as a failure",
+    "fn": "outcomeBody",
+    "args": [
+      "provy-iam-expire-grants",
+      {
+        "held": false,
+        "systems": {
+          "grants": {
+            "held": false,
+            "detail": "2 time-limited grant(s) are past their expiry and still active"
+          }
+        },
+        "checked": [
+          "grants"
+        ],
+        "summary": "not as asked in: grants"
+      },
+      "REQ9",
+      "2026-11-06",
+      "2026-11-06T19:00:00Z",
+      {
+        "expired_grants_active": 2
+      }
+    ],
+    "expect": {
+      "entity_id": "REQ9",
+      "business_date": "2026-11-06",
+      "label": "fail",
+      "source": "confirmed",
+      "occurred_at": "2026-11-06T19:00:00Z",
+      "signals": {
+        "grants_expired": false,
+        "expired_grants_active": 2,
+        "reason_code": "grants_not_expired"
+      }
+    }
+  },
+  {
+    "kind": "call",
+    "name": "outcome: every grant expired settles as a success",
+    "fn": "outcomeBody",
+    "args": [
+      "provy-iam-expire-grants",
+      {
+        "held": true,
+        "systems": {
+          "grants": {
+            "held": true,
+            "detail": "no time-limited grant is past its expiry and still active"
+          }
+        },
+        "checked": [
+          "grants"
+        ],
+        "summary": "every time-limited grant has expired"
+      },
+      "REQ9",
+      "2026-11-06",
+      "2026-11-06T19:00:00Z",
+      {
+        "expired_grants_active": 0
+      }
+    ],
+    "expect": {
+      "entity_id": "REQ9",
+      "business_date": "2026-11-06",
+      "label": "success",
+      "source": "confirmed",
+      "occurred_at": "2026-11-06T19:00:00Z",
+      "signals": {
+        "grants_expired": true,
+        "expired_grants_active": 0
+      }
+    }
+  },
+  {
+    "kind": "call",
+    "name": "decision: a plan applied without the guard says so",
+    "fn": "decisionOf",
+    "args": [
+      {
+        "steps": [
+          {
+            "command": "provy-iam-apply-change",
+            "params": {
+              "person": "provy.iam.b001",
+              "systems": [
+                "directory",
+                "sso",
+                "vpn",
+                "saas_token"
+              ]
+            }
+          }
+        ]
+      },
+      "unchecked",
+      null
+    ],
+    "expect": {
+      "chosen": "provy-iam-apply-change [directory, sso, vpn, saas_token]",
+      "alternatives": [],
+      "rationale": "the model's plan was applied WITHOUT the allow-list check"
+    }
   }
 ]

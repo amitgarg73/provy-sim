@@ -36,16 +36,21 @@ ProvyIamAgents.prototype = {
   _decide: function (subject, params, trace) {
     var task = { command: subject, params: params };
     var own = this.plan.taskPlan(subject, params);
-    var answer = this.model.complete(this._planPrompt(subject, params), 'plan', { stub: JSON.stringify(own), system: 'You plan access changes. Reply with JSON only.' });
+    // SCENARIO LEVERS (provy.iam.fault, per person): model_plan makes the "model" propose a plan that breaks policy, guard=bypass lets it through unchecked.
+    var faults = this.estate._faults(params && params.person);
+    var answer;
+    if (faults.model_plan) answer = { ok: true, mode: 'fault', text: JSON.stringify(this.plan.violatingPlan(faults.model_plan, task)) };
+    else answer = this.model.complete(this._planPrompt(subject, params), 'plan', { stub: JSON.stringify(own), system: 'You plan access changes. Reply with JSON only.' });
     var proposed = answer.ok ? this.plan.parsePlan(answer.text) : null;
     var source = 'model', rejected = null, chosen = proposed;
     if (!answer.ok) { source = 'task'; rejected = 'the model did not answer (' + answer.error + ')'; chosen = own; }
     else if (!proposed) { source = 'task'; rejected = 'the model answer held no plan'; chosen = own; }
     else {
       var v = this.plan.validate(proposed, task);
-      if (!v.ok) { source = 'task'; rejected = v.reason; chosen = own; }
+      if (!v.ok && faults.guard === 'bypass') { source = 'unchecked'; }
+      else if (!v.ok) { source = 'task'; rejected = v.reason; chosen = own; }
     }
-    if (answer.mode === 'stub' && !rejected) source = 'stub';
+    if (answer.mode === 'stub' && !rejected && source !== 'unchecked') source = 'stub';
     // a DECISION step: the agent chose a plan from the task. Provy counts steps of type decision or agent_message that carry a decision object.
     trace.step(this.APPLIER, 'decision', 'success', { phase: 'plan', plan_source: source, model_mode: answer.mode, plan: chosen, rejected_reason: rejected }, { model: this.model.label(), decision: this.plan.decisionOf(chosen, source, rejected) });
     return { plan: chosen, source: source, rejected: rejected };
@@ -79,11 +84,12 @@ ProvyIamAgents.prototype = {
   _verify: function (subject, params, trace) {
     var reading = this.estate.read(params.person);
     var verdict = this.plan.verdict(subject, params, reading);
+    var claim = this.plan.claimOf(verdict, this.estate._faults(params && params.person).verifier === 'optimistic');
     var wording = this.model.complete('State in one plain sentence what this reading means for the access change. Reading: ' + JSON.stringify(verdict.systems), 'finding', { stub: verdict.summary, system: 'You word a finding in one sentence. Do not change the facts.' });
     var finding = (wording.ok && wording.text) ? String(wording.text).substring(0, 400) : verdict.summary;
-    trace.step(this.VERIFIER, 'message', 'success', { phase: 'verify', held: verdict.held, checked: verdict.checked, systems: this._forTrace(verdict.systems), finding: finding, summary: verdict.summary },
+    trace.step(this.VERIFIER, 'message', 'success', { phase: 'verify', held: claim.held, checked: claim.checked, systems: this._forTrace(claim.systems), finding: claim.held === verdict.held ? finding : claim.summary, summary: claim.summary },
       { model: this.model.label() });
-    return { held: verdict.held, systems: verdict.systems, checked: verdict.checked, summary: verdict.summary, finding: finding, reading: reading };
+    return { held: verdict.held, claimed_held: claim.held, claim_summary: claim.summary, systems: verdict.systems, checked: verdict.checked, summary: verdict.summary, finding: finding, reading: reading };
   },
 
   process: function (subject, params, queueItemId) {
@@ -101,11 +107,11 @@ ProvyIamAgents.prototype = {
       else result = { status: 'ok', payload: { person: p.person, command: subject, applied: done.applied } };
       verification = this._verify(subject, p, trace);
       trace.step(this.WORKER, 'tool_call', result.status === 'ok' ? 'success' : 'error', { phase: 'reply', replied: result.status === 'ok' ? 'success' : 'fail', applied: (result.payload && result.payload.applied) || [] });
-      trace.close(verification.summary, verification.held ? 'as_asked' : 'not_as_asked');
+      trace.close(verification.claim_summary, verification.claimed_held ? 'as_asked' : 'not_as_asked');
       // the system of record settles the work item: one outcome per run, from the estate's own reading, keyed on the request number
       try {
         var nowIso = new GlideDateTime().getValue().replace(' ', 'T') + 'Z';
-        var outcome = this.plan.outcomeBody(subject, { held: verification.held, systems: verification.systems, checked: verification.checked }, p.correlation, nowIso.substring(0, 10), nowIso);
+        var outcome = this.plan.outcomeBody(subject, { held: verification.held, systems: verification.systems, checked: verification.checked }, p.correlation, nowIso.substring(0, 10), nowIso, { others_changed: verification.reading && verification.reading.others_changed, expired_grants_active: verification.reading && verification.reading.expired_grants_active });
         if (outcome) trace.outcome(outcome);
       } catch (e3) { gs.warn('provy_iam agents: the outcome was not sent: ' + String(e3).substring(0, 100)); }
     } catch (e) {

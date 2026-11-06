@@ -23,9 +23,22 @@ ProvyIamEstate.prototype = {
     return !!tok && auth === 'Bearer ' + tok;
   },
 
-  _faults: function () {
-    try { return JSON.parse(gs.getProperty('provy.iam.fault', '{}')) || {}; } catch (e) { return {}; }
+  /**
+   * The fault map for one person. The property is JSON: top-level keys apply to everyone, and `persons` holds a map per person, so ONE batch can carry a different failure for each
+   * request: {"vpn":"accept_not_apply","persons":{"provy.iam.b007":{"over_reach":["vpn"]}}}. Keys: <system>: accept_not_apply; over_reach: [systems also revoked for the person's bystander];
+   * expiry_sweep: accept_not_apply; model_plan, guard and verifier are read by ProvyIamAgents.
+   */
+  _faults: function (person) {
+    var all = {};
+    try { all = JSON.parse(gs.getProperty('provy.iam.fault', '{}')) || {}; } catch (e) { return {}; }
+    var out = {};
+    for (var k in all) if (all.hasOwnProperty(k) && k !== 'persons') out[k] = all[k];
+    var mine = (person && all.persons && all.persons[person]) || {};
+    for (var m in mine) if (mine.hasOwnProperty(m)) out[m] = mine[m];
+    return out;
   },
+  /** The bystander a person's request could wrongly touch: a second simulated person named after the first, so a reading can count changes to people the task did not name. */
+  bystanderOf: function (person) { return 'provy.iam.bystander.' + String(person || '').substring(10); },
   _user: function (person) {
     var u = new GlideRecord('sys_user');
     u.addQuery('user_name', person);
@@ -69,6 +82,17 @@ ProvyIamEstate.prototype = {
       remaining += n;
     }
     out.access_remaining = remaining;
+    // people the task did not name: the bystander's revoked access rows and a disabled bystander account
+    var by = this.bystanderOf(person);
+    var bu = this._user(by);
+    if (bu) {
+      var changed = this._count('u_provy_iam_access', 'u_person', by, 'u_state=revoked');
+      if (!(bu.getValue('active') == '1' || bu.getValue('active') == 'true')) changed += 1;
+      out.others_changed = changed;
+    }
+    // time-limited grants still active past their expiry
+    var now = new GlideDateTime().getValue();
+    out.expired_grants_active = this._count('u_provy_iam_access', 'u_person', person, 'u_kind=grant^u_state=active^u_expires<' + "javascript:gs.dateGenerate('" + now.substring(0, 10) + "','" + now.substring(11) + "')");
     return out;
   },
 
@@ -77,7 +101,7 @@ ProvyIamEstate.prototype = {
     p = p || {};
     var person = p.person;
     if (!person) return { status: 'error', payload: { error: 'person is required' } };
-    var faults = this._faults();
+    var faults = this._faults(person);
     var done = [], skipped = [];
     var self = this;
 
@@ -102,7 +126,30 @@ ProvyIamEstate.prototype = {
       done.push(system);
     }
 
-    if (command === 'provy-iam-disable-account') { disableDirectory(); removeGroups(); }
+    function overReach() {
+      var systems = faults.over_reach || [];
+      if (!systems.length) return;
+      var by = self.bystanderOf(person);
+      for (var q = 0; q < systems.length; q++) {
+        if (systems[q] === 'directory') { var bu = self._user(by); if (bu) { bu.setValue('active', false); bu.update(); } }
+        else { var rs = self._rows(by, systems[q]); while (rs.next()) { rs.setValue('u_state', 'revoked'); rs.update(); } }
+      }
+    }
+
+    if (command === 'provy-iam-expire-grants') {
+      // the time-limited-access sweep: revoke every active grant past its expiry, unless the scenario says the sweep does nothing
+      var gr = new GlideRecord('u_provy_iam_access');
+      gr.addQuery('u_person', person); gr.addQuery('u_kind', 'grant'); gr.addQuery('u_state', 'active');
+      gr.query();
+      var now2 = new GlideDateTime().getValue();
+      while (gr.next()) {
+        var ex = gr.getValue('u_expires');
+        if (!ex || ex >= now2) continue;
+        if (faults.expiry_sweep === 'accept_not_apply') { skipped.push(gr.getValue('u_system')); continue; }
+        gr.setValue('u_state', 'revoked'); gr.update(); done.push(gr.getValue('u_system'));
+      }
+    }
+    else if (command === 'provy-iam-disable-account') { disableDirectory(); removeGroups(); }
     else if (command === 'provy-iam-remove-groups') { removeGroups(); }
     else if (command === 'provy-iam-revoke') {
       var sys = p.systems || (p.system ? [p.system] : []);
@@ -129,6 +176,7 @@ ProvyIamEstate.prototype = {
     }
     else return { status: 'error', payload: { error: 'unknown command ' + command } };
 
+    overReach();
     // The honest answer a tool gives: what it was asked to do and did. It cannot see what it skipped.
     return { status: 'ok', payload: { person: person, command: command, applied: done.concat(skipped) } };
   },

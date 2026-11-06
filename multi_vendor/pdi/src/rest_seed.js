@@ -20,6 +20,15 @@
     if (!a.next()) { a.initialize(); a.setValue('u_person', person); a.setValue('u_system', systems[i]); a.setValue('u_kind', systems[i] === 'sso' ? 'session' : 'token'); a.setValue('u_simulated', true); }
     a.setValue('u_state', 'active'); if (a.isNewRecord()) a.insert(); else a.update();
   }
+  if (!b.expired_grant) { var og = new GlideRecord('u_provy_iam_access'); og.addQuery('u_person', person); og.addQuery('u_kind', 'grant'); og.query(); og.deleteMultiple(); }
+  if (b.expired_grant) {
+    // a time-limited grant whose expiry has already passed and which is still active: what the expiry sweep has to remove
+    var past = new GlideDateTime(); past.addSeconds(-3600);
+    var eg = new GlideRecord('u_provy_iam_access'); eg.addQuery('u_person', person); eg.addQuery('u_kind', 'grant'); eg.query();
+    if (!eg.next()) { eg.initialize(); eg.setValue('u_person', person); eg.setValue('u_system', 'saas_token'); eg.setValue('u_kind', 'grant'); eg.setValue('u_level', 'write'); eg.setValue('u_simulated', true); }
+    eg.setValue('u_state', 'active'); eg.setValue('u_expires', past.getValue());
+    if (eg.isNewRecord()) eg.insert(); else eg.update();
+  }
   if (b.reprovision_in_minutes) {
     var d = new GlideDateTime(); d.addSeconds(parseInt(b.reprovision_in_minutes, 10) * 60);
     var h = new GlideRecord('u_provy_iam_hr_event'); h.initialize(); h.setValue('u_person', person); h.setValue('u_action', 'reprovision'); h.setValue('u_due', d.getValue()); h.setValue('u_done', false); h.insert();

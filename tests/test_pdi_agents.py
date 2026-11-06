@@ -84,7 +84,7 @@ def test_a_refused_plan_falls_back_to_the_tasks_own_plan_which_is_always_valid()
 def test_the_outcome_is_sent_after_the_session_closes_and_only_from_the_built_body():
     """The wiring, read from the deployed file: the outcome goes out after trace.close, built by ProvyIamPlan.outcomeBody from the verifier's verdict, never from model wording."""
     src = open(os.path.join(HERE, "..", "multi_vendor", "pdi", "src", "ProvyIamAgents.js")).read()
-    assert src.index("trace.close(verification.summary") < src.index("this.plan.outcomeBody(") < src.index("trace.outcome(outcome)")
+    assert src.index("trace.close(verification.claim_summary") < src.index("this.plan.outcomeBody(") < src.index("trace.outcome(outcome)")
     block = src[src.index("this.plan.outcomeBody("):src.index("trace.outcome(outcome)")]
     assert "finding" not in block and "wording" not in block
 
@@ -94,7 +94,7 @@ def test_the_verify_step_never_repeats_a_top_level_name_inside_its_systems():
     import re
     src = open(os.path.join(HERE, "..", "multi_vendor", "pdi", "src", "ProvyIamAgents.js")).read()
     step = next(l for l in src.splitlines() if "phase: 'verify'" in l)
-    assert "systems: this._forTrace(verdict.systems)" in step and "systems: verdict.systems" not in step
+    assert "systems: this._forTrace(claim.systems)" in step and "systems: verdict.systems" not in step and "systems: claim.systems" not in step
     helper = src[src.index("_forTrace: function"):src.index("_verify: function")]
     assert "ended:" in helper and not re.search(r"\bheld\s*:", helper.split("function (systems)")[1])
     assert "estate_" not in src
@@ -107,3 +107,32 @@ def test_the_plan_step_is_a_decision_step_and_the_session_opens_with_what_was_re
     assert "this.plan.handoffIn(p)" in src
     trace = open(os.path.join(HERE, "..", "multi_vendor", "pdi", "src", "ProvyIamTrace.js")).read()
     assert "body.handoff_in = handoffIn" in trace
+
+
+# ---- the failure levers (6 Nov 2026): semantics that do not depend on the Python twin being right -------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("kind", ["other_person", "extra_system", "bad_command", "too_many_steps"])
+def test_every_policy_breaking_plan_is_refused_by_the_allow_list(kind):
+    task = {"command": "provy-iam-revoke", "params": {"person": "provy.iam.b001", "systems": ["vpn"]}}
+    plan = ref.violating_plan(kind, task)
+    assert ref.validate(plan, task)["ok"] is False, kind
+
+
+def test_a_task_with_nothing_to_overreach_on_never_violates_by_accident():
+    task = {"command": "provy-iam-apply-change", "params": {"person": "provy.iam.b001"}}
+    assert ref.validate(ref.violating_plan("extra_system", task), task) == {"ok": True}
+    assert ref.validate(ref.violating_plan("not-a-kind", task), task) == {"ok": True}
+
+
+def test_an_optimistic_claim_never_changes_the_verdict_the_outcome_is_built_from():
+    reading = {"account_active": True, "groups_held": 0, "roles_held": 0, "estate": {"sso": 0, "vpn": 1, "saas_token": 0}}
+    v = ref.verdict("provy-iam-apply-change", {"person": "provy.iam.b001"}, reading)
+    assert v["held"] is False and ref.claim_of(v, True)["held"] is True and v["held"] is False
+    body = ref.outcome_body("provy-iam-apply-change", v, "REQ1", "2026-11-06", "t", {"others_changed": 0})
+    assert body["label"] == "fail" and body["signals"]["offboarded_all"] is False
+
+
+def test_the_agents_use_the_computed_verdict_for_the_outcome_and_the_claim_for_the_session_only():
+    src = open(os.path.join(HERE, "..", "multi_vendor", "pdi", "src", "ProvyIamAgents.js")).read()
+    block = src[src.index("this.plan.outcomeBody("):src.index("trace.outcome(outcome)")]
+    assert "claim" not in block.lower()

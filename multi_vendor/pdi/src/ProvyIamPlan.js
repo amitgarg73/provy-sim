@@ -9,7 +9,7 @@
  */
 var ProvyIamPlan = Class.create();
 ProvyIamPlan.prototype = {
-  COMMANDS: ['provy-iam-disable-account', 'provy-iam-remove-groups', 'provy-iam-revoke', 'provy-iam-apply-change', 'provy-iam-grant'],
+  COMMANDS: ['provy-iam-disable-account', 'provy-iam-remove-groups', 'provy-iam-revoke', 'provy-iam-apply-change', 'provy-iam-grant', 'provy-iam-expire-grants'],
   SYSTEMS: ['directory', 'sso', 'vpn', 'saas_token'],
   GRANT_SYSTEMS: ['sso', 'vpn', 'saas_token'],
   GRANT_LEVELS: ['read', 'write', 'admin'],
@@ -130,6 +130,13 @@ ProvyIamPlan.prototype = {
     var names = (command === 'provy-iam-grant') ? [String((params && params.system) || 'saas_token')] : this.taskSystems(params || {});
     if (command === 'provy-iam-disable-account' || command === 'provy-iam-remove-groups') names = ['directory'];
     else if (!names.length) names = this.SYSTEMS.slice();
+    if (command === 'provy-iam-expire-grants') {
+      var left = Number(r.expired_grants_active);
+      var known2 = !isNaN(left);
+      var ok = known2 && left === 0;
+      var one = { grants: { held: ok, detail: !known2 ? 'the state of the time-limited grants is unknown' : (ok ? 'no time-limited grant is past its expiry and still active' : left + ' time-limited grant(s) are past their expiry and still active') } };
+      return { held: ok, systems: one, checked: ['grants'], summary: ok ? 'every time-limited grant has expired' : 'not as asked in: grants' };
+    }
     var granting = command === 'provy-iam-grant';
     for (var i = 0; i < names.length; i++) {
       var n = names[i], held, detail;
@@ -172,6 +179,8 @@ ProvyIamPlan.prototype = {
     if (source === 'task' && rejected) {
       d.alternatives.push('the model\'s plan');
       d.rationale = 'the model\'s plan was refused (' + String(rejected).substring(0, 160) + '), so the task\'s own plan was used';
+    } else if (source === 'unchecked') {
+      d.rationale = 'the model\'s plan was applied WITHOUT the allow-list check';
     } else if (source === 'stub') {
       d.rationale = 'offline stub: the task\'s own plan';
     } else {
@@ -191,12 +200,60 @@ ProvyIamPlan.prototype = {
   },
 
   /**
-   * The outcome Provy's contract is settled with, built ONLY from the verdict, which is computed from the estate's own reading. Returns null when it does not apply:
+   * A plan that BREAKS POLICY, for the scenarios that test the guard: the model "proposes" it, `validate` must refuse it. kind: other_person (the same change aimed at someone the task did not name),
+   * extra_system (a second step reaching systems the task did not name), bad_command (a command this POC does not allow), too_many_steps. An unknown kind or a task that leaves nothing to
+   * overreach on returns the task's own plan, so a scenario can never "violate" by accident.
+   */
+  violatingPlan: function (kind, task) {
+    var t = task || {};
+    var own = this.taskPlan(t.command, t.params || {});
+    var base = own.steps[0];
+    var plan = { steps: [JSON.parse(JSON.stringify(base))] };
+    if (kind === 'other_person') {
+      plan.steps[0].params.person = this.PERSON_PREFIX + 'bystander.' + String((t.params && t.params.person) || '').substring(this.PERSON_PREFIX.length);
+    } else if (kind === 'extra_system') {
+      var named = (base.params && base.params.systems) || [];
+      var extra = [];
+      for (var i = 0; i < this.SYSTEMS.length; i++) if (!this._has(named, this.SYSTEMS[i])) extra.push(this.SYSTEMS[i]);
+      if (!extra.length) return own;
+      plan.steps.push({ command: 'provy-iam-revoke', params: { person: base.params.person, systems: extra } });
+    } else if (kind === 'bad_command') {
+      plan.steps[0].command = 'provy-iam-delete-everything';
+    } else if (kind === 'too_many_steps') {
+      plan.steps = [];
+      for (var k = 0; k < this.MAX_STEPS + 1; k++) plan.steps.push(JSON.parse(JSON.stringify(base)));
+    } else return own;
+    return plan;
+  },
+
+  /**
+   * What the verifier SAYS about the run, as against what it computed. An optimistic verifier (a scenario's lever) claims every system is as asked whatever the estate shows:
+   * the agent's word against the system of record's. Honest means the claim equals the verdict.
+   */
+  claimOf: function (verdict, optimistic) {
+    if (!optimistic) return { held: !!verdict.held, systems: verdict.systems, checked: verdict.checked, summary: verdict.summary };
+    var sys = {};
+    for (var i = 0; i < verdict.checked.length; i++) sys[verdict.checked[i]] = { held: true, detail: verdict.checked[i] + ' reported as done' };
+    return { held: true, systems: sys, checked: verdict.checked, summary: 'every system checked is as asked' };
+  },
+
+  /**
+   * The outcome Provy's contract is settled with, built ONLY from the verdict and the estate's own counts, never from anything an agent said. Returns null when it does not apply:
    * no correlation (no work item to settle), a grant, or a command that did not check every system (a directory-only change does not answer "off-boarded from all systems").
    * One boolean per system (`<system>_ended`), the count, `offboarded_all`, and a `reason_code` when it failed so Provy can tell kinds of failure apart.
+   * `extras` are counts the estate reads beside the verdict: `others_changed` (people the task did not name whose access changed) and `expired_grants_active`.
+   * A run is WRONG when the target's access did not end OR another person's access changed, so a leaver that ended with a bystander's VPN revoked settles as a failure.
    */
-  outcomeBody: function (command, verdict, correlation, businessDate, occurredAt) {
+  outcomeBody: function (command, verdict, correlation, businessDate, occurredAt, extras) {
+    var x = extras || {};
     if (!correlation || command === 'provy-iam-grant' || !verdict || !verdict.checked || !verdict.systems) return null;
+    if (command === 'provy-iam-expire-grants') {
+      var open = Number(x.expired_grants_active);
+      var sig = { grants_expired: !!verdict.held };
+      if (!isNaN(open)) sig.expired_grants_active = open;
+      if (!verdict.held) sig.reason_code = 'grants_not_expired';
+      return { entity_id: String(correlation), business_date: businessDate, label: verdict.held ? 'success' : 'fail', source: 'confirmed', occurred_at: occurredAt, signals: sig };
+    }
     if (verdict.checked.length !== this.SYSTEMS.length) return null;
     var signals = { offboarded_all: !!verdict.held, systems_checked: verdict.checked.length };
     var ended = 0, bad = [];
@@ -207,8 +264,12 @@ ProvyIamPlan.prototype = {
       if (ok) ended++; else bad.push(n);
     }
     signals.systems_ended = ended;
+    var others = Number(x.others_changed);
+    var collateral = !isNaN(others) && others > 0;
+    if (!isNaN(others)) { signals.others_changed = others; signals.no_collateral = others === 0; }
     if (bad.length) signals.reason_code = 'access_left_in_' + bad.join('_and_');
-    return { entity_id: String(correlation), business_date: businessDate, label: verdict.held ? 'success' : 'fail', source: 'confirmed', occurred_at: occurredAt, signals: signals };
+    else if (collateral) signals.reason_code = 'collateral_changes';
+    return { entity_id: String(correlation), business_date: businessDate, label: (verdict.held && !collateral) ? 'success' : 'fail', source: 'confirmed', occurred_at: occurredAt, signals: signals };
   },
 
   type: 'ProvyIamPlan'

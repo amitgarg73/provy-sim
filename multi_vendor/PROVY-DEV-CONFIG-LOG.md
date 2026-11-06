@@ -33,3 +33,8 @@ Teardown order (reverse of creation): PDI trace properties, then the ingest keys
 - Servicely test records not cleaned: now REQ0000018, 19, 26 to 35 and their subtasks.
 | 6 Nov | Contracts (IAM Access Mgmt) > Revise | Wording changed (same v1, wording only): "The access change was queued for all of the person's systems." (was "The person is off-boarded from all systems.") | The Servicely agents only orchestrate and queue; they change no access and the Reviewer is told not to claim it is gone. The verdict on the access itself belongs to the fleets that can see the systems | Honest scope for a fleet that cannot settle the access outcome | Contracts > Revise again, or Archive |
 - IAM Access Mgmt contract still has nothing that settles it: the collector emits no outcomes for any record type, and the subtask id (REQT...) differs from the request id (REQ...). Options and recommendation filed against #1984.
+
+## State of the simulator at the end of 6 Nov
+
+- PDI `provy.iam.trace.mode` is **log** (nothing is sent to Provy) while the dev certification runs. **Restore it to empty (live) after the certification and the data cleanup**, with `pdi_prop.py set "" provy.iam.trace.mode`.
+- The failure levers, the eleven scenarios and the random batch are built, tested (fake estate and the real instance, 62 of 62 shared vectors, a 24-request batch with 0 unexpected) and committed. Not yet run against Servicely: `wrong_person` and the two JIT cases have no Servicely half.

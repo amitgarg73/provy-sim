@@ -10,32 +10,7 @@ from multi_vendor.runner import SYNC_JOB, WORKER_JOB, Timeout, run
 from multi_vendor.scenarios import BY_KEY, SCENARIOS
 
 
-class FakeEstate:
-    """Behaves like the PDI estate: seed = active account, 1 group, 5 access items over 4 systems; apply honours faults; the sync job re-creates an account."""
-    def __init__(self, apply_changes_on_wait=False):
-        self.fault, self.jobs, self.log = {}, {SYNC_JOB: False, WORKER_JOB: False}, []
-        self.active, self.groups, self.left = True, 1, 5
-        self.after_poll = apply_changes_on_wait
-        self._polls = 0
-
-    def queue_resync(self, p): self.log.append(("resync_queued", p)); self.pending = True
-    def clear_hr_events(self, p): self.log.append(("events_cleared", p)); self.pending = False
-    def set_fault(self, f): self.fault = dict(f); self.log.append(("fault", dict(f)))
-    def seed(self, p): self.active, self.groups, self.left = True, 1, 5; self.log.append(("seed", p))
-    def set_job_active(self, name, on):
-        self.jobs[name] = on; self.log.append(("job", name, on))
-        if name == SYNC_JOB and on and getattr(self, 'pending', False): self.active = True       # the sync acts only on a queued event
-    def readings(self, p):
-        self._polls += 1
-        if self.after_poll and self._polls >= 3: self._do_apply()
-        return {"account_active": self.active, "groups_held": float(self.groups), "access_remaining": float(self.left), "systems_checked": 4.0}
-    def apply(self, command, params): self._do_apply(); return {"status": "ok"}
-    def agent_apply(self, command, params, queue_item=None):
-        self.log.append(("agent_apply", command, queue_item)); self._do_apply()
-        return {"result": {"status": "ok"}, "plan_source": "stub", "trace_mode": "log", "verification": {"held": not self.fault, "summary": "x"}}
-    def _do_apply(self):
-        if self.fault.get("directory") != "accept_not_apply": self.active, self.groups = False, 0
-        self.left = 1 if self.fault.get("vpn") == "accept_not_apply" else 0
+from tests.fake_estate import FakeEstate  # noqa: E402
 
 
 def _clock():

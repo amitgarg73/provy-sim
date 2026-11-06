@@ -67,3 +67,31 @@ Check the deployed copy against the shared test vectors: `python scripts/verify_
 `pdi/setup_pdi_estate.py`, then `servicely/setup_actions.py` and `servicely/setup_personas.py`, then the hand steps in `servicely/PERSONAS.md`. Then one more
 hand step that cost an hour: **the worker's token must have NO Allowed Scopes** and its URL Allowed Paths must be exactly `/controller/AsyncIntegration`.
 With the "Async Queue" scope set, Servicely answers 401 to every request. Everything done to the instances is in `CONFIG-LOG.md`.
+
+
+## Failure levers and the random batch (6 Nov 2026)
+
+If every request passes, there is nothing to show. A scenario is a row in `scenarios.py`; these are the ways a request can go wrong, and each is data, never a branch in the runner.
+
+| Scenario | The failure | Where it starts |
+|---|---|---|
+| `clean_leaver`, `jit_expired` | none (the controls) | |
+| `vpn_missed`, `directory_missed` | the system answers OK and changes nothing | ServiceNow estate |
+| `recreated_by_sync` | an HR sync re-creates the account afterwards | ServiceNow estate |
+| `over_reach` | the right person ends and a bystander's access is revoked too | ServiceNow estate |
+| `wrong_person` | the change lands on someone the request did not name | the agent (direct only for now) |
+| `policy_refused` | the model proposes a plan that breaks policy and the allow-list refuses it | ServiceNow agents |
+| `policy_bypassed` | the same plan goes through because the guard did not check it | ServiceNow agents |
+| `verifier_claims_ok` | the verifier claims every system is done while the estate says not | ServiceNow agents |
+| `jit_not_expired` | a time-limited grant is still active past its expiry | ServiceNow estate (direct only for now) |
+
+Levers live in the instance property `provy.iam.fault`, a JSON map: top-level keys apply to everyone and `persons` holds one map per person, so a single batch carries a different failure for each request. Keys: `<system>: accept_not_apply`, `over_reach: [systems]`, `expiry_sweep`, `model_plan: other_person|extra_system|bad_command|too_many_steps`, `guard: bypass`, `verifier: optimistic`.
+
+**A batch** is a mix and a seed (`batch.py`): `plan_batch` is pure and repeatable, counts follow the weights and add up to the total, and every item has its own person (`provy.iam.b001`...).
+
+    run_multi_vendor.py batch --n 30 --seed 7                      # the default mix: mostly clean, a tail of every failure
+    run_multi_vendor.py batch --n 30 --seed 7 --plan-only          # print the list, touch nothing
+    run_multi_vendor.py batch --n 40 --mix clean_leaver=3,vpn_missed=1,over_reach=1
+    run_multi_vendor.py batch --n 30 --trigger servicely           # real requests through the service desk (cases whose Servicely half is not built are refused by name)
+
+A batch turns the ServiceNow-side agents on for the run and always off again, so it puts sessions and outcomes in front of Provy; `--estate-only` skips them. The outcome the estate settles with carries a reading per system, `others_changed` and `no_collateral`, and a `reason_code`; a run is wrong when the target's access did not end OR another person's access changed. A direct run mints its own work-item id (`SIM<ddhhmmss>-<n>`), since it has no request number.

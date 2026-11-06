@@ -48,26 +48,56 @@ def _wait(pred: Callable[[], bool], wait: float, poll: float, sleep: Callable[[f
         sleep(poll)
 
 
+def seed_for(scn: Scenario, estate: Estate, person: Optional[str] = None) -> None:
+    """Put a scenario's people in their starting state: the person (with an expired grant when the case needs one) and the bystander when the case has one."""
+    who = person or scn.person
+    estate.seed(who, expired_grant=True) if scn.expired_grant else estate.seed(who)
+    if scn.bystander:
+        estate.seed(estate.bystander_of(who))
+
+
+def run_tag(clock: Callable[[], float] = time.time) -> str:
+    """A short token that is different for every run, so the work-item ids a direct run mints never collide with an earlier run's on the same day."""
+    return time.strftime("%d%H%M%S", time.gmtime(clock()))
+
+
+def task_params(scn: Scenario, estate: Estate, person: Optional[str] = None, correlation: Optional[str] = None) -> dict:
+    """What the task carries. `acts_on_bystander` is the wrong-person case: the request names the person and the change is aimed at someone else.
+    `correlation` is the work-item id a real request would carry (its request number). A direct run has no request, so it mints one."""
+    who = person or scn.person
+    target = estate.bystander_of(who) if scn.acts_on_bystander else who
+    params = {"person": target} if scn.kind == "jit" else {"person": target, "systems": list(scn.systems)}
+    if correlation:
+        params["correlation"] = correlation
+    return params
+
+
 def run(scn: Scenario, estate: Estate, trigger: str = "direct", *, agentic: bool = False, open_request: Optional[Callable[[], str]] = None,
         wait: float = 240, poll: float = 10, sleep: Callable[[float], None] = time.sleep, now: Callable[[], float] = time.monotonic) -> Result:
     if trigger not in ("direct", "servicely"):
         raise ValueError("trigger must be direct or servicely")
     if trigger == "servicely" and open_request is None:
         raise ValueError("the servicely trigger needs open_request")
+    if trigger == "servicely" and not scn.servicely_ready:
+        raise ValueError(f"{scn.key} is not wired for the Servicely flow yet (its Servicely-side half is not built); run it with --trigger direct")
     notes: list[str] = []
+    turned_agents_on = False
     try:
         estate.set_fault({})
         estate.clear_hr_events(scn.person)
-        estate.seed(scn.person)
+        seed_for(scn, estate)
         baseline = estate.readings(scn.person)
-        estate.set_fault(scn.fault)
+        estate.set_person_faults({scn.person: scn.fault}) if scn.fault else estate.set_fault({})
+        if scn.needs_agents and not agentic:
+            estate.set_agentic(True); turned_agents_on = True; agentic = True
+            notes.append("this case needs the ServiceNow-side agents (the lever lives there), so they were switched on for the run and back off after")
         if trigger == "direct" and agentic:
-            out = estate.agent_apply(scn.command, {"person": scn.person, "systems": list(scn.systems)}, queue_item=f"scenario-{scn.key}")
+            out = estate.agent_apply(scn.command, task_params(scn, estate, correlation=f"SIM{run_tag()}-{scn.key}"), queue_item=f"scenario-{scn.key}")
             v = (out or {}).get("verification") or {}
             notes.append(f"applied through the ServiceNow-side agents (plan from {out.get('plan_source')}, trace {out.get('trace_mode')}); the verifier said "
                          f"{'as asked' if v.get('held') else 'NOT as asked'}: {v.get('summary')}")
         elif trigger == "direct":
-            estate.apply(scn.command, {"person": scn.person, "systems": list(scn.systems)})
+            estate.apply(scn.command, task_params(scn, estate))
             notes.append("applied through the estate's own door; the agent platform was not involved")
         else:
             estate.set_job_active(WORKER_JOB, True)
@@ -80,11 +110,17 @@ def run(scn: Scenario, estate: Estate, trigger: str = "direct", *, agentic: bool
             _wait(lambda: estate.readings(scn.person).get("account_active") is True, max(wait, SYNC_WAIT), poll, sleep, now, "the HR sync to re-create the account")
             notes.append("the HR sync re-created the account")
         reading = estate.readings(scn.person)
-        verdict = grade(reading)
+        verdict = grade(reading, scn.kind)
         return Result(scn.key, "estate-only" if trigger == "direct" else "end-to-end", "all systems changed", reading, verdict,
                       verdict.held == scn.should_hold, notes)
     finally:
-        for step in (lambda: estate.set_job_active(SYNC_JOB, False), lambda: estate.set_fault({}), lambda: estate.clear_hr_events(scn.person), lambda: estate.seed(scn.person)):
+        steps = [lambda: estate.set_job_active(SYNC_JOB, False), lambda: estate.set_fault({}), lambda: estate.clear_hr_events(scn.person),
+                 lambda: estate.seed(scn.person)]
+        if scn.bystander:
+            steps.append(lambda: estate.seed(estate.bystander_of(scn.person)))
+        if turned_agents_on:
+            steps.append(lambda: estate.set_agentic(False))
+        for step in steps:
             try:
                 step()
             except Exception:  # noqa: BLE001 - cleanup must try every step

@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from multi_vendor.agent_request import make_open_desk_request, make_open_request
 from multi_vendor.estate import Estate, EstateError
+from multi_vendor.batch import DEFAULT_WEIGHTS, parse_mix, plan_batch, run_batch
 from multi_vendor.runner import Timeout, run
 from multi_vendor.scenarios import BY_KEY, SCENARIOS
 
@@ -31,7 +32,7 @@ def _estate() -> Estate:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["list", "run", "run-all", "reset"])
+    ap.add_argument("cmd", choices=["list", "run", "run-all", "reset", "batch"])
     ap.add_argument("key", nargs="?")
     ap.add_argument("--trigger", choices=["direct", "servicely"], default="direct")
     ap.add_argument("--start", choices=["desk", "orchestrator"], default="desk",
@@ -39,11 +40,48 @@ def main() -> int:
     ap.add_argument("--agentic", action="store_true",
                     help="with --trigger direct: send the task through the ServiceNow-side agents (plan, validate, apply, verify, trace). Switches provy.iam.agentic on for the run and ALWAYS back off")
     ap.add_argument("--wait", type=int, default=240, help="seconds to wait for the estate to change")
+    ap.add_argument("--n", type=int, default=20, help="batch: how many requests")
+    ap.add_argument("--seed", type=int, default=1, help="batch: the same seed gives the same list, so a walk can be replayed")
+    ap.add_argument("--mix", default="", help="batch: scenario=weight,scenario=weight (default: mostly clean, a realistic tail of failures)")
+    ap.add_argument("--plan-only", action="store_true", help="batch: print the list and touch nothing")
+    ap.add_argument("--estate-only", action="store_true", help="batch: apply through the estate's own door, with no ServiceNow-side agents (so no sessions or outcomes reach Provy)")
     a = ap.parse_args()
     if a.cmd == "list":
         for s in SCENARIOS:
-            print(f"{s.key:20} {'holds' if s.should_hold else 'FAILS':6} {s.title}")
+            tags = ("agents" if s.needs_agents else "") + (" direct-only" if not s.servicely_ready else "")
+            print(f"{s.key:20} {'holds' if s.should_hold else 'FAILS':6} {s.title}" + (f"   [{tags.strip()}]" if tags.strip() else ""))
+        print(f"\nbatch mix by default: " + ", ".join(f"{k}={int(v)}" for k, v in DEFAULT_WEIGHTS.items()))
         return 0
+    if a.cmd == "batch":
+        try:
+            items = plan_batch(a.n, parse_mix(a.mix) if a.mix else None, a.seed)
+        except ValueError as e:
+            sys.exit(str(e))
+        counts: dict = {}
+        for it in items:
+            counts[it.key] = counts.get(it.key, 0) + 1
+        print(f"batch of {len(items)} (seed {a.seed}): " + ", ".join(f"{k} x{n}" for k, n in sorted(counts.items(), key=lambda kv: -kv[1])))
+        if a.plan_only:
+            for it in items:
+                print(f"  {it.n:3} {it.person:20} {it.key}")
+            return 0
+        est = _estate()
+        client = None
+        if a.trigger == "servicely":
+            from engine.servicely import client_from_env
+            client = client_from_env(); client.require()
+        opener = (lambda it, scn: (make_open_desk_request if a.start == "desk" else make_open_request)(client, it.person, scn.key, scn.systems)) if client else None
+        try:
+            res = run_batch(items, est, a.trigger, agentic=a.agentic, agents=not a.estate_only, open_request=opener, wait=a.wait)
+        except ValueError as e:
+            sys.exit(str(e))
+        sm = res.summary()
+        print(f"\nheld {sm['held']}  failed {sm['failed']}  unexpected {sm['unexpected']}  errors {sm['errors']}  (of {sm['total']})")
+        for k, row in sorted(sm["by_scenario"].items()):
+            print(f"  {k:20} x{row['count']:<3} held {row['held']:<3} failed {row['failed']:<3} as expected {row['as_expected']:<3}" + (f" errors {row['errors']}" if row["errors"] else ""))
+        for n, why in sorted(res.errors.items()):
+            print(f"  item {n}: ERROR {why}")
+        return 1 if sm["unexpected"] or sm["errors"] else 0
     est = _estate()
     if a.cmd == "reset":
         est.set_fault({}); est.set_job_active("provy_iam_hr_sync (POC)", False)

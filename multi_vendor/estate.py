@@ -102,8 +102,13 @@ class Estate:
             raise EstateError(f"{method} {path.split('?')[0]} answered {status}")
         return data.get("result")
 
-    def seed(self, person: str) -> dict:
-        return self._call("POST", "/seed", {"person": person})
+    def seed(self, person: str, expired_grant: bool = False) -> dict:
+        return self._call("POST", "/seed", {"person": person, **({"expired_grant": True} if expired_grant else {})})
+
+    @staticmethod
+    def bystander_of(person: str) -> str:
+        """The second simulated person a request could wrongly touch. The name rule lives on the instance too (ProvyIamEstate.bystanderOf)."""
+        return "provy.iam.bystander." + person[len("provy.iam."):]
 
     def readings(self, person: str) -> dict:
         return self._call("GET", f"/readings?key={urllib.parse.quote(person)}")
@@ -124,3 +129,7 @@ class Estate:
 
     def set_fault(self, fault: dict) -> None:
         self.set_property("provy.iam.fault", json.dumps(fault))
+
+    def set_person_faults(self, by_person: dict) -> None:
+        """One fault map per person, so a single batch can carry a different failure for each request."""
+        self.set_property("provy.iam.fault", json.dumps({"persons": by_person}))
