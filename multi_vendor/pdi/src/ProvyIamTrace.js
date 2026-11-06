@@ -56,13 +56,15 @@ ProvyIamTrace.prototype = {
    * Open the session. `parentSession` is an OPAQUE string: the asking system's own external id of the session this one continues, exactly as that system's reporter names it.
    * It is passed through UNCHANGED as parent_external_id, and NO parent is sent when it is absent. Nothing is derived here: this instance does not know how another system names sessions.
    */
-  open: function (externalId, sessionType, parentSession, meta) {
+  open: function (externalId, sessionType, parentSession, meta, handoffIn) {
     if (!this.enabled()) { gs.info('provy_iam trace: not configured (url and key, or mode log), nothing is reported'); return false; }
     this.sid = String(externalId);
     // the CORRELATION id (the root request that started the whole flow) travels beside every step as its record id, so a reader that joins on shared record ids can propose the link by itself
     this.correlation = meta && meta.correlation ? String(meta.correlation) : null;
     var body = { session_type: sessionType, external_id: this.sid, started_at: new GlideDateTime().getValue().replace(' ', 'T') + 'Z', metadata: meta || {} };
     if (parentSession) body.parent_external_id = String(parentSession);
+    // what this system received at the handoff: field names and values; Provy keeps names and fingerprints only and compares them with what the sender handed on
+    if (handoffIn && handoffIn.fields && JSON.stringify(handoffIn.fields) !== '{}') body.handoff_in = handoffIn;
     return this._send('/api/ingest/session/open', body);
   },
 

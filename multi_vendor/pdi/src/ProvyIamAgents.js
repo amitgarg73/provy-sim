@@ -46,7 +46,8 @@ ProvyIamAgents.prototype = {
       if (!v.ok) { source = 'task'; rejected = v.reason; chosen = own; }
     }
     if (answer.mode === 'stub' && !rejected) source = 'stub';
-    trace.step(this.APPLIER, 'message', 'success', { phase: 'plan', plan_source: source, model_mode: answer.mode, plan: chosen, rejected_reason: rejected }, { model: this.model.label() });
+    // a DECISION step: the agent chose a plan from the task. Provy counts steps of type decision or agent_message that carry a decision object.
+    trace.step(this.APPLIER, 'decision', 'success', { phase: 'plan', plan_source: source, model_mode: answer.mode, plan: chosen, rejected_reason: rejected }, { model: this.model.label(), decision: this.plan.decisionOf(chosen, source, rejected) });
     return { plan: chosen, source: source, rejected: rejected };
   },
 
@@ -92,7 +93,7 @@ ProvyIamAgents.prototype = {
     var verification = null, source = null;
     try {
       // parent_session is passed through unchanged (see ProvyIamTrace.open); item is only a plain reference kept in the session's metadata
-      trace.open('pdi-' + String(queueItemId || 'direct-' + new Date().getTime()), 'access_provisioning', p.parent_session, { command: subject, person: p.person, item: p.item || null, correlation: p.correlation || null, agentic: true });
+      trace.open('pdi-' + String(queueItemId || 'direct-' + new Date().getTime()), 'access_provisioning', p.parent_session, { command: subject, person: p.person, item: p.item || null, correlation: p.correlation || null, agentic: true }, this.plan.handoffIn(p));
       var decided = this._decide(subject, p, trace);
       source = decided.source;
       var done = this._apply(decided.plan, trace);

@@ -33,6 +33,10 @@ def _run_python(v):
         return _subset(v["expect"], ref.verdict(v["command"], v["params"], v["reading"]))
     if v["kind"] == "parsePlan":
         return ref.parse_plan(v["text"]) == v["expect"]
+    if v["kind"] == "call":
+        import re as _re
+        fn = getattr(ref, _re.sub(r"([A-Z])", lambda m: "_" + m.group(1).lower(), v["fn"]).lstrip("_"))
+        return fn(*v["args"]) == v["expect"]
     if v["kind"] == "outcomeBody":
         return ref.outcome_body(v["command"], v["verdict"], v["correlation"], v["businessDate"], v["occurredAt"]) == v["expect"]
     raise AssertionError(v["kind"])
@@ -94,3 +98,12 @@ def test_the_verify_step_never_repeats_a_top_level_name_inside_its_systems():
     helper = src[src.index("_forTrace: function"):src.index("_verify: function")]
     assert "ended:" in helper and not re.search(r"\bheld\s*:", helper.split("function (systems)")[1])
     assert "estate_" not in src
+
+
+def test_the_plan_step_is_a_decision_step_and_the_session_opens_with_what_was_received():
+    src = open(os.path.join(HERE, "..", "multi_vendor", "pdi", "src", "ProvyIamAgents.js")).read()
+    plan_step = next(l for l in src.splitlines() if "phase: 'plan'" in l)
+    assert "'decision'" in plan_step and "decision: this.plan.decisionOf(" in plan_step
+    assert "this.plan.handoffIn(p)" in src
+    trace = open(os.path.join(HERE, "..", "multi_vendor", "pdi", "src", "ProvyIamTrace.js")).read()
+    assert "body.handoff_in = handoffIn" in trace

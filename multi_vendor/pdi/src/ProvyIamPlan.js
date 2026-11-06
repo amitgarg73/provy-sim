@@ -151,6 +151,45 @@ ProvyIamPlan.prototype = {
     return { held: all, systems: systems, checked: names, summary: all ? 'every system checked is as asked' : 'not as asked in: ' + bad.join(', ') };
   },
 
+
+  /** One line for a plan: each command and the systems it names. Used for the decision a step records. */
+  _planLine: function (plan) {
+    var out = [];
+    var steps = (plan && plan.steps) || [];
+    for (var i = 0; i < steps.length; i++) {
+      var sys = (steps[i].params && steps[i].params.systems) || [];
+      out.push(steps[i].command + (sys.length ? ' [' + sys.join(', ') + ']' : ''));
+    }
+    return out.join('; ');
+  },
+
+  /**
+   * The decision the applier made, as Provy's `decision` object (chosen, alternatives, rationale). `source` is 'model', 'stub' or 'task' (the task's own plan, used when the model's was
+   * refused or missing). The refusal reason is the allow-list's own words, never the model's text.
+   */
+  decisionOf: function (chosen, source, rejected) {
+    var d = { chosen: this._planLine(chosen), alternatives: [] };
+    if (source === 'task' && rejected) {
+      d.alternatives.push('the model\'s plan');
+      d.rationale = 'the model\'s plan was refused (' + String(rejected).substring(0, 160) + '), so the task\'s own plan was used';
+    } else if (source === 'stub') {
+      d.rationale = 'offline stub: the task\'s own plan';
+    } else {
+      d.rationale = 'the model\'s plan passed the allow-list';
+    }
+    return d;
+  },
+
+  /** What this system received at the handoff, as field names and values (Provy keeps names and fingerprints only). The person, and the systems when the task named any. */
+  handoffIn: function (params) {
+    var p = params || {};
+    var fields = {};
+    if (p.person) fields.person = String(p.person);
+    var sys = this.taskSystems(p);
+    if (sys.length) fields.systems = sys;
+    return { fields: fields };
+  },
+
   /**
    * The outcome Provy's contract is settled with, built ONLY from the verdict, which is computed from the estate's own reading. Returns null when it does not apply:
    * no correlation (no work item to settle), a grant, or a command that did not check every system (a directory-only change does not answer "off-boarded from all systems").

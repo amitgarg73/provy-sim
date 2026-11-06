@@ -1192,5 +1192,146 @@
     "businessDate": "2026-11-06",
     "occurredAt": "2026-11-06T19:00:00Z",
     "expect": null
+  },
+  {
+    "kind": "call",
+    "name": "decision: a plan the model proposed and the allow-list passed",
+    "fn": "decisionOf",
+    "args": [
+      {
+        "steps": [
+          {
+            "command": "provy-iam-apply-change",
+            "params": {
+              "person": "provy.iam.a",
+              "systems": [
+                "directory",
+                "sso",
+                "vpn",
+                "saas_token"
+              ]
+            }
+          }
+        ]
+      },
+      "model",
+      null
+    ],
+    "expect": {
+      "chosen": "provy-iam-apply-change [directory, sso, vpn, saas_token]",
+      "alternatives": [],
+      "rationale": "the model's plan passed the allow-list"
+    }
+  },
+  {
+    "kind": "call",
+    "name": "decision: the offline stub uses the task's own plan",
+    "fn": "decisionOf",
+    "args": [
+      {
+        "steps": [
+          {
+            "command": "provy-iam-apply-change",
+            "params": {
+              "person": "provy.iam.a",
+              "systems": [
+                "directory",
+                "sso",
+                "vpn",
+                "saas_token"
+              ]
+            }
+          }
+        ]
+      },
+      "stub",
+      null
+    ],
+    "expect": {
+      "chosen": "provy-iam-apply-change [directory, sso, vpn, saas_token]",
+      "alternatives": [],
+      "rationale": "offline stub: the task's own plan"
+    }
+  },
+  {
+    "kind": "call",
+    "name": "decision: a refused model plan names the allow-list's reason and the alternative",
+    "fn": "decisionOf",
+    "args": [
+      {
+        "steps": [
+          {
+            "command": "provy-iam-apply-change",
+            "params": {
+              "person": "provy.iam.a",
+              "systems": [
+                "directory",
+                "sso",
+                "vpn",
+                "saas_token"
+              ]
+            }
+          }
+        ]
+      },
+      "task",
+      "a different person"
+    ],
+    "expect": {
+      "chosen": "provy-iam-apply-change [directory, sso, vpn, saas_token]",
+      "alternatives": [
+        "the model's plan"
+      ],
+      "rationale": "the model's plan was refused (a different person), so the task's own plan was used"
+    }
+  },
+  {
+    "kind": "call",
+    "name": "handoff in: the person and the systems the task named",
+    "fn": "handoffIn",
+    "args": [
+      {
+        "person": "provy.iam.a",
+        "systems": [
+          "sso",
+          "vpn"
+        ]
+      }
+    ],
+    "expect": {
+      "fields": {
+        "person": "provy.iam.a",
+        "systems": [
+          "sso",
+          "vpn"
+        ]
+      }
+    }
+  },
+  {
+    "kind": "call",
+    "name": "handoff in: no systems named means the person alone",
+    "fn": "handoffIn",
+    "args": [
+      {
+        "person": "provy.iam.a"
+      }
+    ],
+    "expect": {
+      "fields": {
+        "person": "provy.iam.a"
+      }
+    }
+  },
+  {
+    "kind": "call",
+    "name": "handoff in: nothing received is an empty field list, never invented",
+    "fn": "handoffIn",
+    "args": [
+      {}
+    ],
+    "expect": {
+      "fields": {}
+    }
   }
 ]

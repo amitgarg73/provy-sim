@@ -189,3 +189,36 @@ def outcome_body(command: str, verdict: Optional[dict], correlation: Optional[st
         signals["reason_code"] = "access_left_in_" + "_and_".join(bad)
     return {"entity_id": str(correlation), "business_date": business_date, "label": "success" if verdict["held"] else "fail",
             "source": "confirmed", "occurred_at": occurred_at, "signals": signals}
+
+
+def _plan_line(plan: Optional[dict]) -> str:
+    out = []
+    for st in (plan or {}).get("steps", []):
+        sys = (st.get("params") or {}).get("systems") or []
+        out.append(st["command"] + (f" [{', '.join(sys)}]" if sys else ""))
+    return "; ".join(out)
+
+
+def decision_of(chosen: Optional[dict], source: str, rejected: Optional[str]) -> dict:
+    """The decision the applier made, as Provy's decision object. The refusal reason is the allow-list's own words."""
+    d: dict = {"chosen": _plan_line(chosen), "alternatives": []}
+    if source == "task" and rejected:
+        d["alternatives"].append("the model's plan")
+        d["rationale"] = f"the model's plan was refused ({str(rejected)[:160]}), so the task's own plan was used"
+    elif source == "stub":
+        d["rationale"] = "offline stub: the task's own plan"
+    else:
+        d["rationale"] = "the model's plan passed the allow-list"
+    return d
+
+
+def handoff_in(params: Optional[dict]) -> dict:
+    """What this system received at the handoff: the person, and the systems when the task named any."""
+    p = params or {}
+    fields: dict = {}
+    if p.get("person"):
+        fields["person"] = str(p["person"])
+    sys = task_systems(p)
+    if sys:
+        fields["systems"] = sys
+    return {"fields": fields}
