@@ -62,10 +62,10 @@ def run_tag(clock: Callable[[], float] = time.time) -> str:
 
 
 def task_params(scn: Scenario, estate: Estate, person: Optional[str] = None, correlation: Optional[str] = None) -> dict:
-    """What the task carries. `acts_on_bystander` is the wrong-person case: the request names the person and the change is aimed at someone else.
+    """What the task carries. The wrong-person case is a lever on the instance (`misroute`): the task still names the right person and the agent aims at someone else.
     `correlation` is the work-item id a real request would carry (its request number). A direct run has no request, so it mints one."""
     who = person or scn.person
-    target = estate.bystander_of(who) if scn.acts_on_bystander else who
+    target = who
     params = {"person": target} if scn.kind == "jit" else {"person": target, "systems": list(scn.systems)}
     if correlation:
         params["correlation"] = correlation

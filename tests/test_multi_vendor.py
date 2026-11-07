@@ -130,7 +130,7 @@ def test_open_request_copies_ids_from_an_existing_poc_request_and_refuses_withou
     assert table == "ITSMRequest" and body["ShortDescription"].startswith("[provy-iam-poc] Leaver (vpn_missed)") and body["AssignmentGroup"] == "g"
     assert "Systems: directory, sso, vpn, saas_token" in body["Description"] and "Person: provy.iam.spike01" in body["Description"]
     assert body["Assignee"] == "agent-user"                 # an unassigned request is never picked up
-    with pytest.raises(RuntimeError, match="create one by hand"):
+    with pytest.raises(RuntimeError, match="raise one request by hand"):
         make_open_request(C([{"ShortDescription": "unrelated"}]), "p", "k")()
 
 
@@ -170,7 +170,7 @@ def test_desk_request_is_a_plain_ticket_for_the_desk_with_no_access_team_marker(
     c = C()
     assert make_open_desk_request(c, "provy.iam.spike01", "vpn_missed")() == "REQ77"
     table, body = c.created[0]
-    assert table == "ITSMRequest" and body["Assignee"] == "desk-user" and body["ShortDescription"].startswith("[provy-servicely] Please offboard provy.iam.spike01")
+    assert table == "ITSMRequest" and body["Assignee"] == "desk-user" and body["ShortDescription"].startswith("[provy-servicely] Leaver: provy.iam.spike01") and "vpn_missed" not in body["ShortDescription"] + body["Description"]
     assert "[provy-iam-poc]" not in body["ShortDescription"] + body["Description"]      # the desk must recognise it, not be told
     assert "Systems: directory, sso, vpn, saas_token" in body["Description"]
 

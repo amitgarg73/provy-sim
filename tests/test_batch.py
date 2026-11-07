@@ -1,3 +1,4 @@
+from dataclasses import replace
 """The failure levers and the random batch: what each lever does, that a batch is repeatable, that its mix is honoured, and that a bad item or a timeout never leaves the estate dirty."""
 from collections import Counter
 
@@ -64,7 +65,7 @@ def test_every_failure_case_has_a_reason_it_fails_and_the_set_still_has_controls
 
 def test_a_case_whose_servicely_half_is_not_built_refuses_the_real_flow_loudly():
     with pytest.raises(ValueError, match="not wired for the Servicely flow"):
-        run(BY_KEY["wrong_person"], FakeEstate(), "servicely", open_request=lambda: "R", sleep=lambda s: None)
+        run(replace(BY_KEY["clean_leaver"], servicely_ready=False), FakeEstate(), "servicely", open_request=lambda: "R", sleep=lambda s: None)
 
 
 # ---- the planner -------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -145,9 +146,12 @@ def test_a_batch_that_needs_the_agents_switches_them_on_once_and_off_again():
     assert [x for x in e.log if x[0] == "agentic"] == [("agentic", True), ("agentic", False)]
 
 
-def test_the_servicely_batch_refuses_cases_it_cannot_run_for_real_and_names_them():
-    items = [BatchItem(1, "clean_leaver", person_for(1)), BatchItem(2, "wrong_person", person_for(2)), BatchItem(3, "jit_expired", person_for(3))]
-    with pytest.raises(ValueError, match="jit_expired, wrong_person"):
+def test_the_servicely_batch_refuses_cases_it_cannot_run_for_real_and_names_them(monkeypatch):
+    import multi_vendor.batch as batch_mod
+    ghost = replace(BY_KEY["vpn_missed"], key="ghost", servicely_ready=False)
+    monkeypatch.setitem(batch_mod.BY_KEY, "ghost", ghost)
+    items = [BatchItem(1, "clean_leaver", person_for(1)), BatchItem(2, "ghost", person_for(2))]
+    with pytest.raises(ValueError, match="ghost"):
         run_batch(items, FakeEstate(), "servicely", open_request=lambda it, s: (lambda: "R"), sleep=lambda s: None)
 
 
@@ -183,3 +187,23 @@ def test_a_batch_uses_the_agents_by_default_and_can_be_told_not_to():
     assert ("agentic", True) in on.log and any(x[0] == "agent_apply" for x in on.log)
     off = FakeEstate(); run_batch(only_clean, off, "direct", agents=False, sleep=lambda s: None)
     assert not any(x[0] in ("agentic", "agent_apply") for x in off.log)
+
+
+# ---- the service desk wording ----------------------------------------------------------------------------------------------------------------------------------------------
+
+def test_a_desk_request_never_names_the_scenario_and_always_names_the_person():
+    from multi_vendor.agent_request import DESK_WORDINGS, desk_wording
+    for n in range(len(DESK_WORDINGS) + 2):
+        subject, description = desk_wording("provy.iam.b007", ("directory", "vpn"), "2026-11-07", n)
+        for key in BY_KEY:
+            assert key not in subject and key not in description
+        assert "provy.iam.b007" in subject + description and "directory, vpn" in description and "{" not in subject + description
+    assert len({desk_wording("provy.iam.b007", ("vpn",), "2026-11-07", n)[0] for n in range(len(DESK_WORDINGS))}) == len(DESK_WORDINGS)
+
+
+def test_a_temporary_access_request_names_the_one_system_the_worker_turns_into_the_sweep():
+    from multi_vendor.agent_request import DESK_TEMPORARY_WORDINGS, desk_wording
+    for n in range(len(DESK_TEMPORARY_WORDINGS)):
+        subject, description = desk_wording("provy.iam.b009", (), "2026-11-07", n, "jit")
+        assert "provy.iam.b009" in subject + description and "Systems: temporary_access" in description
+        assert not any(k in subject + description for k in BY_KEY) and "leaver" not in (subject + description).lower()

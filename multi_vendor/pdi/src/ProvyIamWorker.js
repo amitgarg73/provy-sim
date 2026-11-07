@@ -81,6 +81,8 @@ ProvyIamWorker.prototype = {
       var pl = item.payload;
       params = (typeof pl === 'string' && (pl.charAt(0) === '{' || pl.charAt(0) === '[')) ? JSON.parse(pl) : (pl && typeof pl === 'object' ? pl : { raw: pl });
     } catch (e) { params = {}; }
+    // A request for temporary access to END arrives through the leaver and mover flow with "Systems: temporary_access". Whichever action the access agent chose, it is the expiry sweep.
+    if (params && params.systems && params.systems.length === 1 && String(params.systems[0]).toLowerCase() === 'temporary_access') { subject = 'provy-iam-expire-grants'; delete params.systems; }
     var result;
     var agents = this._agents();
     if (agents) {

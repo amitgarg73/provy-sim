@@ -45,6 +45,17 @@ ProvyIamEstate.prototype = {
     u.query();
     return u.next() ? u : null;
   },
+  /** How many times the time-limited-access sweep has run for a person (one property holds a map). The sweep can do nothing on purpose, so a reading that must change when it ran needs this. */
+  _sweeps: function (person) {
+    try { return Number((JSON.parse(gs.getProperty('provy.iam.sweeps') || '{}'))[person] || 0); } catch (e) { return 0; }
+  },
+  _bumpSweep: function (person) {
+    var m = {};
+    try { m = JSON.parse(gs.getProperty('provy.iam.sweeps') || '{}'); } catch (e) { m = {}; }
+    m[person] = Number(m[person] || 0) + 1;
+    gs.setProperty('provy.iam.sweeps', JSON.stringify(m));
+  },
+
   _rows: function (person, system) {
     var g = new GlideRecord('u_provy_iam_access');
     g.addQuery('u_person', person);
@@ -93,6 +104,7 @@ ProvyIamEstate.prototype = {
     // time-limited grants still active past their expiry
     var now = new GlideDateTime().getValue();
     out.expired_grants_active = this._count('u_provy_iam_access', 'u_person', person, 'u_kind=grant^u_state=active^u_expires<' + "javascript:gs.dateGenerate('" + now.substring(0, 10) + "','" + now.substring(11) + "')");
+    out.sweeps_run = this._sweeps(person);
     return out;
   },
 
@@ -148,6 +160,7 @@ ProvyIamEstate.prototype = {
         if (faults.expiry_sweep === 'accept_not_apply') { skipped.push(gr.getValue('u_system')); continue; }
         gr.setValue('u_state', 'revoked'); gr.update(); done.push(gr.getValue('u_system'));
       }
+      this._bumpSweep(person);
     }
     else if (command === 'provy-iam-disable-account') { disableDirectory(); removeGroups(); }
     else if (command === 'provy-iam-remove-groups') { removeGroups(); }

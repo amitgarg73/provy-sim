@@ -70,7 +70,7 @@ def main() -> int:
         if a.trigger == "servicely":
             from engine.servicely import client_from_env
             client = client_from_env(); client.require()
-        opener = (lambda it, scn: (make_open_desk_request if a.start == "desk" else make_open_request)(client, it.person, scn.key, scn.systems)) if client else None
+        opener = (lambda it, scn: make_open_desk_request(client, it.person, scn.key, scn.systems, n=it.n, kind=scn.kind) if a.start == "desk" else make_open_request(client, it.person, scn.key, scn.systems)) if client else None
         try:
             res = run_batch(items, est, a.trigger, agentic=a.agentic, agents=not a.estate_only, open_request=opener, wait=a.wait)
         except ValueError as e:
@@ -102,7 +102,7 @@ def main() -> int:
     try:
         for s in todo:
             try:
-                r = run(s, est, a.trigger, agentic=a.agentic, wait=a.wait, open_request=(make_open_desk_request if a.start == 'desk' else make_open_request)(client, s.person, s.key, s.systems) if client else None)
+                r = run(s, est, a.trigger, agentic=a.agentic, wait=a.wait, open_request=(make_open_desk_request(client, s.person, s.key, s.systems, kind=s.kind) if a.start == 'desk' else make_open_request(client, s.person, s.key, s.systems)) if client else None)
             except (Timeout, EstateError) as e:
                 print(f"{s.key:20} ERROR  {e}"); bad += 1; continue
             word = "as expected" if r.matches_expectation else "UNEXPECTED"

@@ -82,7 +82,7 @@ ProvyIamAgents.prototype = {
   },
 
   _verify: function (subject, params, trace) {
-    var reading = this.estate.read(params.person);
+    var reading = this.estate.read(params.named || params.person);
     var verdict = this.plan.verdict(subject, params, reading);
     var claim = this.plan.claimOf(verdict, this.estate._faults(params && params.person).verifier === 'optimistic');
     var wording = this.model.complete('State in one plain sentence what this reading means for the access change. Reading: ' + JSON.stringify(verdict.systems), 'finding', { stub: verdict.summary, system: 'You word a finding in one sentence. Do not change the facts.' });
@@ -95,11 +95,13 @@ ProvyIamAgents.prototype = {
   process: function (subject, params, queueItemId) {
     var trace = new global.ProvyIamTrace();
     var p = params || {};
+    // SCENARIO LEVER misroute (per person): the agent aims the change at the wrong person. `named` stays the person the request named, and the verdict and the outcome are about them.
+    if (p.person && this.estate._faults(p.person).misroute) { p.named = p.person; p.person = this.estate.bystanderOf(p.named); }
     var result;
     var verification = null, source = null;
     try {
       // parent_session is passed through unchanged (see ProvyIamTrace.open); item is only a plain reference kept in the session's metadata
-      trace.open('pdi-' + String(queueItemId || 'direct-' + new Date().getTime()), 'access_provisioning', p.parent_session, { command: subject, person: p.person, item: p.item || null, correlation: p.correlation || null, agentic: true }, this.plan.handoffIn(p));
+      trace.open('pdi-' + String(queueItemId || 'direct-' + new Date().getTime()), 'access_provisioning', p.parent_session, { command: subject, person: p.person, named_person: p.named || p.person, item: p.item || null, correlation: p.correlation || null, agentic: true }, this.plan.handoffIn(p));
       var decided = this._decide(subject, p, trace);
       source = decided.source;
       var done = this._apply(decided.plan, trace);

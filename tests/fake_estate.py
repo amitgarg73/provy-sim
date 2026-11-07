@@ -48,7 +48,7 @@ class FakeEstate:
         if self.after_poll and self._polls >= 3:
             self._apply("provy-iam-apply-change", {"person": p})
         s, by = self._p(p), self.people.get(self.bystander_of(p))
-        out = {"account_active": s["active"], "groups_held": float(s["groups"]), "access_remaining": float(s["left"]), "systems_checked": 4.0, "expired_grants_active": float(s["grants"])}
+        out = {"account_active": s["active"], "groups_held": float(s["groups"]), "access_remaining": float(s["left"]), "systems_checked": 4.0, "expired_grants_active": float(s["grants"]), "sweeps_run": float(s.get("sweeps", 0))}
         if by is not None:
             out["others_changed"] = float(by["revoked"] + (0 if by["active"] else 1))
         return out
@@ -57,8 +57,8 @@ class FakeEstate:
         self.log.append(("agent_apply", command, queue_item))
         person, f = params["person"], self._faults(params["person"])
         target = person
-        if f.get("model_plan") == "other_person" and f.get("guard") == "bypass":
-            target = self.bystander_of(person)                              # the plan the guard should have refused is applied to someone else
+        if f.get("misroute") or (f.get("model_plan") == "other_person" and f.get("guard") == "bypass"):
+            target = self.bystander_of(person)                              # aimed at someone else: the misroute lever, or a plan the guard should have refused
         self._apply(command, {**params, "person": target}, faults_of=person)
         held = not any(v == "accept_not_apply" for v in f.values())
         return {"result": {"status": "ok"}, "plan_source": "stub", "trace_mode": "log", "verification": {"held": held, "summary": "x"}}
@@ -67,6 +67,7 @@ class FakeEstate:
         f = self._faults(faults_of or person)
         s = self._p(person)
         if command == "provy-iam-expire-grants":
+            s["sweeps"] = s.get("sweeps", 0) + 1                 # the sweep ran, even when it removes nothing
             if f.get("expiry_sweep") != "accept_not_apply":
                 s["grants"] = 0
             return

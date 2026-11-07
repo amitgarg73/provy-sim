@@ -13,6 +13,16 @@ TABLE = "ITSMRequest"
 PERSONA = "Provy IAM POC: Access orchestrator"
 
 
+def seed_request(client: Any) -> dict:
+    """The request whose who-asked, classification and group the new ones copy: the first "[provy-iam-poc]" one, else any existing request that carries a requestor and a group."""
+    rows = list(client.query(TABLE))
+    pick = next((r for r in rows if str(r.get("ShortDescription", "")).startswith(MARKER)), None) \
+        or next((r for r in rows if r.get("Requestor") and r.get("RequestedFor") and r.get("AssignmentGroup")), None)
+    if not pick:
+        raise RuntimeError(f"no existing {TABLE} to copy who-asked and the group from: raise one request by hand (see README)")
+    return pick
+
+
 def agent_user_id(client: Any) -> str:
     """The agent user paired with the orchestrator persona. A Request assigned to it is the one the agent works; an unassigned one sits at "new" for ever."""
     persona = next((p for p in client.query("SystemAgentPersona") if p.get("Name") == PERSONA), None)
@@ -26,10 +36,7 @@ def agent_user_id(client: Any) -> str:
 
 def make_open_request(client: Any, person: str, scenario_key: str, systems: tuple = ("directory", "sso", "vpn", "saas_token")):
     def open_request() -> str:
-        rows = [r for r in client.query(TABLE) if str(r.get("ShortDescription", "")).startswith(MARKER)]
-        if not rows:
-            raise RuntimeError(f"no existing {MARKER} Request to copy ids from: create one by hand first (see README)")
-        t = rows[0]
+        t = seed_request(client)
         body = {"ShortDescription": f"{MARKER} Leaver ({scenario_key}): disable account and remove access for {person}",
                 "Requestor": t["Requestor"], "RequestedFor": t["RequestedFor"], "AssignmentGroup": t["AssignmentGroup"],
                 "Assignee": agent_user_id(client),
@@ -54,17 +61,45 @@ def desk_user_id(client: Any) -> str:
     return user["id"]
 
 
-def make_open_desk_request(client: Any, person: str, scenario_key: str, systems: tuple = ("directory", "sso", "vpn", "saas_token")):
-    """The FRONT DOOR: a plain request, worded as an HR feed or a manager would word it, assigned to the service desk's agent. It names no Access agent and carries no
-    [provy-iam-poc] marker: the desk has to recognise an access change and raise the subtask itself. Copies who-asked and the group from the first POC request."""
+# How different people ask for the same thing. The wording never names a scenario: the audience must not be able to read the answer off the ticket.
+# Every variant names the person by user name (the desk agent only acts on a provy.iam.* name) and says "leaver", so the desk recognises it.
+DESK_WORDINGS = (
+    ("Leaver: {person}, last day {date}", "Leaver: please disable the account and remove all access for {person}, effective {date}.\nSystems: {systems}"),
+    ("Please offboard {person}", "Hi, {person} is leaving the company and today is their last day. Can you remove their access everywhere? {date}.\nSystems: {systems}"),
+    ("Access removal for leaver {person}", "HR notification: {person} has left. Effective {date}. Please remove access to the following: {systems}."),
+    ("{person} has resigned, please remove access", "{person} handed in their notice and finishes on {date}. Please disable their account and take away all access ({systems})."),
+    ("Termination: remove access for {person}", "Termination effective {date} for {person}. Disable the account, groups and tokens. Systems: {systems}."),
+    ("Offboarding request - {person}", "Please start the offboarding for {person}, leaving on {date}. We need the account disabled and access removed from {systems}."),
+)
+
+
+# A time-limited grant that has run out. It goes through the same desk, with the one system name "temporary_access", which the instance's worker turns into the expiry sweep.
+DESK_TEMPORARY_WORDINGS = (
+    ("Temporary access for {person} has ended", "The temporary access we gave {person} for the incident has run out on {date}. Please remove it.\nSystems: temporary_access"),
+    ("Please remove the time-limited access for {person}", "{person} was given time-limited access that expired on {date}. Can you take it away now?\nSystems: temporary_access"),
+    ("Expired temporary access - {person}", "Access review: {person} still has temporary access past its end date ({date}). Please revoke it.\nSystems: temporary_access"),
+    ("{person}: end the temporary access", "The work that {person} needed the temporary access for is finished as of {date}. Please end that access.\nSystems: temporary_access"),
+)
+
+
+def desk_wording(person: str, systems: tuple, today: str, n: int = 0, kind: str = "leaver") -> tuple:
+    """(subject, description) for the n-th request, stable for the same inputs so a seeded batch reads the same every time."""
+    pool = DESK_TEMPORARY_WORDINGS if kind == "jit" else DESK_WORDINGS
+    subject, description = pool[n % len(pool)]
+    fill = {"person": person, "date": today, "systems": ", ".join(systems)}
+    return f"{DESK_MARKER} " + subject.format(**fill), description.format(**fill)
+
+
+def make_open_desk_request(client: Any, person: str, scenario_key: str, systems: tuple = ("directory", "sso", "vpn", "saas_token"), n: int = 0, kind: str = "leaver"):
+    """The FRONT DOOR: a plain request, worded as an HR feed, a manager or the leaver's colleague would word it, assigned to the service desk's agent. It names no Access agent,
+    carries no [provy-iam-poc] marker and no scenario key: the desk has to recognise an access change and raise the subtask itself. Copies who-asked and the group from the
+    first POC request. `n` picks the wording."""
     def open_request() -> str:
-        rows = [r for r in client.query(TABLE) if str(r.get("ShortDescription", "")).startswith(MARKER)]
-        if not rows:
-            raise RuntimeError(f"no existing {MARKER} Request to copy ids from: create one by hand (see README)")
-        t = rows[0]
-        body = {"ShortDescription": f"{DESK_MARKER} Please offboard {person} ({scenario_key})",
+        t = seed_request(client)
+        subject, description = desk_wording(person, systems, datetime.date.today().isoformat(), n, kind)
+        body = {"ShortDescription": subject,
                 "Requestor": t["Requestor"], "RequestedFor": t["RequestedFor"], "AssignmentGroup": t["AssignmentGroup"], "Assignee": desk_user_id(client),
-                "Description": f"Leaver: please disable the account and remove all access for {person}, effective {datetime.date.today().isoformat()}.\nSystems: {', '.join(systems)}"}
+                "Description": description}
         if t.get("Classification"):
             body["Classification"] = t["Classification"]
         made = client.create(TABLE, body)

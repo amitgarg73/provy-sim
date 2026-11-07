@@ -131,19 +131,19 @@ def run_batch(items: list[BatchItem], estate: Estate, trigger: str = "direct", *
                     res.errors[it.n] = str(e)[:160]
         else:
             estate.set_job_active(WORKER_JOB, True)
+            # ONE REQUEST AT A TIME: raised together, six requests overloaded Servicely's agents (two stopped after two steps and nothing was queued, 7 Nov). A person raises
+            # a request, the agents work it, and the next one arrives after, which is also how a real queue reads. `wait` is the allowance PER request.
             for it in items:
                 try:
                     open_request(it, scns[it.n])()
                 except Exception as e:  # noqa: BLE001
                     res.errors[it.n] = str(e)[:160]
-            pending = {it.n for it in items if it.n not in res.errors}
-            end = now() + wait
-            while pending and now() < end:
-                pending = {n for n in pending if estate.readings(next(i.person for i in items if i.n == n)) == baselines[n]}
-                if pending:
+                    continue
+                end = now() + wait
+                while estate.readings(it.person) == baselines[it.n] and now() < end:
                     sleep(poll)
-            for n in pending:
-                res.errors[n] = f"timed out after {int(wait)}s waiting for the estate to change"
+                if estate.readings(it.person) == baselines[it.n]:
+                    res.errors[it.n] = f"timed out after {int(wait)}s waiting for the estate to change"
         resync = [it for it in items if scns[it.n].resync and it.n not in res.errors]
         if resync:
             for it in resync:
