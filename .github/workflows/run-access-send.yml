@@ -1,0 +1,62 @@
+name: run-access-send
+run-name: access ${{ inputs.run_label || 'unlabelled' }} / ${{ inputs.dry_run == 'true' && 'dry run' || 'real' }} / ${{ inputs.count }} / ${{ inputs.scenario_mix }}
+
+# Access changes through the Servicely desk (the Multi Vendor Scenario). It raises requests at the service desk the way a person would; Servicely's own agents hand them to the
+# Access team, the Access agent queues the change, and the ServiceNow instance applies it, reports to Provy and settles the outcome. Nothing here posts to Provy by itself.
+# It does switch the instance's own agents on for the run and always off again (see multi_vendor/batch.py), and it deletes nothing on either instance.
+#
+# Safe by default: dry_run is true, so a dispatch with no changes prints the list it would raise and makes no call to either instance.
+# One request at a time, about 4 minutes each. Count is capped at 25 unless confirm_large=yes (then 60).
+#
+# Repository secrets (never inputs): SERVICELY_INSTANCE_URL, SERVICELY_API_TOKEN, SERVICENOW_INSTANCE, SERVICENOW_USER, SERVICENOW_PASSWORD.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:       { description: 'true prints the list and raises nothing, with no network call', required: false, type: string, default: 'true' }
+      count:         { description: 'Requests to raise (max 25, or 60 with confirm_large=yes)', required: false, type: string, default: '10' }
+      confirm_large: { description: 'yes allows a count above 25', required: false, type: string, default: 'no' }
+      seed:          { description: 'RNG seed (same seed, same list)', required: false, type: string, default: '7' }
+      scenario_mix:  { description: 'default, or scenario=count pairs such as clean_leaver=4,wrong_person=1', required: false, type: string, default: 'default' }
+      wait:          { description: 'Seconds to allow each request before it counts as timed out', required: false, type: string, default: '480' }
+      run_label:     { description: 'Optional label written in the run name', required: false, type: string, default: '' }
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Check the inputs
+        env:
+          INPUT_COUNT: ${{ inputs.count }}
+          INPUT_CONFIRM_LARGE: ${{ inputs.confirm_large }}
+          INPUT_SEED: ${{ inputs.seed }}
+          INPUT_WAIT: ${{ inputs.wait }}
+        run: |
+          for v in "$INPUT_COUNT" "$INPUT_SEED" "$INPUT_WAIT"; do
+            case "$v" in ''|*[!0-9]*) echo "REFUSED: '$v' is not a whole number"; exit 1;; esac
+          done
+          if [ "$INPUT_COUNT" -lt 1 ]; then echo "REFUSED: choose at least 1 request"; exit 1; fi
+          if [ "$INPUT_COUNT" -gt 60 ]; then echo "REFUSED: the limit is 60 requests in one run"; exit 1; fi
+          if [ "$INPUT_COUNT" -gt 25 ] && [ "$INPUT_CONFIRM_LARGE" != "yes" ]; then echo "REFUSED: above 25 requests, set confirm_large=yes"; exit 1; fi
+      - name: Raise the requests
+        env:
+          SERVICELY_INSTANCE_URL: ${{ secrets.SERVICELY_INSTANCE_URL }}
+          SERVICELY_API_TOKEN: ${{ secrets.SERVICELY_API_TOKEN }}
+          SERVICENOW_INSTANCE: ${{ secrets.SERVICENOW_INSTANCE }}
+          SERVICENOW_USER: ${{ secrets.SERVICENOW_USER }}
+          SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_COUNT: ${{ inputs.count }}
+          INPUT_SEED: ${{ inputs.seed }}
+          INPUT_MIX: ${{ inputs.scenario_mix }}
+          INPUT_WAIT: ${{ inputs.wait }}
+        run: |
+          args=(batch --n "$INPUT_COUNT" --seed "$INPUT_SEED" --trigger servicely --wait "$INPUT_WAIT")
+          if [ "$INPUT_MIX" != "default" ] && [ -n "$INPUT_MIX" ]; then args+=(--mix "$INPUT_MIX"); fi
+          if [ "$INPUT_DRY_RUN" = "true" ]; then args+=(--plan-only); fi
+          python -u scripts/run_multi_vendor.py "${args[@]}"
