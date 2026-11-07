@@ -34,6 +34,7 @@ ProvyIamAgents.prototype = {
   },
 
   _decide: function (subject, params, trace) {
+    var t0 = new Date().getTime();
     var task = { command: subject, params: params };
     var own = this.plan.taskPlan(subject, params);
     // SCENARIO LEVERS (provy.iam.fault, per person): model_plan makes the "model" propose a plan that breaks policy, guard=bypass lets it through unchecked.
@@ -52,19 +53,19 @@ ProvyIamAgents.prototype = {
     }
     if (answer.mode === 'stub' && !rejected && source !== 'unchecked') source = 'stub';
     // a DECISION step: the agent chose a plan from the task. Provy counts steps of type decision or agent_message that carry a decision object.
-    trace.step(this.APPLIER, 'decision', 'success', { phase: 'plan', plan_source: source, model_mode: answer.mode, plan: chosen, rejected_reason: rejected }, { model: this.model.label(), decision: this.plan.decisionOf(chosen, source, rejected) });
+    trace.step(this.APPLIER, 'decision', 'success', { phase: 'plan', plan_source: source, model_mode: answer.mode, plan: chosen, rejected_reason: rejected }, { model: this.model.label(), latency_ms: new Date().getTime() - t0, decision: this.plan.decisionOf(chosen, source, rejected) });
     return { plan: chosen, source: source, rejected: rejected };
   },
 
   _apply: function (plan, trace) {
     var applied = [], failed = null;
     for (var i = 0; i < plan.steps.length; i++) {
-      var st = plan.steps[i], res;
+      var st = plan.steps[i], res, t0 = new Date().getTime();
       try { res = this.estate.apply(st.command, st.params); }
       catch (e) { res = { status: 'error', payload: { error: String(e).substring(0, 160) } }; }
       var items = (res.payload && res.payload.applied) || [];
       trace.step(this.APPLIER, 'tool_call', res.status === 'ok' ? 'success' : 'error',
-        { phase: 'apply', command: st.command, systems: items, status: res.status }, { tool_input: st.params, tool_output: res.payload });
+        { phase: 'apply', command: st.command, systems: items, status: res.status }, { tool_input: st.params, tool_output: res.payload, latency_ms: new Date().getTime() - t0 });
       if (res.status !== 'ok') { failed = res; break; }
       for (var k = 0; k < items.length; k++) applied.push(items[k]);
     }
@@ -82,6 +83,7 @@ ProvyIamAgents.prototype = {
   },
 
   _verify: function (subject, params, trace) {
+    var t0 = new Date().getTime();
     var reading = this.estate.read(params.named || params.person);
     var verdict = this.plan.verdict(subject, params, reading);
     var claim = this.plan.claimOf(verdict, this.estate._faults(params && params.person).verifier === 'optimistic');
@@ -90,7 +92,7 @@ ProvyIamAgents.prototype = {
     trace.step(this.VERIFIER, 'message', 'success', { phase: 'verify', held: claim.held, checked: claim.checked, systems: this._forTrace(claim.systems), finding: claim.held === verdict.held ? finding : claim.summary, summary: claim.summary },
       // THE CLAIM IS ITS OWN FIELD, named for the key the outcome settles under (offboarded_all), so Provy can place an expectation and compare it with what the estate says. Without it a lying
       // verifier produced no incident at all: the outcome was wrong and nothing had been expected. The value is what the verifier SAID, which a lever can make untrue.
-      { model: this.model.label(), claim: { signal: 'offboarded_all', value: !!claim.held, confidence: 0.9 } });
+      { model: this.model.label(), latency_ms: new Date().getTime() - t0, claim: { signal: 'offboarded_all', value: !!claim.held, confidence: 0.9 } });
     return { held: verdict.held, claimed_held: claim.held, claim_summary: claim.summary, systems: verdict.systems, checked: verdict.checked, summary: verdict.summary, finding: finding, reading: reading };
   },
 
