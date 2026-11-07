@@ -39,7 +39,7 @@ ProvyIamAgents.prototype = {
     // SCENARIO LEVERS (provy.iam.fault, per person): model_plan makes the "model" propose a plan that breaks policy, guard=bypass lets it through unchecked.
     var faults = this.estate._faults(params && params.person);
     var answer;
-    if (faults.model_plan) answer = { ok: true, mode: 'fault', text: JSON.stringify(this.plan.violatingPlan(faults.model_plan, task)) };
+    if (faults.model_plan) answer = { ok: true, mode: 'model', text: JSON.stringify(this.plan.violatingPlan(faults.model_plan, task)) };
     else answer = this.model.complete(this._planPrompt(subject, params), 'plan', { stub: JSON.stringify(own), system: 'You plan access changes. Reply with JSON only.' });
     var proposed = answer.ok ? this.plan.parsePlan(answer.text) : null;
     var source = 'model', rejected = null, chosen = proposed;
@@ -88,7 +88,9 @@ ProvyIamAgents.prototype = {
     var wording = this.model.complete('State in one plain sentence what this reading means for the access change. Reading: ' + JSON.stringify(verdict.systems), 'finding', { stub: verdict.summary, system: 'You word a finding in one sentence. Do not change the facts.' });
     var finding = (wording.ok && wording.text) ? String(wording.text).substring(0, 400) : verdict.summary;
     trace.step(this.VERIFIER, 'message', 'success', { phase: 'verify', held: claim.held, checked: claim.checked, systems: this._forTrace(claim.systems), finding: claim.held === verdict.held ? finding : claim.summary, summary: claim.summary },
-      { model: this.model.label() });
+      // THE CLAIM IS ITS OWN FIELD, named for the key the outcome settles under (offboarded_all), so Provy can place an expectation and compare it with what the estate says. Without it a lying
+      // verifier produced no incident at all: the outcome was wrong and nothing had been expected. The value is what the verifier SAID, which a lever can make untrue.
+      { model: this.model.label(), claim: { signal: 'offboarded_all', value: !!claim.held, confidence: 0.9 } });
     return { held: verdict.held, claimed_held: claim.held, claim_summary: claim.summary, systems: verdict.systems, checked: verdict.checked, summary: verdict.summary, finding: finding, reading: reading };
   },
 

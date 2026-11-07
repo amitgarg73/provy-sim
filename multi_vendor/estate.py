@@ -108,7 +108,7 @@ class Estate:
     @staticmethod
     def bystander_of(person: str) -> str:
         """The second simulated person a request could wrongly touch. The name rule lives on the instance too (ProvyIamEstate.bystanderOf)."""
-        return "provy.iam.bystander." + person[len("provy.iam."):]
+        return "provy.iam.colleague." + person[len("provy.iam."):]
 
     def readings(self, person: str) -> dict:
         return self._call("GET", f"/readings?key={urllib.parse.quote(person)}")

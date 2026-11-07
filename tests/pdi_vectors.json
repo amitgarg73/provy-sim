@@ -1352,7 +1352,7 @@
         {
           "command": "provy-iam-apply-change",
           "params": {
-            "person": "provy.iam.bystander.b001",
+            "person": "provy.iam.colleague.b001",
             "systems": [
               "directory",
               "sso",

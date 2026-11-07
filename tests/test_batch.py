@@ -136,7 +136,7 @@ def test_a_batch_cleans_up_every_person_and_the_flags_even_when_an_item_breaks()
     assert set(res.errors) == {2} and "500" in res.errors[2]                                     # one bad item is reported, the others still ran
     assert 1 in res.verdicts and 3 in res.verdicts
     assert e.fault == {} and e.person_faults == {} and e.jobs[SYNC_JOB] is False and e.agentic is False
-    assert all(p["active"] and p["left"] == 5 for k, p in e.people.items() if not k.startswith("provy.iam.bystander"))
+    assert all(p["active"] and p["left"] == 5 for k, p in e.people.items() if not k.startswith("provy.iam.colleague"))
 
 
 def test_a_batch_that_needs_the_agents_switches_them_on_once_and_off_again():

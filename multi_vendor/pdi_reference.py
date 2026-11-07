@@ -260,7 +260,7 @@ def violating_plan(kind: str, task: dict) -> dict:
     import copy
     plan = {"steps": [copy.deepcopy(base)]}
     if kind == "other_person":
-        plan["steps"][0]["params"]["person"] = PERSON_PREFIX + "bystander." + str((task.get("params") or {}).get("person", ""))[len(PERSON_PREFIX):]
+        plan["steps"][0]["params"]["person"] = PERSON_PREFIX + "colleague." + str((task.get("params") or {}).get("person", ""))[len(PERSON_PREFIX):]
     elif kind == "extra_system":
         named = (base.get("params") or {}).get("systems") or []
         extra = [x for x in SYSTEMS if x not in named]

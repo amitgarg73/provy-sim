@@ -38,7 +38,7 @@ ProvyIamEstate.prototype = {
     return out;
   },
   /** The bystander a person's request could wrongly touch: a second simulated person named after the first, so a reading can count changes to people the task did not name. */
-  bystanderOf: function (person) { return 'provy.iam.bystander.' + String(person || '').substring(10); },
+  bystanderOf: function (person) { return 'provy.iam.colleague.' + String(person || '').substring(10); },
   _user: function (person) {
     var u = new GlideRecord('sys_user');
     u.addQuery('user_name', person);

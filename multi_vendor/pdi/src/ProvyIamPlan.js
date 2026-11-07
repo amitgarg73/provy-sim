@@ -210,7 +210,7 @@ ProvyIamPlan.prototype = {
     var base = own.steps[0];
     var plan = { steps: [JSON.parse(JSON.stringify(base))] };
     if (kind === 'other_person') {
-      plan.steps[0].params.person = this.PERSON_PREFIX + 'bystander.' + String((t.params && t.params.person) || '').substring(this.PERSON_PREFIX.length);
+      plan.steps[0].params.person = this.PERSON_PREFIX + 'colleague.' + String((t.params && t.params.person) || '').substring(this.PERSON_PREFIX.length);
     } else if (kind === 'extra_system') {
       var named = (base.params && base.params.systems) || [];
       var extra = [];
