@@ -63,7 +63,7 @@ let conversationId = null;
 Table("SystemAgentConversationHistory").EQUAL("RelatedRecord", current.ID() + ":" + current.getTableName()).forEach(function (c) {
     if (!c.ParentConversation.value()) conversationId = String(c.ID());
 });
-answer = { person: who ? who[1] : null, systems: systems, item: String(current.ID()), correlation: correlation, parent_session: conversationId ? "pull-servicely-" + conversationId : null };'''
+answer = { person: who ? who[1] : null, systems: systems, item: String(current.ID()), item_number: String(current.Number()), correlation: correlation, parent_session: conversationId ? "pull-servicely-" + conversationId : null };'''
 
 TOOL_SCRIPT = r'''// Queues one Provy IAM POC Action on a Provy IAM POC work item, so the outside worker can apply it. Parameters: command, requestNumber (optional).
 // A work item is a Request (REQ...) or a subtask of one (REQT...): the service desk raises the access change as a subtask under the original Request.

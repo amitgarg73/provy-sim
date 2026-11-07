@@ -113,8 +113,12 @@ ProvyIamAgents.prototype = {
       // the system of record settles the work item: one outcome per run, from the estate's own reading, keyed on the request number
       try {
         var nowIso = new GlideDateTime().getValue().replace(' ', 'T') + 'Z';
-        var outcome = this.plan.outcomeBody(subject, { held: verification.held, systems: verification.systems, checked: verification.checked }, p.correlation, nowIso.substring(0, 10), nowIso, { others_changed: verification.reading && verification.reading.others_changed, expired_grants_active: verification.reading && verification.reading.expired_grants_active });
+        var facts = { held: verification.held, systems: verification.systems, checked: verification.checked };
+        var extras = { others_changed: verification.reading && verification.reading.others_changed, expired_grants_active: verification.reading && verification.reading.expired_grants_active };
+        var outcome = this.plan.outcomeBody(subject, facts, p.correlation, nowIso.substring(0, 10), nowIso, extras);
         if (outcome) trace.outcome(outcome);
+        // ONE OUTCOME PER REQUEST, ON THIS FLEET'S OWN KEY. A second outcome addressed to the subtask was tried on 7 Nov and is wrong: an outcome settles work in the fleet of the key it
+        // arrives on, so it created fake work items in Access provisioning. The IAM Access Mgmt fleet takes its verdict from this one through the product's relay (argus #1984), not from a second push.
       } catch (e3) { gs.warn('provy_iam agents: the outcome was not sent: ' + String(e3).substring(0, 100)); }
     } catch (e) {
       gs.warn('provy_iam agents: ' + String(e).substring(0, 160));
