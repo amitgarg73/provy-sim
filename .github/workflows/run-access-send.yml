@@ -60,3 +60,9 @@ jobs:
           if [ "$INPUT_MIX" != "default" ] && [ -n "$INPUT_MIX" ]; then args+=(--mix "$INPUT_MIX"); fi
           if [ "$INPUT_DRY_RUN" = "true" ]; then args+=(--plan-only); fi
           python -u scripts/run_multi_vendor.py "${args[@]}"
+      - name: Connect the chains on dev
+        # Linking is a Vercel cron and Vercel runs crons only on production, so dev needs it called. Skipped quietly when the secret is not set. A dry run raised nothing, so nothing to link.
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          CRON_SECRET_PREVIEW: ${{ secrets.CRON_SECRET_PREVIEW }}
+        run: python -u scripts/link_chains.py --rounds 3 --wait 60

@@ -207,3 +207,16 @@ def test_a_temporary_access_request_names_the_one_system_the_worker_turns_into_t
         subject, description = desk_wording("provy.iam.b009", (), "2026-11-07", n, "jit")
         assert "provy.iam.b009" in subject + description and "Systems: temporary_access" in description
         assert not any(k in subject + description for k in BY_KEY) and "leaver" not in (subject + description).lower()
+
+
+# ---- linking the chains on dev ---------------------------------------------------------------------------------------------------------------------------------------------
+
+def test_the_link_script_refuses_a_host_that_is_not_pre_prod_and_skips_without_the_secret(monkeypatch, capsys):
+    import sys
+    sys.path.insert(0, "scripts")
+    import link_chains
+    monkeypatch.setattr(sys, "argv", ["link_chains.py", "--base", "https://provy.ai"])
+    assert link_chains.main() == 2 and "REFUSED" in capsys.readouterr().out
+    monkeypatch.setattr(sys, "argv", ["link_chains.py"])
+    monkeypatch.delenv("CRON_SECRET_PREVIEW", raising=False)
+    assert link_chains.main() == 0 and "SKIPPED" in capsys.readouterr().out
