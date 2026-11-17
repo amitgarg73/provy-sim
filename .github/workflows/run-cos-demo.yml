@@ -1,5 +1,5 @@
 name: run-cos-demo
-run-name: cos | ${{ inputs.label }} | scenario=${{ inputs.scenario }} runs=${{ inputs.runs }} levers=${{ inputs.lever_set }} mode=${{ inputs.mode }} budget=$${{ inputs.budget_usd }}
+run-name: cos ${{ inputs.label }} / ${{ inputs.dry_run == 'true' && 'dry run' || 'real' }} / ${{ inputs.mode }} / ${{ inputs.scenario }} / ${{ inputs.runs }} / ${{ inputs.lever_set }} / $${{ inputs.budget_usd }}
 
 # Chief of Staff demo, on demand, against the DEV workspace only (https://dev.provy.ai).
 # Started from the pre-prod console. The address is written in the steps below; it is never an input.
@@ -16,7 +16,7 @@ on:
       levers_json:    { description: 'JSON map of lever to value, used only when lever_set is custom (max 1500 characters)', required: false, type: string, default: '' }
       mode:           { description: 'mock (spends nothing) or live', required: true, type: string, default: 'mock' }
       model:          { description: 'paid or free (only when mode is live)', required: false, type: string, default: 'paid' }
-      budget_usd:     { description: 'Dollar budget for the run, above 0 and at most 2.00', required: true, type: string }
+      budget_usd:     { description: 'Dollar budget for the run, above 0 and at most 2.00, written with two decimals such as 0.25', required: true, type: string }
       seed:           { description: 'Whole number. Same seed and same levers give the same runs', required: true, type: string }
       dry_run:        { description: 'true shows the plan and the worst-case cost and calls nothing', required: false, type: string, default: 'true' }
       outcome_path:   { description: 'push (the harness sends the true outcome to Provy)', required: false, type: string, default: 'push' }
@@ -68,7 +68,7 @@ jobs:
           case "$INPUT_DRY_RUN" in true|false) ;; *) refuse "dry_run must be true or false";; esac
           [ "$INPUT_OUTCOME_PATH" = "push" ] || refuse "outcome_path must be push"
           [ "$INPUT_NO_CERT" = "true" ] || refuse "tick 'no certification is running on dev' (no_cert_running=true)"
-          printf '%s' "$INPUT_BUDGET" | grep -Eq '^[0-9]{1,2}(\.[0-9]{1,2})?$' || refuse "budget_usd must be a decimal such as 0.25"
+          printf '%s' "$INPUT_BUDGET" | grep -Eq '^[0-9]{1,2}\.[0-9]{2}$' || refuse "budget_usd must have exactly two decimals, such as 0.25"
           awk -v b="$INPUT_BUDGET" 'BEGIN { exit !(b > 0 && b <= 2.00) }' || refuse "budget_usd must be above 0 and at most 2.00"
           if [ "$INPUT_LEVER_SET" = "custom" ]; then
             [ -n "$INPUT_LEVERS_JSON" ] || refuse "lever_set=custom needs levers_json"

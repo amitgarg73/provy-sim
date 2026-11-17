@@ -128,7 +128,7 @@ def test_first_step_validates_and_second_group_runs_the_guard(steps):
 
 def test_input_validation_covers_every_cap(steps):
     body = _run_text(steps[0])
-    for needle in ("-gt 30", "1500", "2.00", "0.25", "no_cert_running=true", "mock|live", "paid|free", "push", "{1,40}"):
+    for needle in ("-gt 30", "1500", "2.00", "two decimals", "no_cert_running=true", "mock|live", "paid|free", "push", "{1,40}"):
         assert needle in body, needle
 
 
@@ -172,8 +172,8 @@ def test_runtimes_timeout_environment_concurrency_and_run_name(spec, text):
     assert spec["concurrency"]["cancel-in-progress"] is False
     assert "python-version: '3.11'" in text and "node-version: '20'" in text
     rn = spec["run-name"]
-    for part in ("cos | ", "inputs.label", "scenario=", "runs=", "levers=", "mode=", "budget=$"):
-        assert part in rn
+    assert rn == ("cos ${{ inputs.label }} / ${{ inputs.dry_run == 'true' && 'dry run' || 'real' }} / ${{ inputs.mode }} / "
+                  "${{ inputs.scenario }} / ${{ inputs.runs }} / ${{ inputs.lever_set }} / $${{ inputs.budget_usd }}")
     assert spec["permissions"] == {"contents": "read"}
 
 

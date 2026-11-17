@@ -54,6 +54,12 @@ gh api -X PUT repos/amitgarg73/provy-sim/environments/cos-dev
 
 The passphrase is on your clipboard after the `openssl` line: save it in your password manager before you copy anything else, because you need it to open a results file.
 
+## The run name (the console reads it)
+
+Exactly: `cos <label> / <dry run|real> / <mock|live> / <scenario> / <runs> / <lever_set> / $<budget>`
+
+Example: `cos my test / real / live / status / 5 / control / $0.25`. It says `dry run` when dry_run is true, otherwise `real`. GitHub cannot pad a number inside a run name, so the workflow refuses a budget that does not have exactly two decimals (0.25 and 1.50 pass, 1 and 0.5 do not). The console must send it that way.
+
 ## Starting a run and what it prints
 
 The console starts the workflow. The inputs are: scenario, runs, lever_set, levers_json, mode, model, budget_usd, seed, dry_run, outcome_path, label, no_cert_running. A dry run is the default: it prints the plan and the worst-case cost and loads no key.
