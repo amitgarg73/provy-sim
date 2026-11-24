@@ -1,0 +1,162 @@
+name: run-status-demo
+run-name: status ${{ inputs.label }} / ${{ inputs.dry_run == 'true' && 'dry run' || 'real' }} / ${{ inputs.action }} / ${{ inputs.journey }} / ${{ inputs.count }} / seed ${{ inputs.seed }}
+
+# The simple Status tracking and escalation demo, on demand, against the DEV workspace only (https://dev.provy.ai).
+# Started from the pre-prod console (Dev group, "Status demo"). The address is written in the steps below; it is never an input.
+# The harness comes from the private argus repo, one folder, at the exact commit named in status-demo/HARNESS_PIN.
+# Secrets (names only, all dev; they live in the GitHub Environment cos-dev): STATUS_DEMO_KEY, ARGUS_HARNESS_READ, COS_RESULTS_PASSPHRASE.
+# The repository is public: the log prints the journey card and counts, never a per-session planted answer. The ground-truth sheet is
+# encrypted before upload. Every session it sends says SIMULATED DEMO.
+on:
+  workflow_dispatch:
+    inputs:
+      action:   { description: 'single (one journey), bulk (a seeded random mix) or change (a model-change batch)', required: true, type: string, default: 'single' }
+      journey:  { description: 'J1 to J7 for single, B1 or B2 for change, ignored for bulk', required: true, type: string, default: 'J1' }
+      count:    { description: 'Sessions for bulk (1 to 100), per side for change (2 to 50), ignored for single', required: true, type: string, default: '1' }
+      seed:     { description: 'Whole number. Same seed and same settings give the same sessions', required: true, type: string, default: '1' }
+      mix:      { description: 'Bulk only: default, or journey weights such as J1=30,J2=40,J3=8', required: false, type: string, default: 'default' }
+      outcome:  { description: 'single only: now, or later (the true outcome is held back until settle)', required: false, type: string, default: 'now' }
+      dry_run:  { description: 'true prints the card and the plan and sends nothing', required: false, type: string, default: 'true' }
+      label:    { description: 'Run label, up to 40 characters: letters, digits, space, underscore, hyphen', required: true, type: string }
+
+# One status demo run at a time.
+concurrency:
+  group: status-demo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  status-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: cos-dev
+    steps:
+      - name: Check the inputs
+        env:
+          INPUT_ACTION: ${{ inputs.action }}
+          INPUT_JOURNEY: ${{ inputs.journey }}
+          INPUT_COUNT: ${{ inputs.count }}
+          INPUT_SEED: ${{ inputs.seed }}
+          INPUT_MIX: ${{ inputs.mix }}
+          INPUT_OUTCOME: ${{ inputs.outcome }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_LABEL: ${{ inputs.label }}
+        run: |
+          refuse() { echo "REFUSED: $1"; exit 1; }
+          for v in "$INPUT_COUNT" "$INPUT_SEED"; do
+            case "$v" in ''|*[!0-9]*) refuse "'$v' is not a whole number";; esac
+          done
+          if [ "${#INPUT_SEED}" -gt 12 ] || [ "${#INPUT_COUNT}" -gt 3 ]; then refuse "seed or count is too long"; fi
+          case "$INPUT_ACTION" in
+            single) printf '%s' "$INPUT_JOURNEY" | grep -Eq '^J[1-7]$' || refuse "single needs a journey J1 to J7";;
+            bulk) [ "$INPUT_COUNT" -ge 1 ] && [ "$INPUT_COUNT" -le 100 ] || refuse "bulk is 1 to 100 sessions";;
+            change) printf '%s' "$INPUT_JOURNEY" | grep -Eq '^B[12]$' || refuse "change needs B1 or B2"
+                    [ "$INPUT_COUNT" -ge 2 ] && [ "$INPUT_COUNT" -le 50 ] || refuse "a change batch is 2 to 50 sessions per side";;
+            *) refuse "action must be single, bulk or change";;
+          esac
+          printf '%s' "$INPUT_LABEL" | grep -Eq '^[A-Za-z0-9 _-]{1,40}$' || refuse "label must be 1 to 40 characters of letters, digits, space, _ or -"
+          printf '%s' "$INPUT_MIX" | grep -Eq '^(default|(J[1-7]=[0-9]{1,3})(,J[1-7]=[0-9]{1,3}){0,6})$' || refuse "mix must be default or journey weights such as J1=30,J2=40"
+          case "$INPUT_OUTCOME" in now|later) ;; *) refuse "outcome must be now or later";; esac
+          case "$INPUT_DRY_RUN" in true|false) ;; *) refuse "dry_run must be true or false";; esac
+          echo "inputs ok"
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Refuse any address but dev, and prove the refusal
+        run: |
+          python3 cos/guard.py https://dev.provy.ai
+          out=$(python3 cos/guard.py https://provy.ai || true)
+          echo "$out"
+          case "$out" in *Refused*) echo "self-proof ok: a production host is refused";; *) echo "REFUSED: the guard did not refuse a production host"; exit 1;; esac
+          out=$(python3 cos/guard.py https://dev.provy.ai@provy.ai || true)
+          case "$out" in *Refused*) ;; *) echo "REFUSED: the guard let a user-info trick through"; exit 1;; esac
+
+      - name: Read the harness pin
+        id: pin
+        run: |
+          pin=$(tr -d ' \t\r\n' < status-demo/HARNESS_PIN)
+          printf '%s' "$pin" | grep -Eq '^[0-9a-f]{40}$' || { echo "REFUSED: status-demo/HARNESS_PIN is not a 40-character commit id yet. Write the argus commit that holds reference-harness/status_demo and commit it."; exit 1; }
+          echo "sha=$pin" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the harness (one folder, pinned commit)
+        uses: actions/checkout@v4
+        with:
+          repository: amitgarg73/argus
+          ref: ${{ steps.pin.outputs.sha }}
+          token: ${{ secrets.ARGUS_HARNESS_READ }}
+          sparse-checkout: reference-harness
+          sparse-checkout-cone-mode: true
+          path: argus-harness
+          persist-credentials: false
+
+      - name: Load the fleet key
+        # Real runs only. The key is masked BEFORE it is exported, so the public log can never show it.
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          STATUS_DEMO_KEY: ${{ secrets.STATUS_DEMO_KEY }}
+        run: |
+          if [ -z "$STATUS_DEMO_KEY" ] || [ "$(printf '%s' "$STATUS_DEMO_KEY" | wc -l)" -gt 0 ]; then echo "REFUSED: STATUS_DEMO_KEY is missing or is not a single line"; exit 1; fi
+          echo "::add-mask::$STATUS_DEMO_KEY"
+          printf 'PROVY_KEY_STATUS_DEMO=%s\n' "$STATUS_DEMO_KEY" >> "$GITHUB_ENV"
+          echo "fleet key loaded"
+
+      - name: Fire the status demo
+        env:
+          INPUT_ACTION: ${{ inputs.action }}
+          INPUT_JOURNEY: ${{ inputs.journey }}
+          INPUT_COUNT: ${{ inputs.count }}
+          INPUT_SEED: ${{ inputs.seed }}
+          INPUT_MIX: ${{ inputs.mix }}
+          INPUT_OUTCOME: ${{ inputs.outcome }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          results="$RUNNER_TEMP/status-results"
+          mkdir -p "$results"
+          cd argus-harness/reference-harness
+          args=(--base-url https://dev.provy.ai --state-dir "$results" --hide-truth)
+          case "$INPUT_ACTION" in
+            single) args+=(single "$INPUT_JOURNEY" --seed "$INPUT_SEED" --outcome "$INPUT_OUTCOME");;
+            bulk)   args+=(bulk --count "$INPUT_COUNT" --seed "$INPUT_SEED")
+                    if [ "$INPUT_MIX" != "default" ]; then args+=(--mix "$INPUT_MIX"); fi;;
+            change) args+=(change "$INPUT_JOURNEY" --per-side "$INPUT_COUNT" --seed "$INPUT_SEED");;
+          esac
+          if [ "$INPUT_DRY_RUN" != "true" ]; then args+=(--send); fi
+          python3 -u status_demo.py "${args[@]}"
+          python3 -u status_demo.py --state-dir "$results" sheet --out "$results/ground-truth.html" || true
+          if [ "$INPUT_DRY_RUN" != "true" ] && [ "$INPUT_OUTCOME" = "later" ] && [ "$INPUT_ACTION" = "single" ]; then echo "The true outcome is held back. Start a settle run to send it."; fi
+
+      - name: Encrypt the results
+        if: ${{ always() && inputs.dry_run != 'true' }}
+        env:
+          COS_RESULTS_PASSPHRASE: ${{ secrets.COS_RESULTS_PASSPHRASE }}
+        run: |
+          results="$RUNNER_TEMP/status-results"
+          if [ ! -d "$results" ] || [ -z "$(ls -A "$results")" ]; then echo "no results to keep"; exit 0; fi
+          if [ -z "$COS_RESULTS_PASSPHRASE" ]; then echo "no passphrase set: results are NOT uploaded (the repo is public)"; exit 0; fi
+          mkdir -p "$RUNNER_TEMP/status-upload"
+          tar -czf "$RUNNER_TEMP/status-results.tgz" -C "$results" .
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:COS_RESULTS_PASSPHRASE -in "$RUNNER_TEMP/status-results.tgz" -out "$RUNNER_TEMP/status-upload/status-results.tgz.enc"
+          echo "results encrypted"
+
+      - name: Upload the encrypted results
+        if: ${{ always() && inputs.dry_run != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-results-${{ github.run_id }}
+          path: ${{ runner.temp }}/status-upload/status-results.tgz.enc
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Clean up
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/status-results" "$RUNNER_TEMP/status-results.tgz" "$RUNNER_TEMP/status-upload"
+          echo "cleaned up"
