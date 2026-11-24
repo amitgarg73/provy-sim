@@ -104,7 +104,7 @@ jobs:
           STATUS_DEMO_KEY: ${{ secrets.STATUS_DEMO_KEY }}
         run: |
           if [ -z "$STATUS_DEMO_KEY" ] || [ "$(printf '%s' "$STATUS_DEMO_KEY" | wc -l)" -gt 0 ]; then echo "REFUSED: STATUS_DEMO_KEY is missing or is not a single line"; exit 1; fi
-          echo "::add-mask::$STATUS_DEMO_KEY"
+          printf '::add-mask::%s\n' "$STATUS_DEMO_KEY"
           printf 'PROVY_KEY_STATUS_DEMO=%s\n' "$STATUS_DEMO_KEY" >> "$GITHUB_ENV"
           echo "fleet key loaded"
 
