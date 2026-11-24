@@ -1,0 +1,202 @@
+name: run-cos-demo
+run-name: cos ${{ inputs.label }} / ${{ inputs.dry_run == 'true' && 'dry run' || 'real' }} / ${{ inputs.mode }} / ${{ inputs.scenario }} / ${{ inputs.runs }} / ${{ inputs.lever_set }} / $${{ inputs.budget_usd }}
+
+# Chief of Staff demo, on demand, against the DEV workspace only (https://dev.provy.ai).
+# Started from the pre-prod console. The address is written in the steps below; it is never an input.
+# The harness comes from the private argus repo, one folder, at the exact commit named in cos/HARNESS_PIN.
+# Secrets (names only, all dev; they live in the GitHub Environment cos-dev): COS_FLEET_KEYS_JSON, ANTHROPIC_API_KEY,
+# GROQ_API_KEY, ARGUS_HARNESS_READ, COS_RESULTS_PASSPHRASE. See cos/README.md.
+# The repository is public: results are encrypted before upload, and no key or planted answer is ever printed.
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:       { description: "A scenario name, or full for every fleet's scenario", required: true, type: string }
+      runs:           { description: 'Runs per scenario, 1 to 30 (full set: 60 in total)', required: true, type: string, default: '1' }
+      lever_set:      { description: 'control, a preset name, or custom', required: true, type: string, default: 'control' }
+      levers_json:    { description: 'JSON map of lever to value, used only when lever_set is custom (max 1500 characters)', required: false, type: string, default: '' }
+      mode:           { description: 'mock (spends nothing) or live', required: true, type: string, default: 'mock' }
+      model:          { description: 'paid or free (only when mode is live)', required: false, type: string, default: 'paid' }
+      budget_usd:     { description: 'Dollar budget for the run, above 0 and at most 2.00, written with two decimals such as 0.25', required: true, type: string }
+      seed:           { description: 'Whole number. Same seed and same levers give the same runs', required: true, type: string }
+      dry_run:        { description: 'true shows the plan and the worst-case cost and calls nothing', required: false, type: string, default: 'true' }
+      outcome_path:   { description: 'push (the harness sends the true outcome to Provy)', required: false, type: string, default: 'push' }
+      label:          { description: 'Run label, up to 40 characters: letters, digits, space, underscore, hyphen', required: true, type: string }
+      no_cert_running: { description: 'Must be true: nobody is running a certification on dev', required: true, type: string }
+
+# One Chief of Staff run at a time.
+concurrency:
+  group: cos-demo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  cos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    environment: cos-dev
+    steps:
+      - name: Check the inputs
+        env:
+          INPUT_SCENARIO: ${{ inputs.scenario }}
+          INPUT_RUNS: ${{ inputs.runs }}
+          INPUT_LEVER_SET: ${{ inputs.lever_set }}
+          INPUT_LEVERS_JSON: ${{ inputs.levers_json }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_MODEL: ${{ inputs.model }}
+          INPUT_BUDGET: ${{ inputs.budget_usd }}
+          INPUT_SEED: ${{ inputs.seed }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_OUTCOME_PATH: ${{ inputs.outcome_path }}
+          INPUT_LABEL: ${{ inputs.label }}
+          INPUT_NO_CERT: ${{ inputs.no_cert_running }}
+        run: |
+          refuse() { echo "REFUSED: $1"; exit 1; }
+          for v in "$INPUT_RUNS" "$INPUT_SEED"; do
+            case "$v" in ''|*[!0-9]*) refuse "'$v' is not a whole number";; esac
+          done
+          if [ "${#INPUT_RUNS}" -gt 3 ] || [ "$INPUT_RUNS" -lt 1 ] || [ "$INPUT_RUNS" -gt 30 ]; then refuse "runs must be 1 to 30"; fi
+          if [ "${#INPUT_SEED}" -gt 12 ]; then refuse "seed is too long"; fi
+          printf '%s' "$INPUT_SCENARIO" | grep -Eq '^[A-Za-z0-9_-]{1,64}$' || refuse "scenario must be a name (letters, digits, _ -) or full"
+          printf '%s' "$INPUT_LABEL" | grep -Eq '^[A-Za-z0-9 _-]{1,40}$' || refuse "label must be 1 to 40 characters of letters, digits, space, _ or -"
+          printf '%s' "$INPUT_LEVER_SET" | grep -Eq '^[A-Za-z0-9_-]{1,64}$' || refuse "lever_set must be control, a preset name, or custom"
+          case "$INPUT_MODE" in mock|live) ;; *) refuse "mode must be mock or live";; esac
+          if [ "$INPUT_MODE" = "live" ]; then
+            case "$INPUT_MODEL" in paid|free) ;; *) refuse "model must be paid or free when mode is live";; esac
+          fi
+          case "$INPUT_DRY_RUN" in true|false) ;; *) refuse "dry_run must be true or false";; esac
+          [ "$INPUT_OUTCOME_PATH" = "push" ] || refuse "outcome_path must be push"
+          [ "$INPUT_NO_CERT" = "true" ] || refuse "tick 'no certification is running on dev' (no_cert_running=true)"
+          printf '%s' "$INPUT_BUDGET" | grep -Eq '^[0-9]{1,2}\.[0-9]{2}$' || refuse "budget_usd must have exactly two decimals, such as 0.25"
+          awk -v b="$INPUT_BUDGET" 'BEGIN { exit !(b > 0 && b <= 2.00) }' || refuse "budget_usd must be above 0 and at most 2.00"
+          if [ "$INPUT_LEVER_SET" = "custom" ]; then
+            [ -n "$INPUT_LEVERS_JSON" ] || refuse "lever_set=custom needs levers_json"
+            if [ "${#INPUT_LEVERS_JSON}" -gt 1500 ]; then refuse "levers_json is longer than 1500 characters"; fi
+            printf '%s' "$INPUT_LEVERS_JSON" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert isinstance(d, dict)' 2>/dev/null || refuse "levers_json must be a JSON map of lever to value"
+          fi
+          echo "inputs ok"
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Refuse any address but dev, and prove the refusal
+        run: |
+          python3 cos/guard.py https://dev.provy.ai
+          out=$(python3 cos/guard.py https://provy.ai || true)
+          echo "$out"
+          case "$out" in *Refused*) echo "self-proof ok: a production host is refused";; *) echo "REFUSED: the guard did not refuse a production host"; exit 1;; esac
+          out=$(python3 cos/guard.py https://dev.provy.ai@provy.ai || true)
+          case "$out" in *Refused*) ;; *) echo "REFUSED: the guard let a user-info trick through"; exit 1;; esac
+
+      - name: Read the harness pin
+        id: pin
+        run: |
+          pin=$(tr -d ' \t\r\n' < cos/HARNESS_PIN)
+          printf '%s' "$pin" | grep -Eq '^[0-9a-f]{40}$' || { echo "REFUSED: cos/HARNESS_PIN is not a 40-character commit id yet. Write the real one and commit it."; exit 1; }
+          echo "sha=$pin" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the harness (one folder, pinned commit)
+        uses: actions/checkout@v4
+        with:
+          repository: amitgarg73/argus
+          ref: ${{ steps.pin.outputs.sha }}
+          token: ${{ secrets.ARGUS_HARNESS_READ }}
+          sparse-checkout: reference-harness
+          sparse-checkout-cone-mode: true
+          path: argus-harness
+          persist-credentials: false
+
+      - name: Load the fleet keys
+        # Real runs only. Every key is masked BEFORE it is exported, so the public log can never show one.
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          COS_FLEET_KEYS_JSON: ${{ secrets.COS_FLEET_KEYS_JSON }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          FLEETS = ["cos", "status", "meetings", "cross", "sched", "wms", "kestrel", "pledge", "candidate", "twin", "sender"]
+          raw = os.environ.get("COS_FLEET_KEYS_JSON", "")
+          try:
+              keys = json.loads(raw)
+          except Exception:
+              print("REFUSED: COS_FLEET_KEYS_JSON is missing or is not JSON"); sys.exit(1)
+          if not isinstance(keys, dict) or set(keys) != set(FLEETS):
+              print("REFUSED: COS_FLEET_KEYS_JSON must hold exactly these fleets: " + ", ".join(FLEETS)); sys.exit(1)
+          for f in FLEETS:
+              v = keys[f]
+              if not isinstance(v, str) or not v or any(c in v for c in "\r\n"):
+                  print("REFUSED: the key for fleet " + f + " is empty or not a single line"); sys.exit(1)
+          for f in FLEETS:
+              print("::add-mask::" + keys[f])
+          with open(os.environ["GITHUB_ENV"], "a") as out:
+              for f in FLEETS:
+                  out.write("PROVY_KEY_" + f.upper() + "=" + keys[f] + "\n")
+          print("fleet keys loaded: " + str(len(FLEETS)))
+          PY
+
+      - name: Run the Chief of Staff demo
+        env:
+          INPUT_SCENARIO: ${{ inputs.scenario }}
+          INPUT_RUNS: ${{ inputs.runs }}
+          INPUT_LEVER_SET: ${{ inputs.lever_set }}
+          INPUT_LEVERS_JSON: ${{ inputs.levers_json }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_MODEL: ${{ inputs.model }}
+          INPUT_BUDGET: ${{ inputs.budget_usd }}
+          INPUT_SEED: ${{ inputs.seed }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_LABEL: ${{ inputs.label }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          results="$RUNNER_TEMP/cos-results"
+          mkdir -p "$results"
+          args=(cos-run --base-url https://dev.provy.ai --scenario "$INPUT_SCENARIO" --runs "$INPUT_RUNS" --lever-set "$INPUT_LEVER_SET"
+                --mode "$INPUT_MODE" --budget-usd "$INPUT_BUDGET" --seed "$INPUT_SEED" --label "$INPUT_LABEL"
+                --outcome-path push --max-total-runs 60 --results-dir "$results")
+          if [ "$INPUT_MODE" = "live" ]; then args+=(--model "$INPUT_MODEL"); fi
+          if [ "$INPUT_LEVER_SET" = "custom" ]; then
+            printf '%s' "$INPUT_LEVERS_JSON" > "$RUNNER_TEMP/levers.json"
+            args+=(--levers-file "$RUNNER_TEMP/levers.json")
+          fi
+          if [ "$INPUT_DRY_RUN" = "true" ]; then args+=(--dry-run); else args+=(--send); fi
+          cd argus-harness/reference-harness
+          python3 -u harness.py "${args[@]}"
+
+      - name: Encrypt the results
+        if: ${{ always() && inputs.dry_run != 'true' }}
+        env:
+          COS_RESULTS_PASSPHRASE: ${{ secrets.COS_RESULTS_PASSPHRASE }}
+        run: |
+          results="$RUNNER_TEMP/cos-results"
+          if [ ! -d "$results" ] || [ -z "$(ls -A "$results")" ]; then echo "no results to keep"; exit 0; fi
+          if [ -z "$COS_RESULTS_PASSPHRASE" ]; then echo "no passphrase set: results are NOT uploaded (the repo is public)"; exit 0; fi
+          mkdir -p "$RUNNER_TEMP/cos-upload"
+          tar -czf "$RUNNER_TEMP/cos-results.tgz" -C "$results" .
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:COS_RESULTS_PASSPHRASE -in "$RUNNER_TEMP/cos-results.tgz" -out "$RUNNER_TEMP/cos-upload/cos-results.tgz.enc"
+          echo "results encrypted"
+
+      - name: Upload the encrypted results
+        if: ${{ always() && inputs.dry_run != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cos-results-${{ github.run_id }}
+          path: ${{ runner.temp }}/cos-upload/cos-results.tgz.enc
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Clean up
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/cos-results" "$RUNNER_TEMP/cos-results.tgz" "$RUNNER_TEMP/cos-upload" "$RUNNER_TEMP/levers.json"
+          echo "cleaned up"
