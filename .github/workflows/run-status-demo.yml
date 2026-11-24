@@ -4,7 +4,7 @@ run-name: status ${{ inputs.label }} / ${{ inputs.dry_run == 'true' && 'dry run'
 # The simple Status tracking and escalation demo, on demand, against the DEV workspace only (https://dev.provy.ai).
 # Started from the pre-prod console (Dev group, "Status demo"). The address is written in the steps below; it is never an input.
 # The harness comes from the private argus repo, one folder, at the exact commit named in status-demo/HARNESS_PIN.
-# Secrets (names only, all dev; they live in the GitHub Environment cos-dev): STATUS_DEMO_KEY, ARGUS_HARNESS_READ, COS_RESULTS_PASSPHRASE.
+# Secrets (names only, all dev; they live in the GitHub Environment cos-dev): STATUS_DEMO_KEY, ARGUS_HARNESS_DEPLOY_KEY (a read-only deploy key on the argus repo), COS_RESULTS_PASSPHRASE.
 # The repository is public: the log prints the journey card and counts, never a per-session planted answer. The ground-truth sheet is
 # encrypted before upload. Every session it sends says SIMULATED DEMO.
 on:
@@ -91,7 +91,7 @@ jobs:
         with:
           repository: amitgarg73/argus
           ref: ${{ steps.pin.outputs.sha }}
-          token: ${{ secrets.ARGUS_HARNESS_READ }}
+          ssh-key: ${{ secrets.ARGUS_HARNESS_DEPLOY_KEY }}
           sparse-checkout: reference-harness
           sparse-checkout-cone-mode: true
           path: argus-harness

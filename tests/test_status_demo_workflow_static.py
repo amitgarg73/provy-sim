@@ -59,7 +59,7 @@ def test_the_address_is_the_literal_and_only_proof_addresses_appear(text):
 
 def test_secrets_are_the_three_dev_ones(text):
     names = set(re.findall(r"secrets\.([A-Za-z0-9_]+)", text))
-    assert names == {"STATUS_DEMO_KEY", "ARGUS_HARNESS_READ", "COS_RESULTS_PASSPHRASE"}
+    assert names == {"STATUS_DEMO_KEY", "ARGUS_HARNESS_DEPLOY_KEY", "COS_RESULTS_PASSPHRASE"}
     assert not any(re.search(r"PROD|CERTIFY", n.upper()) for n in names)
 
 

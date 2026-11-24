@@ -9,7 +9,8 @@ What it runs is `reference-harness/status_demo.py` from the private argus repo, 
 | Name | What it is |
 |---|---|
 | `STATUS_DEMO_KEY` | The ingest key of the "Simulated demo: Status tracking and escalation" fleet on dev. It is in `~/Claude Projects/provy-sim-state-status-demo/tenant.json` (mode 600) |
-| `ARGUS_HARNESS_READ`, `COS_RESULTS_PASSPHRASE` | Already there for the Chief of Staff demo; reused |
+| `ARGUS_HARNESS_DEPLOY_KEY` | The private half of a read-only deploy key on the argus repo (the public half is on that repo as "provy-sim status-demo (read only)"). The workflow fetches the harness with it |
+| `COS_RESULTS_PASSPHRASE` | Encrypts the results before upload. The passphrase is saved in `~/Claude Projects/provy-sim-state-status-demo/results-passphrase.txt` (mode 600) |
 
 ```
 python3 -c "import json,os;print(json.load(open(os.path.expanduser('~/Claude Projects/provy-sim-state-status-demo/tenant.json')))['ingest_key'],end='')" | pbcopy
