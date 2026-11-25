@@ -755,6 +755,25 @@ def EvalResultDefault(agent, entity_id, reason):
                       passed=False, detail={"reasoning": reason}, entity_id=entity_id)
 
 
+def _agent_overspend(result, gt, m, contract, s, ctx) -> Optional[InjectedFault]:
+    """One agent spends a multiple of its normal share on this run: a bloated prompt, an oversized
+    model, a loop of retries. Every model call the agent made is scaled (tokens in and out, and the cost
+    priced from them), so the session total and the per-agent breakdown both carry it and still agree.
+    Unlike `llm_cost` (one call breaching a per-call budget) this moves the agent's SHARE of the
+    session's spend, which is what the Command Center money table's Watch flag reads. Non-outcome-shaping."""
+    from .pack import llm_cost_usd   # lazy: engine.pack imports this module
+    agent = s.target or m.resolver_agent
+    mult = float(s.params.get("multiplier", 6))
+    steps = [t for t in result.traces if t.agent == agent and t.step_type == "agent_message"]
+    if not steps or mult <= 1:
+        return None
+    for t in steps:
+        t.tokens_input = int(round((t.tokens_input or 0) * mult))
+        t.tokens_output = int(round((t.tokens_output or 0) * mult))
+        t.cost_usd = llm_cost_usd(t.tokens_input, t.tokens_output)
+    return InjectedFault("agent_overspend", agent, "agent_spend_share", {"multiplier": mult})
+
+
 _LEVER_FNS = {
     "skip_propagation": _skip_propagation,
     "overt_error": _overt_error,
@@ -792,6 +811,7 @@ _LEVER_FNS = {
     "tool_errors": _tool_errors,
     "llm_cost": _llm_cost,
     "llm_tokens": _llm_tokens,
+    "agent_overspend": _agent_overspend,
 }
 
 
@@ -883,7 +903,7 @@ def apply(result: RunResult, gt, manifest: LeverManifest,
     # run without masking a cause. An errored tool span IS an attribution signal, so tool_errors
     # only fires on a run with no divergence to attribute — it still exercises the L1 error-rate
     # check on clean runs without stealing a silent culprit's blame.
-    for name in ("tool_latency", *_per_tool("tool_latency"), "llm_cost", "llm_tokens"):
+    for name in ("tool_latency", *_per_tool("tool_latency"), "llm_cost", "llm_tokens", "agent_overspend"):
         _fire(name, exclusive=False)
     if not primary_fired:
         for name in ("tool_errors", *_per_tool("tool_errors")):

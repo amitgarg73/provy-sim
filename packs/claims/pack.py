@@ -8,6 +8,8 @@ signal-mapped so all five grade deterministically.
 """
 from __future__ import annotations
 
+import hashlib
+
 from engine.pack import BasePack
 from engine.types import AgentSpec, Criterion, LeverManifest, RunContext, RunResult
 
@@ -19,6 +21,29 @@ DOC_SETS = {
     "theft": ["police_report", "proof_of_ownership"],
     "liability": ["incident_report", "witness_statement"],
 }
+
+
+# What each agent's model call normally reads and writes (tokens in, out). The adjudicator reads the
+# most (claim, policy, history) and writes the reasoning, intake the least. Priced by the shared
+# `llm_cost_usd`, so one session costs a fraction of a cent to about a cent, and the per-agent
+# `cost_breakdown` the emitter writes at close reconciles to the session total.
+_TOKEN_PROFILE = {
+    "intake": (900, 220),
+    "validator": (1500, 260),
+    "adjudicator": (3200, 650),
+    "reviewer": (1800, 300),
+}
+
+
+def _tokens(agent: str, entity_id: str) -> tuple[int, int]:
+    """The agent's usual token use on this claim, varied by up to 25 percent either way. Derived from
+    the claim id and agent (not the run's RNG), so a seed always gives the same figures and the extra
+    variety does not shift any other draw the run makes."""
+    base_in, base_out = _TOKEN_PROFILE[agent]
+    h = int(hashlib.sha256(f"{entity_id}|{agent}".encode()).hexdigest()[:8], 16)
+    f_in = 0.75 + (h % 1000) / 2000.0
+    f_out = 0.75 + ((h // 1000) % 1000) / 2000.0
+    return int(base_in * f_in), int(base_out * f_out)
 
 
 class ClaimsPack(BasePack):
@@ -150,7 +175,7 @@ class ClaimsPack(BasePack):
 
         r.traces.append(self.agent_step(
             ctx, A["intake"], item, decision=f"extracted claim_type={item['claim_type']}, amount={item['amount']}",
-            entity_id=eid))
+            entity_id=eid, tokens=_tokens("intake", eid)))
         r.traces.append(self.tool_step(
             ctx, A["validator"], "policy_lookup",
             tool_input={"claim_type": item["claim_type"]},
@@ -161,7 +186,7 @@ class ClaimsPack(BasePack):
             ctx, A["validator"], item,
             decision=(f"all {len(DOC_SETS[item['claim_type']])} required documents present; "
                       f"policy active"),
-            entity_id=eid))
+            entity_id=eid, tokens=_tokens("validator", eid)))
         r.traces.append(self.tool_step(
             ctx, A["adjudicator"], "fetch_claim_history",
             tool_input={"claim_id": eid},
@@ -179,7 +204,7 @@ class ClaimsPack(BasePack):
                       f"(amount_within_limit={gt['within_limit']}) with {len(item['docs_submitted'])} of "
                       f"{len(DOC_SETS[item['claim_type']])} required documents present; "
                       f"therefore decision={gt['correct_decision']}."),
-            entity_id=eid,
+            entity_id=eid, tokens=_tokens("adjudicator", eid),
             payload_extra={"decision": gt["correct_decision"], "policy_limit": item["policy_limit"],
                            "amount": item["amount"], "amount_within_limit": gt["within_limit"],
                            "confidence": "HIGH"}))
@@ -189,7 +214,8 @@ class ClaimsPack(BasePack):
             tool_output={"checks": ["limit_respected", "no_duplicate", "documents_complete"]},
             entity_id=eid))
         r.traces.append(self.agent_step(
-            ctx, A["reviewer"], item, decision="approved: within policy limit, no duplicate", entity_id=eid))
+            ctx, A["reviewer"], item, decision="approved: within policy limit, no duplicate", entity_id=eid,
+            tokens=_tokens("reviewer", eid)))
 
         r.evals = [
             self.eval_pass("intake", "extraction_accuracy", eid, "all claim fields extracted correctly"),

@@ -92,6 +92,32 @@ Every lever aims at a specific agent via the pack's `LeverManifest`, and derives
 the "bad value" for a signal from the contract — so the same nine levers work
 for all three packs unchanged.
 
+## Spend per agent, and the lever that skews it
+
+Every session closes with `total_cost_usd` and `metadata.cost_breakdown`, the per-agent lines the
+platform's one reader (`web/lib/cost-breakdown.ts`) takes: `{agent: {cost_usd, input, output, model}}`.
+The emitter builds the breakdown from the same per-step cost that makes the total (`engine/emitter.py`,
+`close_session`), so the two always agree. An agent that spent nothing is left out, and a pack that
+writes its own `cost_breakdown` keeps it.
+
+The claims pack gives each agent its own token profile (`_TOKEN_PROFILE` in `packs/claims/pack.py`:
+the adjudicator reads and writes the most, intake the least), varied up to 25 percent per claim from the
+claim id, so a seed always gives the same money. One session costs about half a cent to a cent.
+
+`agent_overspend` moves ONE agent's share of that spend. It multiplies every model call the agent made on
+the run (tokens in and out, cost priced from them), so the session total and the breakdown still agree,
+and it never touches the outcome. It is not `llm_cost`: that pushes one call over a per-call budget, this
+changes who spends the money, which is what the Command Center "Where the money goes" Watch flag reads
+(Watch = share of spend more than 10 points above share of misses).
+
+```bash
+--levers '{"agent_overspend": {"rate": 0.5, "target": "reviewer", "params": {"multiplier": 8}}, ...}'
+```
+
+`target` is the agent (default: the pack's resolver), `multiplier` defaults to 6, `rate` is the share of
+sessions it hits. It is deliberately not in any fleet's default rates and is not yet offered by the
+provy-sim-control console, so it is reached with `--levers` (state the whole mix in the command).
+
 ## Quick start — a dry batch (emits nothing)
 
 ```bash
