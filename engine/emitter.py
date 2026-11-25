@@ -270,6 +270,19 @@ class ProvyEmitter:
         tok_in = sum(s.tokens_input or 0 for s in result.traces)
         tok_out = sum(s.tokens_output or 0 for s in result.traces)
         cost = round(sum(s.cost_usd or 0.0 for s in result.traces), 6)
+        # The per-agent accounting a real SDK client flushes at close (metadata.cost_breakdown, argus#845):
+        # the same per-step cost, grouped by the agent that spent it, so it reconciles to total_cost_usd. A pack
+        # that wrote its own breakdown keeps it. Agents that spent nothing are left out (silence, not a zero).
+        breakdown: dict = {}
+        for s in result.traces:
+            if not (s.cost_usd or 0.0) and not (s.tokens_input or s.tokens_output):
+                continue
+            line = breakdown.setdefault(s.agent, {"cost_usd": 0.0, "input": 0, "output": 0})
+            line["cost_usd"] = round(line["cost_usd"] + (s.cost_usd or 0.0), 6)
+            line["input"] += s.tokens_input or 0
+            line["output"] += s.tokens_output or 0
+            if s.model:
+                line["model"] = s.model
         return self._post("/api/ingest/session/close", {
             "session_id": result.session_id,
             "terminal_reason": result.terminal_reason,
@@ -277,6 +290,7 @@ class ProvyEmitter:
             "total_tokens_out": tok_out,
             "total_cost_usd": cost,
             "metadata": {
+                **({"cost_breakdown": breakdown} if breakdown else {}),
                 **result.metadata,
                 "total_steps": len(result.traces),
                 "confidence": result.confidence,
